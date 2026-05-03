@@ -1,0 +1,200 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  BadgeCheck,
+  Building2,
+  Calendar,
+  ClipboardCheck,
+  Crown,
+  Flag,
+  HeartPulse,
+  Hospital,
+  LayoutDashboard,
+  MapPin,
+  Package,
+  Pill,
+  Settings,
+  Stethoscope,
+  Thermometer,
+  Truck,
+  Users,
+  FileText,
+} from "lucide-react";
+import type { UserRole } from "@/lib/permissions";
+
+export type NavItem = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  roles?: UserRole[]; // omit = visible to all signed-in users
+};
+
+export type NavSection = {
+  label?: string;
+  items: NavItem[];
+};
+
+export const NAV_SECTIONS: NavSection[] = [
+  {
+    items: [
+      {
+        label: "Command Center",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      {
+        label: "Incidents",
+        href: "/dashboard/incidents",
+        icon: AlertTriangle,
+      },
+      {
+        label: "VIP Tracking",
+        href: "/dashboard/vip",
+        icon: Crown,
+        roles: ["protocol_officer", "command_center"],
+      },
+      {
+        label: "Heat Index",
+        href: "/dashboard/heat-index",
+        icon: Thermometer,
+        roles: ["medical_field", "venue_manager", "command_center"],
+      },
+    ],
+  },
+  {
+    label: "Medical",
+    items: [
+      {
+        label: "Field",
+        href: "/dashboard/medical/field",
+        icon: HeartPulse,
+        roles: ["medical_field"],
+      },
+      {
+        label: "UCF",
+        href: "/dashboard/medical/ucf",
+        icon: Stethoscope,
+        roles: ["medical_ucf"],
+      },
+      {
+        label: "Hospital",
+        href: "/dashboard/medical/hospital",
+        icon: Hospital,
+        roles: ["medical_hospital"],
+      },
+      {
+        label: "Clinic",
+        href: "/dashboard/medical/clinic",
+        icon: Pill,
+        roles: ["medical_clinic"],
+      },
+      {
+        label: "Supplies",
+        href: "/dashboard/medical/supplies",
+        icon: Package,
+        roles: [
+          "medical_field",
+          "medical_ucf",
+          "medical_hospital",
+          "medical_clinic",
+        ],
+      },
+    ],
+  },
+  {
+    label: "Logistics",
+    items: [
+      {
+        label: "Transportation",
+        href: "/dashboard/transportation",
+        icon: Truck,
+        roles: ["logistics_officer", "transportation_dispatcher"],
+      },
+      {
+        label: "Venues",
+        href: "/dashboard/venues",
+        icon: MapPin,
+        roles: ["venue_manager", "logistics_officer"],
+      },
+    ],
+  },
+  {
+    label: "Personnel",
+    items: [
+      {
+        label: "Duty Schedule",
+        href: "/dashboard/personnel/duty",
+        icon: Calendar,
+        roles: ["personnel_admin"],
+      },
+      {
+        label: "Attendance",
+        href: "/dashboard/personnel/attendance",
+        icon: ClipboardCheck,
+        roles: ["personnel_admin"],
+      },
+      {
+        label: "ID Generator",
+        href: "/dashboard/personnel/ids",
+        icon: BadgeCheck,
+        roles: ["personnel_admin"],
+      },
+    ],
+  },
+  {
+    items: [
+      {
+        label: "Reports",
+        href: "/dashboard/reports",
+        icon: FileText,
+        roles: ["delegation_head", "command_center"],
+      },
+    ],
+  },
+  {
+    label: "Admin",
+    items: [
+      {
+        label: "Users",
+        href: "/dashboard/admin/users",
+        icon: Users,
+        roles: ["command_center"],
+      },
+      {
+        label: "Sites",
+        href: "/dashboard/admin/sites",
+        icon: Building2,
+        roles: ["command_center"],
+      },
+      {
+        label: "Delegations",
+        href: "/dashboard/admin/delegations",
+        icon: Flag,
+        roles: ["command_center"],
+      },
+      {
+        label: "Settings",
+        href: "/dashboard/admin/settings",
+        icon: Settings,
+        roles: [], // super_admin only — empty list = no non-super_admin role grants access
+      },
+    ],
+  },
+];
+
+// Super admin sees every item. Otherwise the item's `roles` list controls visibility
+// (omit = visible to all signed-in users).
+export function canSeeNavItem(
+  role: UserRole | null | undefined,
+  item: NavItem,
+): boolean {
+  if (!role) return false;
+  if (role === "super_admin") return true;
+  if (!item.roles) return true;
+  return item.roles.includes(role);
+}
