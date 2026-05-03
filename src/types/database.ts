@@ -391,6 +391,240 @@ export type Database = {
         };
         Relationships: [];
       };
+      vip_persons: {
+        Row: {
+          id: string;
+          full_name: string;
+          title: string | null;
+          organization: string | null;
+          delegation_id: string | null;
+          contact_number: string | null;
+          notes: string | null;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          full_name: string;
+          title?: string | null;
+          organization?: string | null;
+          delegation_id?: string | null;
+          contact_number?: string | null;
+          notes?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          full_name?: string;
+          title?: string | null;
+          organization?: string | null;
+          delegation_id?: string | null;
+          contact_number?: string | null;
+          notes?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      vip_movements: {
+        Row: {
+          id: string;
+          vip_id: string;
+          destination_site_id: string | null;
+          status: Database["palaro"]["Enums"]["vip_movement_status"];
+          estimated_arrival: string | null;
+          actual_arrival: string | null;
+          estimated_departure: string | null;
+          actual_departure: string | null;
+          purpose: string | null;
+          protocol_officer_id: string | null;
+          vehicle_info: string | null;
+          escort_count: number | null;
+          notes: string | null;
+          updated_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          vip_id: string;
+          destination_site_id?: string | null;
+          status: Database["palaro"]["Enums"]["vip_movement_status"];
+          estimated_arrival?: string | null;
+          actual_arrival?: string | null;
+          estimated_departure?: string | null;
+          actual_departure?: string | null;
+          purpose?: string | null;
+          protocol_officer_id?: string | null;
+          vehicle_info?: string | null;
+          escort_count?: number | null;
+          notes?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          vip_id?: string;
+          destination_site_id?: string | null;
+          status?: Database["palaro"]["Enums"]["vip_movement_status"];
+          estimated_arrival?: string | null;
+          actual_arrival?: string | null;
+          estimated_departure?: string | null;
+          actual_departure?: string | null;
+          purpose?: string | null;
+          protocol_officer_id?: string | null;
+          vehicle_info?: string | null;
+          escort_count?: number | null;
+          notes?: string | null;
+          updated_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      heat_index_readings: {
+        Row: {
+          id: string;
+          site_id: string;
+          temperature_c: number;
+          humidity_percent: number;
+          heat_index_c: number | null;
+          danger_level: string | null;
+          game_suspension_recommended: boolean | null;
+          recorded_by: string | null;
+          recorded_at: string;
+          notes: string | null;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          temperature_c: number;
+          humidity_percent: number;
+          heat_index_c?: number | null;
+          danger_level?: string | null;
+          game_suspension_recommended?: boolean | null;
+          recorded_by?: string | null;
+          recorded_at?: string;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          site_id?: string;
+          temperature_c?: number;
+          humidity_percent?: number;
+          heat_index_c?: number | null;
+          danger_level?: string | null;
+          game_suspension_recommended?: boolean | null;
+          recorded_by?: string | null;
+          recorded_at?: string;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
+      duty_schedules: {
+        Row: {
+          id: string;
+          personnel_id: string;
+          site_id: string | null;
+          duty_start: string;
+          duty_end: string;
+          shift_label: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          personnel_id: string;
+          site_id?: string | null;
+          duty_start: string;
+          duty_end: string;
+          shift_label?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          personnel_id?: string;
+          site_id?: string | null;
+          duty_start?: string;
+          duty_end?: string;
+          shift_label?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      attendance_logs: {
+        Row: {
+          id: string;
+          personnel_id: string;
+          site_id: string | null;
+          type: Database["palaro"]["Enums"]["attendance_type"];
+          scanned_at: string;
+          scanned_by: string | null;
+          notes: string | null;
+        };
+        Insert: {
+          id?: string;
+          personnel_id: string;
+          site_id?: string | null;
+          type: Database["palaro"]["Enums"]["attendance_type"];
+          scanned_at?: string;
+          scanned_by?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          personnel_id?: string;
+          site_id?: string | null;
+          type?: Database["palaro"]["Enums"]["attendance_type"];
+          scanned_at?: string;
+          scanned_by?: string | null;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
+      audit_logs: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          changes: Json | null;
+          ip_address: string | null;
+          user_agent: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          changes?: Json | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          action?: string;
+          entity_type?: string;
+          entity_id?: string | null;
+          changes?: Json | null;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
@@ -443,6 +677,13 @@ export type Database = {
         | "hospital"
         | "command_center"
         | "clinic";
+      vip_movement_status:
+        | "eta_logged"
+        | "arrived"
+        | "etd_logged"
+        | "departed"
+        | "cancelled";
+      attendance_type: "time_in" | "time_out";
     };
     CompositeTypes: { [_ in never]: never };
   };

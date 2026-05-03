@@ -9,6 +9,7 @@ import {
   deleteDelegationSchema,
   updateDelegationSchema,
 } from "@/lib/schemas/delegations";
+import { recordAudit } from "./audit";
 import { fail, ok, type ActionResult } from "./types";
 import type { Database } from "@/types/database";
 
@@ -95,6 +96,14 @@ export async function createDelegation(
 
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "create",
+    entity_type: "delegation",
+    entity_id: inserted.id,
+    changes: { region_code: data.region_code, region_name: data.region_name },
+    user_id: auth.profile.id,
+  });
+
   revalidatePath(DELEGATIONS_PATH);
   return ok({ id: inserted.id });
 }
@@ -141,6 +150,14 @@ export async function updateDelegation(
     .eq("id", id);
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "update",
+    entity_type: "delegation",
+    entity_id: id,
+    changes: { region_code: data.region_code, region_name: data.region_name },
+    user_id: auth.profile.id,
+  });
+
   revalidatePath(DELEGATIONS_PATH);
   return ok();
 }
@@ -163,6 +180,14 @@ export async function deleteDelegation(
     .update({ is_active: false })
     .eq("id", parsed.data.id);
   if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "delete",
+    entity_type: "delegation",
+    entity_id: parsed.data.id,
+    changes: { is_active: false },
+    user_id: auth.profile.id,
+  });
 
   revalidatePath(DELEGATIONS_PATH);
   return ok();

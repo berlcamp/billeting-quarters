@@ -9,6 +9,7 @@ import {
   deleteSiteSchema,
   updateSiteSchema,
 } from "@/lib/schemas/sites";
+import { recordAudit } from "./audit";
 import { fail, ok, type ActionResult } from "./types";
 import type { Database } from "@/types/database";
 
@@ -71,6 +72,14 @@ export async function createSite(
 
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "create",
+    entity_type: "site",
+    entity_id: inserted.id,
+    changes: { name: data.name, site_type: data.site_type },
+    user_id: auth.profile.id,
+  });
+
   revalidatePath(SITES_PATH);
   revalidatePath(DELEGATIONS_PATH); // delegations reference BQ sites
   return ok({ id: inserted.id });
@@ -104,6 +113,14 @@ export async function updateSite(input: unknown): Promise<ActionResult<void>> {
     .eq("id", id);
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "update",
+    entity_type: "site",
+    entity_id: id,
+    changes: { name: data.name, site_type: data.site_type },
+    user_id: auth.profile.id,
+  });
+
   revalidatePath(SITES_PATH);
   revalidatePath(DELEGATIONS_PATH);
   return ok();
@@ -126,6 +143,14 @@ export async function deleteSite(input: unknown): Promise<ActionResult<void>> {
     .update({ is_active: false })
     .eq("id", parsed.data.id);
   if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "delete",
+    entity_type: "site",
+    entity_id: parsed.data.id,
+    changes: { is_active: false },
+    user_id: auth.profile.id,
+  });
 
   revalidatePath(SITES_PATH);
   revalidatePath(DELEGATIONS_PATH);

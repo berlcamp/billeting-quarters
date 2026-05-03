@@ -478,7 +478,7 @@ Every state-changing action creates an `audit_logs` entry. Use a `withAuditLog()
 6. Incident Reporting (universal entry point)
 7. Medical chain: Field → UCF → Hospital referrals
 8. Command Center realtime dashboard
-9. Notifications system
+9. Notifications system  
 
 ### Phase 2 — Pre-Palaro (Weeks 5–6)
 10. Heat Index Monitoring with auto game-suspension flag

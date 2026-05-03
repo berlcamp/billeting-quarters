@@ -48,7 +48,7 @@ export function CommandCenterOverview({
   sites,
 }: CommandCenterOverviewProps) {
   const [mapOpen, setMapOpen] = useState(true);
-  const incidents = useRealtimeIncidents(initialIncidents, {
+  useRealtimeIncidents({
     onCritical: (incident) => {
       toast.error(`CRITICAL: ${incident.title}`, {
         description: `Incident #${incident.incident_number} just opened.`,
@@ -58,6 +58,7 @@ export function CommandCenterOverview({
     },
   });
   const referrals = useRealtimeReferrals(initialReferrals);
+  const incidents = initialIncidents;
   const siteLookup = new Map(sites.map((s) => [s.id, s.name]));
 
   return (

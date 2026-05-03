@@ -11,14 +11,16 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex flex-1 min-h-0">
-      <aside className="hidden w-64 shrink-0 border-r bg-background lg:flex lg:flex-col">
+      <aside className="hidden w-64 shrink-0 border-r bg-background lg:flex lg:flex-col print:hidden">
         <div className="flex-1 overflow-y-auto">
           <SidebarNav role={profile.role} />
         </div>
       </aside>
       <div className="flex flex-1 flex-col min-w-0">
         <Topbar profile={profile} />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 print:p-0 print:overflow-visible">
+          {children}
+        </main>
       </div>
     </div>
   );

@@ -105,6 +105,51 @@ export const PATIENT_GENDER_LABELS: Record<PatientGender, string> = {
   other: "Other / unspecified",
 };
 
+export type VipMovementStatus =
+  Database["palaro"]["Enums"]["vip_movement_status"];
+
+export const VIP_MOVEMENT_STATUSES: readonly VipMovementStatus[] = [
+  "eta_logged",
+  "arrived",
+  "etd_logged",
+  "departed",
+  "cancelled",
+] as const;
+
+export const VIP_MOVEMENT_STATUS_LABELS: Record<VipMovementStatus, string> = {
+  eta_logged: "ETA logged",
+  arrived: "Arrived",
+  etd_logged: "ETD logged",
+  departed: "Departed",
+  cancelled: "Cancelled",
+};
+
+export const VIP_MOVEMENT_STATUS_BADGE: Record<VipMovementStatus, string> = {
+  eta_logged: "bg-yellow-100 text-yellow-800",
+  arrived: "bg-blue-100 text-blue-800",
+  etd_logged: "bg-violet-100 text-violet-800",
+  departed: "bg-green-100 text-green-800",
+  cancelled: "bg-gray-100 text-gray-800",
+};
+
+export const ACTIVE_VIP_STATUSES: readonly VipMovementStatus[] = [
+  "eta_logged",
+  "arrived",
+  "etd_logged",
+] as const;
+
+export type AttendanceType = Database["palaro"]["Enums"]["attendance_type"];
+
+export const ATTENDANCE_TYPE_LABELS: Record<AttendanceType, string> = {
+  time_in: "Time in",
+  time_out: "Time out",
+};
+
+export const ATTENDANCE_TYPE_BADGE: Record<AttendanceType, string> = {
+  time_in: "bg-green-100 text-green-800",
+  time_out: "bg-blue-100 text-blue-800",
+};
+
 export const AFFECTED_PERSON_ROLES = [
   "Athlete",
   "Coach",

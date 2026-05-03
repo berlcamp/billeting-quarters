@@ -15,6 +15,7 @@ import {
   submitHospitalAssessmentSchema,
   submitUcfAssessmentSchema,
 } from "@/lib/schemas/referrals";
+import { recordAudit } from "./audit";
 import { fail, ok, type ActionResult } from "./types";
 import type { Database, Json } from "@/types/database";
 
@@ -112,6 +113,14 @@ export async function acceptReferral(
     .eq("status", "pending"); // optimistic concurrency: only flip from pending
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "update",
+    entity_type: "referral",
+    entity_id: parsed.data.id,
+    changes: { status: "accepted", received_by: profile.id },
+    user_id: profile.id,
+  });
+
   revalidatePath(UCF_PATH);
   revalidatePath(`${UCF_PATH}/${parsed.data.id}`);
   return ok();
@@ -170,6 +179,14 @@ export async function submitUcfAssessment(
     .eq("id", data.id);
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "update",
+    entity_type: "referral",
+    entity_id: data.id,
+    changes: { stage: "ucf_assessment", status: "in_treatment" },
+    user_id: profile.id,
+  });
+
   revalidatePath(UCF_PATH);
   revalidatePath(`${UCF_PATH}/${data.id}`);
   return ok();
@@ -201,6 +218,14 @@ export async function dischargeReferral(
     })
     .eq("id", id);
   if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "referral",
+    entity_id: id,
+    changes: { status: "discharged" },
+    user_id: profile.id,
+  });
 
   revalidatePath(UCF_PATH);
   revalidatePath(`${UCF_PATH}/${id}`);
@@ -328,6 +353,19 @@ export async function createFieldReferral(
       .from("notifications")
       .insert(notificationRows);
   }
+
+  await recordAudit({
+    action: "create",
+    entity_type: "referral",
+    entity_id: inserted.id,
+    changes: {
+      referral_number: inserted.referral_number,
+      level: "field_to_ucf",
+      to_site_id: data.to_site_id,
+      patient_name: data.patient_name,
+    },
+    user_id: profile.id,
+  });
 
   revalidatePath(FIELD_PATH);
   revalidatePath(UCF_PATH);
@@ -477,6 +515,19 @@ export async function createUcfToHospitalReferral(
       .insert(notificationRows);
   }
 
+  await recordAudit({
+    action: "create",
+    entity_type: "referral",
+    entity_id: inserted.id,
+    changes: {
+      referral_number: inserted.referral_number,
+      level: "ucf_to_hospital",
+      source_referral_id: source.id,
+      to_site_id: data.to_site_id,
+    },
+    user_id: profile.id,
+  });
+
   revalidatePath(UCF_PATH);
   revalidatePath(`${UCF_PATH}/${source.id}`);
   revalidatePath(HOSPITAL_PATH);
@@ -616,6 +667,14 @@ export async function submitHospitalAssessment(
     .eq("id", data.id);
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "update",
+    entity_type: "referral",
+    entity_id: data.id,
+    changes: { stage: "hospital_assessment", status: "in_treatment" },
+    user_id: profile.id,
+  });
+
   revalidatePath(HOSPITAL_PATH);
   revalidatePath(`${HOSPITAL_PATH}/${data.id}`);
   return ok();
@@ -661,6 +720,14 @@ export async function admitReferral(
     .eq("id", id);
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "update",
+    entity_type: "referral",
+    entity_id: id,
+    changes: { status: "admitted" },
+    user_id: profile.id,
+  });
+
   revalidatePath(HOSPITAL_PATH);
   revalidatePath(`${HOSPITAL_PATH}/${id}`);
   return ok();
@@ -692,6 +759,14 @@ export async function rejectReferral(
     })
     .eq("id", id);
   if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "referral",
+    entity_id: id,
+    changes: { status: "rejected", reason },
+    user_id: profile.id,
+  });
 
   revalidatePath(HOSPITAL_PATH);
   revalidatePath(`${HOSPITAL_PATH}/${id}`);
@@ -761,6 +836,19 @@ export async function createHospitalAdmit(
     .select("id, referral_number")
     .single();
   if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "create",
+    entity_type: "referral",
+    entity_id: inserted.id,
+    changes: {
+      referral_number: inserted.referral_number,
+      level: "hospital_admit",
+      to_site_id: data.to_site_id,
+      patient_name: data.patient_name,
+    },
+    user_id: profile.id,
+  });
 
   revalidatePath(HOSPITAL_PATH);
   return ok({ id: inserted.id, referral_number: inserted.referral_number });

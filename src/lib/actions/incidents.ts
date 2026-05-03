@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
 import { createIncidentSchema } from "@/lib/schemas/incidents";
+import { recordAudit } from "./audit";
 import { fail, ok, type ActionResult } from "./types";
 import type { Database } from "@/types/database";
 
@@ -87,6 +88,14 @@ export async function updateIncidentStatus(
     })
     .eq("id", id);
   if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "incident",
+    entity_id: id,
+    changes: { status, resolution_notes: resolution_notes ?? null },
+    user_id: profile.id,
+  });
 
   revalidatePath(INCIDENTS_PATH);
   revalidatePath(`${INCIDENTS_PATH}/${id}`);
@@ -183,6 +192,20 @@ export async function createIncident(
       .from("notifications")
       .insert(notificationRows);
   }
+
+  await recordAudit({
+    action: "create",
+    entity_type: "incident",
+    entity_id: inserted.id,
+    changes: {
+      incident_number: inserted.incident_number,
+      category: data.category,
+      severity: data.severity,
+      title: data.title,
+      site_id: data.site_id ?? null,
+    },
+    user_id: profile.id,
+  });
 
   revalidatePath(INCIDENTS_PATH);
   return ok({ id: inserted.id, incident_number: inserted.incident_number });

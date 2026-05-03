@@ -13,7 +13,8 @@ interface LiveIncidentStatsProps {
 }
 
 export function LiveIncidentStats({ initial }: LiveIncidentStatsProps) {
-  const incidents = useRealtimeIncidents(initial);
+  useRealtimeIncidents();
+  const incidents = initial;
 
   const open = incidents.filter(
     (i) => i.status === "open" || i.status === "in_progress",

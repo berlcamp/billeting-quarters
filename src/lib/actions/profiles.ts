@@ -10,6 +10,7 @@ import {
   updateUserRoleSchema,
   updateUserStatusSchema,
 } from "@/lib/schemas/profiles";
+import { recordAudit } from "./audit";
 import { fail, ok, type ActionResult } from "./types";
 import type { Database } from "@/types/database";
 
@@ -92,6 +93,18 @@ export async function inviteUser(
 
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "create",
+    entity_type: "profile",
+    entity_id: inserted.id,
+    changes: {
+      email: data.email,
+      role: data.role,
+      status: "active",
+    },
+    user_id: auth.profile.id,
+  });
+
   revalidatePath(USERS_PATH);
   return ok({ id: inserted.id });
 }
@@ -138,6 +151,14 @@ export async function updateUserRole(
     .eq("id", user_id);
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "update",
+    entity_type: "profile",
+    entity_id: user_id,
+    changes: { role, previous_role: target?.role ?? null },
+    user_id: auth.profile.id,
+  });
+
   revalidatePath(USERS_PATH);
   return ok();
 }
@@ -178,6 +199,14 @@ export async function updateUserStatus(
     .eq("id", user_id);
   if (error) return fail(error.message);
 
+  await recordAudit({
+    action: "update",
+    entity_type: "profile",
+    entity_id: user_id,
+    changes: { status },
+    user_id: auth.profile.id,
+  });
+
   revalidatePath(USERS_PATH);
   return ok();
 }
@@ -201,6 +230,17 @@ export async function updateUserDetails(
     .update(rest)
     .eq("id", user_id);
   if (error) return fail(error.message);
+
+  const cleanedChanges = Object.fromEntries(
+    Object.entries(rest).filter(([, v]) => v !== undefined),
+  );
+  await recordAudit({
+    action: "update",
+    entity_type: "profile",
+    entity_id: user_id,
+    changes: cleanedChanges as Record<string, string | number | boolean | null>,
+    user_id: auth.profile.id,
+  });
 
   revalidatePath(USERS_PATH);
   return ok();

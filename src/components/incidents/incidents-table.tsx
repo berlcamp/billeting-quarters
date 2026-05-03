@@ -45,7 +45,7 @@ const INCIDENT_STATUSES: readonly IncidentStatus[] = [
 ];
 
 export function IncidentsTable({
-  incidents: initialIncidents,
+  incidents,
   siteLookup,
   delegationLookup,
 }: IncidentsTableProps) {
@@ -58,7 +58,7 @@ export function IncidentsTable({
   );
   const router = useRouter();
 
-  const incidents = useRealtimeIncidents(initialIncidents, {
+  useRealtimeIncidents({
     onCritical: (incident) => {
       toast.error(`CRITICAL: ${incident.title}`, {
         description: `Incident #${incident.incident_number} just opened.`,
