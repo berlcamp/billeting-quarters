@@ -676,6 +676,261 @@ export type Database = {
         };
         Relationships: [];
       };
+      vehicles: {
+        Row: {
+          id: string;
+          vehicle_code: string;
+          plate_number: string | null;
+          vehicle_type: Database["palaro"]["Enums"]["vehicle_type"];
+          make_model: string | null;
+          capacity: number | null;
+          driver_name: string | null;
+          driver_contact: string | null;
+          current_assignment: string | null;
+          qr_code_url: string | null;
+          is_active: boolean;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          vehicle_code: string;
+          plate_number?: string | null;
+          vehicle_type: Database["palaro"]["Enums"]["vehicle_type"];
+          make_model?: string | null;
+          capacity?: number | null;
+          driver_name?: string | null;
+          driver_contact?: string | null;
+          current_assignment?: string | null;
+          qr_code_url?: string | null;
+          is_active?: boolean;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          vehicle_code?: string;
+          plate_number?: string | null;
+          vehicle_type?: Database["palaro"]["Enums"]["vehicle_type"];
+          make_model?: string | null;
+          capacity?: number | null;
+          driver_name?: string | null;
+          driver_contact?: string | null;
+          current_assignment?: string | null;
+          qr_code_url?: string | null;
+          is_active?: boolean;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      vehicle_routes: {
+        Row: {
+          id: string;
+          vehicle_id: string;
+          route_name: string;
+          origin_site_id: string | null;
+          destination_site_id: string | null;
+          scheduled_time: string | null;
+          delegation_id: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          vehicle_id: string;
+          route_name: string;
+          origin_site_id?: string | null;
+          destination_site_id?: string | null;
+          scheduled_time?: string | null;
+          delegation_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          vehicle_id?: string;
+          route_name?: string;
+          origin_site_id?: string | null;
+          destination_site_id?: string | null;
+          scheduled_time?: string | null;
+          delegation_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      vehicle_logs: {
+        Row: {
+          id: string;
+          vehicle_id: string;
+          site_id: string;
+          direction: Database["palaro"]["Enums"]["vehicle_log_direction"];
+          scanned_by: string | null;
+          scanned_at: string;
+          passenger_count: number | null;
+          notes: string | null;
+        };
+        Insert: {
+          id?: string;
+          vehicle_id: string;
+          site_id: string;
+          direction: Database["palaro"]["Enums"]["vehicle_log_direction"];
+          scanned_by?: string | null;
+          scanned_at?: string;
+          passenger_count?: number | null;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          vehicle_id?: string;
+          site_id?: string;
+          direction?: Database["palaro"]["Enums"]["vehicle_log_direction"];
+          scanned_by?: string | null;
+          scanned_at?: string;
+          passenger_count?: number | null;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
+      venue_schedules: {
+        Row: {
+          id: string;
+          venue_id: string;
+          delegation_id: string;
+          sport: string | null;
+          scheduled_start: string;
+          scheduled_end: string;
+          status: Database["palaro"]["Enums"]["schedule_status"];
+          is_special_request: boolean;
+          special_request_reason: string | null;
+          approved_by: string | null;
+          approved_at: string | null;
+          booked_by: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          venue_id: string;
+          delegation_id: string;
+          sport?: string | null;
+          scheduled_start: string;
+          scheduled_end: string;
+          status?: Database["palaro"]["Enums"]["schedule_status"];
+          is_special_request?: boolean;
+          special_request_reason?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          booked_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          venue_id?: string;
+          delegation_id?: string;
+          sport?: string | null;
+          scheduled_start?: string;
+          scheduled_end?: string;
+          status?: Database["palaro"]["Enums"]["schedule_status"];
+          is_special_request?: boolean;
+          special_request_reason?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          booked_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      medical_supplies: {
+        Row: {
+          id: string;
+          name: string;
+          category: string | null;
+          unit: string;
+          current_stock: number;
+          reorder_level: number;
+          expiry_date: string | null;
+          storage_site_id: string | null;
+          notes: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          category?: string | null;
+          unit: string;
+          current_stock?: number;
+          reorder_level?: number;
+          expiry_date?: string | null;
+          storage_site_id?: string | null;
+          notes?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          category?: string | null;
+          unit?: string;
+          current_stock?: number;
+          reorder_level?: number;
+          expiry_date?: string | null;
+          storage_site_id?: string | null;
+          notes?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      supply_movements: {
+        Row: {
+          id: string;
+          supply_id: string;
+          movement_type: Database["palaro"]["Enums"]["supply_movement_type"];
+          quantity: number;
+          reason: string | null;
+          reference_type: string | null;
+          reference_id: string | null;
+          performed_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          supply_id: string;
+          movement_type: Database["palaro"]["Enums"]["supply_movement_type"];
+          quantity: number;
+          reason?: string | null;
+          reference_type?: string | null;
+          reference_id?: string | null;
+          performed_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          supply_id?: string;
+          movement_type?: Database["palaro"]["Enums"]["supply_movement_type"];
+          quantity?: number;
+          reason?: string | null;
+          reference_type?: string | null;
+          reference_id?: string | null;
+          performed_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       audit_logs: {
         Row: {
           id: string;
@@ -771,6 +1026,24 @@ export type Database = {
         | "departed"
         | "cancelled";
       attendance_type: "time_in" | "time_out";
+      vehicle_type:
+        | "bus"
+        | "van"
+        | "multicab"
+        | "pedicab"
+        | "ambulance"
+        | "service_vehicle";
+      vehicle_log_direction: "in" | "out";
+      schedule_status:
+        | "booked"
+        | "special_request"
+        | "cancelled"
+        | "completed";
+      supply_movement_type:
+        | "stock_in"
+        | "stock_out"
+        | "adjustment"
+        | "expired";
     };
     CompositeTypes: { [_ in never]: never };
   };

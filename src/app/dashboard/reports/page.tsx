@@ -19,8 +19,16 @@ import { getCurrentProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
 import { todayInManila } from "@/lib/timezone";
 import { DailyIncidentReportCard } from "@/components/reports/daily-incident-report-card";
+import { DateRangeReportCard } from "@/components/reports/date-range-report-card";
 import { RecentAuditLog } from "@/components/reports/recent-audit-log";
 import { getRecentAuditLogs } from "@/lib/actions/audit";
+
+function shiftDate(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
 
 export default async function ReportsPage() {
   const profile = await getCurrentProfile();
@@ -31,6 +39,7 @@ export default async function ReportsPage() {
   }
 
   const today = todayInManila();
+  const weekAgo = shiftDate(today, -6);
   const auditResult = await getRecentAuditLogs(20);
   const auditLogs = auditResult.error ? [] : (auditResult.data ?? []);
 
@@ -38,21 +47,37 @@ export default async function ReportsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Reports"
-        description="Daily summaries, audit trail, and operational analytics."
+        description="Daily summaries, multi-day analytics, and audit trail."
       />
 
       <DailyIncidentReportCard defaultDate={today} />
 
+      <DateRangeReportCard
+        title="Medical chain throughput"
+        description="Field → UCF → Hospital flow metrics for any window. Time-to-accept, time-to-discharge (median + p90), hospitalization rate, and busiest receivers."
+        defaultFrom={weekAgo}
+        defaultTo={today}
+        hrefBase="/dashboard/reports/medical-chain"
+      />
+
+      <DateRangeReportCard
+        title="Operations snapshot"
+        description="Multi-day trend across incidents, referrals, and clinic visits. Stacked bar chart with daily breakdown table."
+        defaultFrom={weekAgo}
+        defaultTo={today}
+        hrefBase="/dashboard/reports/operations"
+      />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <PlaceholderReportCard
           icon={Activity}
-          title="Medical chain throughput"
-          description="Field → UCF → Hospital flow metrics. Time-to-accept, time-to-discharge, hospitalization rates."
+          title="Heat-index trends"
+          description="Daily peak heat indexes per playing venue, with suspension-event timeline overlay."
         />
         <PlaceholderReportCard
           icon={ClipboardList}
-          title="Incident trends"
-          description="Multi-day breakdowns by category, severity, and venue. Heatmap overlays."
+          title="Vehicle utilization"
+          description="In/out scan volume per vehicle and per site. Identifies overcommitted shuttles."
         />
         <PlaceholderReportCard
           icon={CalendarDays}

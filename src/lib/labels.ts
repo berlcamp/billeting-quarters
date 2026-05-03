@@ -159,3 +159,130 @@ export const AFFECTED_PERSON_ROLES = [
   "Staff",
   "Other",
 ] as const;
+
+export type VehicleType = Database["palaro"]["Enums"]["vehicle_type"];
+
+export const VEHICLE_TYPES: readonly VehicleType[] = [
+  "bus",
+  "van",
+  "multicab",
+  "pedicab",
+  "ambulance",
+  "service_vehicle",
+] as const;
+
+export const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
+  bus: "Bus",
+  van: "Van",
+  multicab: "Multicab",
+  pedicab: "Pedicab",
+  ambulance: "Ambulance",
+  service_vehicle: "Service vehicle",
+};
+
+export type VehicleLogDirection =
+  Database["palaro"]["Enums"]["vehicle_log_direction"];
+
+export const VEHICLE_LOG_DIRECTION_LABELS: Record<VehicleLogDirection, string> =
+  {
+    in: "Check-in",
+    out: "Check-out",
+  };
+
+export const VEHICLE_LOG_DIRECTION_BADGE: Record<VehicleLogDirection, string> =
+  {
+    in: "bg-green-100 text-green-800",
+    out: "bg-blue-100 text-blue-800",
+  };
+
+export type ScheduleStatus = Database["palaro"]["Enums"]["schedule_status"];
+
+export const SCHEDULE_STATUSES: readonly ScheduleStatus[] = [
+  "booked",
+  "special_request",
+  "cancelled",
+  "completed",
+] as const;
+
+export const SCHEDULE_STATUS_LABELS: Record<ScheduleStatus, string> = {
+  booked: "Booked",
+  special_request: "Special request",
+  cancelled: "Cancelled",
+  completed: "Completed",
+};
+
+export const SCHEDULE_STATUS_BADGE: Record<ScheduleStatus, string> = {
+  booked: "bg-blue-100 text-blue-800",
+  special_request: "bg-yellow-100 text-yellow-800",
+  cancelled: "bg-gray-100 text-gray-800",
+  completed: "bg-green-100 text-green-800",
+};
+
+// Common Palaro sports — used as combobox suggestions when booking a venue.
+export const PALARO_SPORTS = [
+  "Athletics",
+  "Arnis",
+  "Badminton",
+  "Baseball",
+  "Basketball",
+  "Billiards",
+  "Boxing",
+  "Chess",
+  "Football",
+  "Futsal",
+  "Gymnastics",
+  "Karatedo",
+  "Pencak Silat",
+  "Sepak Takraw",
+  "Softball",
+  "Swimming",
+  "Table Tennis",
+  "Taekwondo",
+  "Tennis",
+  "Volleyball",
+  "Wrestling",
+  "Wushu",
+] as const;
+
+export type SupplyMovementType =
+  Database["palaro"]["Enums"]["supply_movement_type"];
+
+export const SUPPLY_MOVEMENT_TYPES: readonly SupplyMovementType[] = [
+  "stock_in",
+  "stock_out",
+  "adjustment",
+  "expired",
+] as const;
+
+export const SUPPLY_MOVEMENT_TYPE_LABELS: Record<SupplyMovementType, string> = {
+  stock_in: "Stock in",
+  stock_out: "Stock out",
+  adjustment: "Adjustment",
+  expired: "Expired / discarded",
+};
+
+export const SUPPLY_MOVEMENT_TYPE_BADGE: Record<SupplyMovementType, string> = {
+  stock_in: "bg-green-100 text-green-800",
+  stock_out: "bg-blue-100 text-blue-800",
+  adjustment: "bg-yellow-100 text-yellow-800",
+  expired: "bg-red-100 text-red-800",
+};
+
+export const SUPPLY_CATEGORIES = [
+  "Medication",
+  "Consumable",
+  "Equipment",
+  "First aid",
+  "Other",
+] as const;
+
+export const SUPPLY_UNITS = [
+  "pcs",
+  "box",
+  "bottle",
+  "vial",
+  "tablet",
+  "pack",
+  "roll",
+  "set",
+] as const;
