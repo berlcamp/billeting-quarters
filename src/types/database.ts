@@ -523,6 +523,93 @@ export type Database = {
         };
         Relationships: [];
       };
+      clinic_patients: {
+        Row: {
+          id: string;
+          patient_number: string;
+          full_name: string;
+          age: number | null;
+          gender: string | null;
+          delegation_id: string | null;
+          phone: string | null;
+          emergency_contact: string | null;
+          allergies: string | null;
+          medical_history: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          patient_number?: string;
+          full_name: string;
+          age?: number | null;
+          gender?: string | null;
+          delegation_id?: string | null;
+          phone?: string | null;
+          emergency_contact?: string | null;
+          allergies?: string | null;
+          medical_history?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          patient_number?: string;
+          full_name?: string;
+          age?: number | null;
+          gender?: string | null;
+          delegation_id?: string | null;
+          phone?: string | null;
+          emergency_contact?: string | null;
+          allergies?: string | null;
+          medical_history?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      clinic_visits: {
+        Row: {
+          id: string;
+          patient_id: string;
+          site_id: string;
+          visit_date: string;
+          vital_signs: Json | null;
+          chief_complaint: string | null;
+          diagnosis: string | null;
+          prescription: string | null;
+          notes: string | null;
+          attended_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          patient_id: string;
+          site_id: string;
+          visit_date?: string;
+          vital_signs?: Json | null;
+          chief_complaint?: string | null;
+          diagnosis?: string | null;
+          prescription?: string | null;
+          notes?: string | null;
+          attended_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          patient_id?: string;
+          site_id?: string;
+          visit_date?: string;
+          vital_signs?: Json | null;
+          chief_complaint?: string | null;
+          diagnosis?: string | null;
+          prescription?: string | null;
+          notes?: string | null;
+          attended_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       duty_schedules: {
         Row: {
           id: string;

@@ -22,7 +22,7 @@ export default async function NotAuthorizedPage({
             Access not authorized
           </CardTitle>
           <CardDescription>
-            Your Google account is not on the PPDMS access list.
+            Your Google account is not on the Palaro Command access list.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

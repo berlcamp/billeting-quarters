@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PPDMS — Palarong Pambansa Delegation Monitoring System",
+  title: "Palaro Command",
   description:
     "Real-time operations platform for monitoring delegations during the Palarong Pambansa national sports event.",
 };

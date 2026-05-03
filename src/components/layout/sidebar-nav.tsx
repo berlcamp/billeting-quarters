@@ -22,7 +22,7 @@ export function SidebarNav({ role, onNavigate }: SidebarNavProps) {
           onClick={onNavigate}
           className="flex flex-col leading-tight"
         >
-          <span className="text-lg font-bold tracking-tight">PPDMS</span>
+          <span className="text-lg font-bold tracking-tight">Palaro Command</span>
           <span className="text-xs text-muted-foreground">
             Palarong Pambansa
           </span>

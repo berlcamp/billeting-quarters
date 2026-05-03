@@ -38,7 +38,7 @@ export function MobileNav({ role }: MobileNavProps) {
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="sr-only">
           <SheetTitle>Navigation</SheetTitle>
-          <SheetDescription>PPDMS site navigation</SheetDescription>
+          <SheetDescription>Palaro Command site navigation</SheetDescription>
         </SheetHeader>
         <div className="overflow-y-auto h-full">
           <SidebarNav role={role} onNavigate={() => setOpen(false)} />

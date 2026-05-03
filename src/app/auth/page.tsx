@@ -30,10 +30,10 @@ export default async function AuthPage({
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
           <CardTitle className="text-2xl font-bold tracking-tight">
-            PPDMS
+            Palaro Command
           </CardTitle>
           <CardDescription>
-            Palarong Pambansa Delegation Monitoring System
+            Palarong Pambansa Operations Platform
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

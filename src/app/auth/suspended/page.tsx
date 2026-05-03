@@ -18,7 +18,7 @@ export default async function SuspendedPage() {
             Account suspended
           </CardTitle>
           <CardDescription>
-            Your PPDMS account has been suspended.
+            Your Palaro Command account has been suspended.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

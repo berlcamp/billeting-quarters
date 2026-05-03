@@ -341,7 +341,7 @@ export async function scanAttendance(
     }
   }
   if (!personnelId) {
-    return fail("Scan value is not a recognized PPDMS ID.");
+    return fail("Scan value is not a recognized Palaro Command ID.");
   }
 
   const admin = createAdminClient();
