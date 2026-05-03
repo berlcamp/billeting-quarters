@@ -1,7 +1,6 @@
-import { Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "./breadcrumbs";
 import { MobileNav } from "./mobile-nav";
+import { NotificationBell } from "./notification-bell";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
 import type { Profile } from "@/lib/auth/access-check";
@@ -18,9 +17,7 @@ export function Topbar({ profile }: TopbarProps) {
         <Breadcrumbs />
       </div>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" aria-label="Notifications">
-          <Bell className="size-4" />
-        </Button>
+        <NotificationBell profileId={profile.id} role={profile.role} />
         <ThemeToggle />
         <UserMenu
           email={profile.email}

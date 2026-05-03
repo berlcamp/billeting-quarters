@@ -134,6 +134,56 @@ export async function createIncident(
 
   if (error) return fail(error.message);
 
+  // Notification fan-out:
+  //  - severity >= medium → broadcast to command_center
+  //  - severity = critical → also broadcast to medical_field
+  // Best-effort — don't fail the create if notification insert errors.
+  type NotificationInsert =
+    Database["palaro"]["Tables"]["notifications"]["Insert"];
+  const notificationRows: NotificationInsert[] = [];
+  if (
+    data.severity === "medium" ||
+    data.severity === "high" ||
+    data.severity === "critical"
+  ) {
+    const sev =
+      data.severity === "critical"
+        ? "critical"
+        : data.severity === "high"
+          ? "warning"
+          : "info";
+    notificationRows.push({
+      recipient_id: null,
+      recipient_role: "command_center",
+      title: `${data.severity.toUpperCase()}: ${data.title}`,
+      body: data.description?.slice(0, 240) ?? null,
+      category: "incident",
+      severity: sev,
+      reference_type: "incident",
+      reference_id: inserted.id,
+      link_url: `${INCIDENTS_PATH}/${inserted.id}`,
+    });
+  }
+  if (data.severity === "critical") {
+    notificationRows.push({
+      recipient_id: null,
+      recipient_role: "medical_field",
+      title: `CRITICAL incident: ${data.title}`,
+      body: data.description?.slice(0, 240) ?? null,
+      category: "incident",
+      severity: "critical",
+      reference_type: "incident",
+      reference_id: inserted.id,
+      link_url: `${INCIDENTS_PATH}/${inserted.id}`,
+    });
+  }
+  if (notificationRows.length > 0) {
+    await admin
+      .schema("palaro")
+      .from("notifications")
+      .insert(notificationRows);
+  }
+
   revalidatePath(INCIDENTS_PATH);
   return ok({ id: inserted.id, incident_number: inserted.incident_number });
 }
