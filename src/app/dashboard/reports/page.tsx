@@ -1,11 +1,5 @@
 import Link from "next/link";
-import {
-  Activity,
-  CalendarDays,
-  ClipboardList,
-  FileBarChart,
-  Lock,
-} from "lucide-react";
+import { Lock } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Forbidden } from "@/components/shared/forbidden";
 import {
@@ -68,23 +62,29 @@ export default async function ReportsPage() {
         hrefBase="/dashboard/reports/operations"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <PlaceholderReportCard
-          icon={Activity}
-          title="Heat-index trends"
-          description="Daily peak heat indexes per playing venue, with suspension-event timeline overlay."
-        />
-        <PlaceholderReportCard
-          icon={ClipboardList}
-          title="Vehicle utilization"
-          description="In/out scan volume per vehicle and per site. Identifies overcommitted shuttles."
-        />
-        <PlaceholderReportCard
-          icon={CalendarDays}
-          title="Per-delegation summary"
-          description="All operational events grouped by region (NCR, CAR, …). Read-only for delegation heads."
-        />
-      </div>
+      <DateRangeReportCard
+        title="Heat-index trends"
+        description="Daily peak heat indexes per playing venue, plus a chronological list of every game-suspension event in the window."
+        defaultFrom={weekAgo}
+        defaultTo={today}
+        hrefBase="/dashboard/reports/heat-trends"
+      />
+
+      <DateRangeReportCard
+        title="Vehicle utilization"
+        description="In/out scan volume per vehicle and per site. Surfaces overcommitted shuttles (≥ p90) and idle vehicles."
+        defaultFrom={weekAgo}
+        defaultTo={today}
+        hrefBase="/dashboard/reports/vehicle-utilization"
+      />
+
+      <DateRangeReportCard
+        title="Per-delegation summary"
+        description="All operational events grouped by region (NCR, CAR, …). Includes incidents, referrals, VIP movements, bookings, and clinic visits."
+        defaultFrom={weekAgo}
+        defaultTo={today}
+        hrefBase="/dashboard/reports/per-delegation"
+      />
 
       <Card>
         <CardHeader>
@@ -113,29 +113,3 @@ export default async function ReportsPage() {
   );
 }
 
-function PlaceholderReportCard({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof FileBarChart;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <Icon className="size-4 text-muted-foreground" />
-          {title}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-          Coming soon
-        </span>
-      </CardContent>
-    </Card>
-  );
-}

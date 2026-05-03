@@ -286,3 +286,61 @@ export const SUPPLY_UNITS = [
   "roll",
   "set",
 ] as const;
+
+export type GarbageCollectionStatus =
+  Database["palaro"]["Enums"]["garbage_collection_status"];
+
+export const GARBAGE_STATUSES: readonly GarbageCollectionStatus[] = [
+  "scheduled",
+  "collected",
+  "missed",
+  "special_request",
+] as const;
+
+export const GARBAGE_STATUS_LABELS: Record<GarbageCollectionStatus, string> = {
+  scheduled: "Scheduled",
+  collected: "Collected",
+  missed: "Missed",
+  special_request: "Special request",
+};
+
+export const GARBAGE_STATUS_BADGE: Record<GarbageCollectionStatus, string> = {
+  scheduled: "bg-blue-100 text-blue-800",
+  collected: "bg-green-100 text-green-800",
+  missed: "bg-red-100 text-red-800",
+  special_request: "bg-yellow-100 text-yellow-800",
+};
+
+// Food request lifecycle is a free-form TEXT column on the table — these are
+// the values the app produces. Anything else from a stale row maps to "other".
+export const FOOD_REQUEST_STATUSES = [
+  "pending",
+  "confirmed",
+  "delivered",
+  "cancelled",
+] as const;
+
+export type FoodRequestStatus = (typeof FOOD_REQUEST_STATUSES)[number];
+
+export const FOOD_REQUEST_STATUS_LABELS: Record<FoodRequestStatus, string> = {
+  pending: "Pending",
+  confirmed: "Confirmed",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
+export const FOOD_REQUEST_STATUS_BADGE: Record<FoodRequestStatus, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  confirmed: "bg-blue-100 text-blue-800",
+  delivered: "bg-green-100 text-green-800",
+  cancelled: "bg-gray-100 text-gray-800",
+};
+
+export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
+
+export const MEAL_TYPE_LABELS: Record<(typeof MEAL_TYPES)[number], string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+  snack: "Snack",
+};

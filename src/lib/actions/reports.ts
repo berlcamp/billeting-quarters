@@ -436,3 +436,455 @@ export async function getOperationsSnapshot(
 
   return ok({ from: fromDate, to: toDate, days, totals });
 }
+
+// =============================================================================
+// HEAT-INDEX TRENDS
+// =============================================================================
+
+export interface HeatTrendsReport {
+  from: string;
+  to: string;
+  // Per-venue daily peaks. Long-form so the renderer can pivot easily.
+  rows: Array<{
+    site_id: string;
+    site_name: string;
+    days: Array<{
+      date: string;
+      max_heat_c: number | null;
+      max_danger: string | null;
+      suspension_recommended: boolean;
+    }>;
+    overall_peak_c: number | null;
+    suspension_days: number;
+  }>;
+  // Suspension events in the window — each reading where the flag was set.
+  suspension_events: Array<{
+    id: string;
+    site_id: string;
+    site_name: string;
+    recorded_at: string;
+    heat_index_c: number | null;
+    danger_level: string | null;
+  }>;
+}
+
+const DANGER_RANK: Record<string, number> = {
+  caution: 1,
+  extreme_caution: 2,
+  danger: 3,
+  extreme_danger: 4,
+};
+
+export async function getHeatTrendsReport(
+  fromDate: string,
+  toDate: string,
+): Promise<ActionResult<HeatTrendsReport>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (!hasPermission(profile, "reports.view")) {
+    return fail("You don't have permission to view reports.");
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+    return fail("Invalid dates — expected YYYY-MM-DD.");
+  }
+  if (fromDate > toDate) return fail("From-date must be on or before to-date.");
+
+  const { startUtc } = manilaDayBoundsUtc(fromDate);
+  const { endUtc } = manilaDayBoundsUtc(toDate);
+
+  const admin = createAdminClient();
+  const [readingsRes, sitesRes] = await Promise.all([
+    admin
+      .schema("palaro")
+      .from("heat_index_readings")
+      .select(
+        "id, site_id, recorded_at, heat_index_c, danger_level, game_suspension_recommended",
+      )
+      .gte("recorded_at", startUtc)
+      .lt("recorded_at", endUtc)
+      .order("recorded_at", { ascending: true }),
+    admin.schema("palaro").from("sites").select("id, name"),
+  ]);
+  if (readingsRes.error) return fail(readingsRes.error.message);
+  if (sitesRes.error) return fail(sitesRes.error.message);
+
+  const siteName = new Map((sitesRes.data ?? []).map((s) => [s.id, s.name]));
+  const dates = listDates(fromDate, toDate);
+
+  // Aggregate per (site, date): max heat + worst danger.
+  const buckets = new Map<
+    string,
+    Map<
+      string,
+      { max_heat_c: number | null; worst_danger: string | null; suspension: boolean }
+    >
+  >();
+  const suspension_events: HeatTrendsReport["suspension_events"] = [];
+
+  for (const r of readingsRes.data ?? []) {
+    const date = manilaYmdFromUtc(r.recorded_at);
+    let perSite = buckets.get(r.site_id);
+    if (!perSite) {
+      perSite = new Map();
+      buckets.set(r.site_id, perSite);
+    }
+    const cur = perSite.get(date) ?? {
+      max_heat_c: null,
+      worst_danger: null,
+      suspension: false,
+    };
+    if (
+      r.heat_index_c !== null &&
+      (cur.max_heat_c === null || r.heat_index_c > cur.max_heat_c)
+    ) {
+      cur.max_heat_c = r.heat_index_c;
+    }
+    if (
+      r.danger_level &&
+      (cur.worst_danger === null ||
+        (DANGER_RANK[r.danger_level] ?? 0) >
+          (DANGER_RANK[cur.worst_danger] ?? 0))
+    ) {
+      cur.worst_danger = r.danger_level;
+    }
+    if (r.game_suspension_recommended) cur.suspension = true;
+    perSite.set(date, cur);
+
+    if (r.game_suspension_recommended) {
+      suspension_events.push({
+        id: r.id,
+        site_id: r.site_id,
+        site_name: siteName.get(r.site_id) ?? "Unknown site",
+        recorded_at: r.recorded_at,
+        heat_index_c: r.heat_index_c,
+        danger_level: r.danger_level,
+      });
+    }
+  }
+
+  const rows: HeatTrendsReport["rows"] = Array.from(buckets.entries())
+    .map(([site_id, perSite]) => {
+      const days = dates.map((date) => {
+        const v = perSite.get(date);
+        return {
+          date,
+          max_heat_c: v?.max_heat_c ?? null,
+          max_danger: v?.worst_danger ?? null,
+          suspension_recommended: v?.suspension ?? false,
+        };
+      });
+      const overall_peak_c = days.reduce<number | null>(
+        (acc, d) =>
+          d.max_heat_c === null
+            ? acc
+            : acc === null || d.max_heat_c > acc
+              ? d.max_heat_c
+              : acc,
+        null,
+      );
+      const suspension_days = days.filter((d) => d.suspension_recommended)
+        .length;
+      return {
+        site_id,
+        site_name: siteName.get(site_id) ?? "Unknown site",
+        days,
+        overall_peak_c,
+        suspension_days,
+      };
+    })
+    .sort((a, b) => (b.overall_peak_c ?? 0) - (a.overall_peak_c ?? 0));
+
+  return ok({ from: fromDate, to: toDate, rows, suspension_events });
+}
+
+// =============================================================================
+// VEHICLE UTILIZATION
+// =============================================================================
+
+export interface VehicleUtilizationReport {
+  from: string;
+  to: string;
+  totals: {
+    scans: number;
+    in_scans: number;
+    out_scans: number;
+  };
+  per_vehicle: Array<{
+    vehicle_id: string;
+    vehicle_code: string;
+    vehicle_type: string;
+    scans: number;
+    in_scans: number;
+    out_scans: number;
+    last_scan_at: string | null;
+  }>;
+  per_site: Array<{
+    site_id: string;
+    site_name: string;
+    scans: number;
+  }>;
+}
+
+export async function getVehicleUtilizationReport(
+  fromDate: string,
+  toDate: string,
+): Promise<ActionResult<VehicleUtilizationReport>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (!hasPermission(profile, "reports.view")) {
+    return fail("You don't have permission to view reports.");
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+    return fail("Invalid dates — expected YYYY-MM-DD.");
+  }
+  if (fromDate > toDate) return fail("From-date must be on or before to-date.");
+
+  const { startUtc } = manilaDayBoundsUtc(fromDate);
+  const { endUtc } = manilaDayBoundsUtc(toDate);
+
+  const admin = createAdminClient();
+  const [logsRes, vehiclesRes, sitesRes] = await Promise.all([
+    admin
+      .schema("palaro")
+      .from("vehicle_logs")
+      .select("id, vehicle_id, site_id, direction, scanned_at")
+      .gte("scanned_at", startUtc)
+      .lt("scanned_at", endUtc),
+    admin
+      .schema("palaro")
+      .from("vehicles")
+      .select("id, vehicle_code, vehicle_type"),
+    admin.schema("palaro").from("sites").select("id, name"),
+  ]);
+  if (logsRes.error) return fail(logsRes.error.message);
+  if (vehiclesRes.error) return fail(vehiclesRes.error.message);
+  if (sitesRes.error) return fail(sitesRes.error.message);
+
+  const vehicles = vehiclesRes.data ?? [];
+  const siteName = new Map((sitesRes.data ?? []).map((s) => [s.id, s.name]));
+  const logs = logsRes.data ?? [];
+
+  type Bucket = {
+    scans: number;
+    in_scans: number;
+    out_scans: number;
+    last_scan_at: string | null;
+  };
+  const perVehicle = new Map<string, Bucket>();
+  const perSite = new Map<string, number>();
+  let totalIn = 0;
+  let totalOut = 0;
+
+  for (const l of logs) {
+    const cur = perVehicle.get(l.vehicle_id) ?? {
+      scans: 0,
+      in_scans: 0,
+      out_scans: 0,
+      last_scan_at: null,
+    };
+    cur.scans += 1;
+    if (l.direction === "in") {
+      cur.in_scans += 1;
+      totalIn += 1;
+    } else {
+      cur.out_scans += 1;
+      totalOut += 1;
+    }
+    if (cur.last_scan_at === null || l.scanned_at > cur.last_scan_at) {
+      cur.last_scan_at = l.scanned_at;
+    }
+    perVehicle.set(l.vehicle_id, cur);
+
+    perSite.set(l.site_id, (perSite.get(l.site_id) ?? 0) + 1);
+  }
+
+  const per_vehicle: VehicleUtilizationReport["per_vehicle"] = vehicles
+    .map((v) => {
+      const b = perVehicle.get(v.id) ?? {
+        scans: 0,
+        in_scans: 0,
+        out_scans: 0,
+        last_scan_at: null,
+      };
+      return {
+        vehicle_id: v.id,
+        vehicle_code: v.vehicle_code,
+        vehicle_type: v.vehicle_type,
+        ...b,
+      };
+    })
+    .sort((a, b) => b.scans - a.scans);
+
+  const per_site: VehicleUtilizationReport["per_site"] = Array.from(
+    perSite.entries(),
+  )
+    .map(([site_id, scans]) => ({
+      site_id,
+      site_name: siteName.get(site_id) ?? "Unknown site",
+      scans,
+    }))
+    .sort((a, b) => b.scans - a.scans);
+
+  return ok({
+    from: fromDate,
+    to: toDate,
+    totals: {
+      scans: logs.length,
+      in_scans: totalIn,
+      out_scans: totalOut,
+    },
+    per_vehicle,
+    per_site,
+  });
+}
+
+// =============================================================================
+// PER-DELEGATION SUMMARY
+// =============================================================================
+
+export interface DelegationSummaryReport {
+  from: string;
+  to: string;
+  rows: Array<{
+    delegation_id: string;
+    region_code: string;
+    region_name: string;
+    incidents: number;
+    referrals: number;
+    vip_movements: number;
+    venue_bookings: number;
+    clinic_visits: number;
+  }>;
+}
+
+export async function getDelegationSummaryReport(
+  fromDate: string,
+  toDate: string,
+): Promise<ActionResult<DelegationSummaryReport>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (!hasPermission(profile, "reports.view")) {
+    return fail("You don't have permission to view reports.");
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+    return fail("Invalid dates — expected YYYY-MM-DD.");
+  }
+  if (fromDate > toDate) return fail("From-date must be on or before to-date.");
+
+  const { startUtc } = manilaDayBoundsUtc(fromDate);
+  const { endUtc } = manilaDayBoundsUtc(toDate);
+
+  const admin = createAdminClient();
+  const [delsRes, incRes, refRes, vipMoveRes, vipPersonRes, venueRes, clinicRes, patientRes] =
+    await Promise.all([
+      admin
+        .schema("palaro")
+        .from("delegations")
+        .select("id, region_code, region_name")
+        .eq("is_active", true)
+        .order("region_code"),
+      admin
+        .schema("palaro")
+        .from("incidents")
+        .select("id, delegation_id, reported_at")
+        .gte("reported_at", startUtc)
+        .lt("reported_at", endUtc),
+      admin
+        .schema("palaro")
+        .from("referrals")
+        .select("id, delegation_id, referred_at")
+        .gte("referred_at", startUtc)
+        .lt("referred_at", endUtc),
+      admin
+        .schema("palaro")
+        .from("vip_movements")
+        .select("id, vip_id, created_at")
+        .gte("created_at", startUtc)
+        .lt("created_at", endUtc),
+      admin
+        .schema("palaro")
+        .from("vip_persons")
+        .select("id, delegation_id"),
+      admin
+        .schema("palaro")
+        .from("venue_schedules")
+        .select("id, delegation_id, scheduled_start")
+        .gte("scheduled_start", startUtc)
+        .lt("scheduled_start", endUtc),
+      admin
+        .schema("palaro")
+        .from("clinic_visits")
+        .select("id, patient_id, visit_date")
+        .gte("visit_date", startUtc)
+        .lt("visit_date", endUtc),
+      admin
+        .schema("palaro")
+        .from("clinic_patients")
+        .select("id, delegation_id"),
+    ]);
+  if (delsRes.error) return fail(delsRes.error.message);
+  if (incRes.error) return fail(incRes.error.message);
+  if (refRes.error) return fail(refRes.error.message);
+  if (vipMoveRes.error) return fail(vipMoveRes.error.message);
+  if (vipPersonRes.error) return fail(vipPersonRes.error.message);
+  if (venueRes.error) return fail(venueRes.error.message);
+  if (clinicRes.error) return fail(clinicRes.error.message);
+  if (patientRes.error) return fail(patientRes.error.message);
+
+  const delegations = delsRes.data ?? [];
+
+  type DelBucket = {
+    incidents: number;
+    referrals: number;
+    vip_movements: number;
+    venue_bookings: number;
+    clinic_visits: number;
+  };
+  const empty: DelBucket = {
+    incidents: 0,
+    referrals: 0,
+    vip_movements: 0,
+    venue_bookings: 0,
+    clinic_visits: 0,
+  };
+  const buckets = new Map<string, DelBucket>(
+    delegations.map((d) => [d.id, { ...empty }]),
+  );
+
+  function bump(key: string | null, field: keyof DelBucket) {
+    if (!key) return;
+    const b = buckets.get(key);
+    if (!b) return;
+    b[field] += 1;
+  }
+
+  for (const inc of incRes.data ?? []) bump(inc.delegation_id, "incidents");
+  for (const ref of refRes.data ?? []) bump(ref.delegation_id, "referrals");
+  for (const v of venueRes.data ?? []) bump(v.delegation_id, "venue_bookings");
+
+  // VIP movements link via vip_persons.delegation_id; clinic visits via clinic_patients.delegation_id.
+  const vipDelByPerson = new Map(
+    (vipPersonRes.data ?? []).map((p) => [p.id, p.delegation_id]),
+  );
+  for (const m of vipMoveRes.data ?? []) {
+    bump(vipDelByPerson.get(m.vip_id) ?? null, "vip_movements");
+  }
+  const delByPatient = new Map(
+    (patientRes.data ?? []).map((p) => [p.id, p.delegation_id]),
+  );
+  for (const v of clinicRes.data ?? []) {
+    bump(delByPatient.get(v.patient_id) ?? null, "clinic_visits");
+  }
+
+  const rows: DelegationSummaryReport["rows"] = delegations.map((d) => ({
+    delegation_id: d.id,
+    region_code: d.region_code,
+    region_name: d.region_name,
+    ...(buckets.get(d.id) ?? empty),
+  }));
+
+  return ok({ from: fromDate, to: toDate, rows });
+}

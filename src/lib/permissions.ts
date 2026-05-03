@@ -70,6 +70,10 @@ export const PERMISSIONS = [
   "delegations.manage",
   "reports.view",
   "admin.manage",
+  "garbage.log",
+  "garbage.manage",
+  "food.request",
+  "food.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -94,6 +98,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "sites.manage",
     "delegations.manage",
     "reports.view",
+    "garbage.manage",
+    "food.manage",
   ],
   medical_field: [
     "incident.create",
@@ -123,18 +129,28 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "supplies.manage",
   ],
   protocol_officer: ["incident.view", "vip.manage"],
-  logistics_officer: ["incident.view", "vehicle.manage"],
+  logistics_officer: [
+    "incident.view",
+    "vehicle.manage",
+    "garbage.manage",
+    "food.manage",
+  ],
   personnel_admin: ["personnel.manage", "attendance.record"],
   venue_manager: [
     "incident.view",
     "venue.book",
     "venue.approve_special",
     "heat_index.record",
+    "food.request",
   ],
-  delegation_head: ["incident.view"],
+  delegation_head: ["incident.view", "food.request"],
   transportation_dispatcher: ["vehicle.manage", "vehicle.scan"],
-  garbage_logger: ["incident.create", "incident.view"],
-  food_supplier_admin: ["incident.view"],
+  garbage_logger: [
+    "incident.create",
+    "incident.view",
+    "garbage.log",
+  ],
+  food_supplier_admin: ["incident.view", "food.manage"],
 };
 
 type ProfileLike = { role: UserRole | null } | null | undefined;

@@ -967,6 +967,123 @@ export type Database = {
         };
         Relationships: [];
       };
+      garbage_collections: {
+        Row: {
+          id: string;
+          site_id: string;
+          scheduled_at: string;
+          collected_at: string | null;
+          status: Database["palaro"]["Enums"]["garbage_collection_status"];
+          is_special_request: boolean;
+          collector_name: string | null;
+          notes: string | null;
+          logged_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          scheduled_at: string;
+          collected_at?: string | null;
+          status?: Database["palaro"]["Enums"]["garbage_collection_status"];
+          is_special_request?: boolean;
+          collector_name?: string | null;
+          notes?: string | null;
+          logged_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          site_id?: string;
+          scheduled_at?: string;
+          collected_at?: string | null;
+          status?: Database["palaro"]["Enums"]["garbage_collection_status"];
+          is_special_request?: boolean;
+          collector_name?: string | null;
+          notes?: string | null;
+          logged_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      food_suppliers: {
+        Row: {
+          id: string;
+          name: string;
+          contact_person: string | null;
+          contact_number: string | null;
+          email: string | null;
+          cuisine_type: string | null;
+          capacity_meals_per_day: number | null;
+          is_active: boolean;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          contact_person?: string | null;
+          contact_number?: string | null;
+          email?: string | null;
+          cuisine_type?: string | null;
+          capacity_meals_per_day?: number | null;
+          is_active?: boolean;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          contact_person?: string | null;
+          contact_number?: string | null;
+          email?: string | null;
+          cuisine_type?: string | null;
+          capacity_meals_per_day?: number | null;
+          is_active?: boolean;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      food_requests: {
+        Row: {
+          id: string;
+          bq_id: string;
+          supplier_id: string | null;
+          meal_type: string | null;
+          quantity_meals: number;
+          required_at: string;
+          status: string;
+          notes: string | null;
+          requested_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          bq_id: string;
+          supplier_id?: string | null;
+          meal_type?: string | null;
+          quantity_meals: number;
+          required_at: string;
+          status?: string;
+          notes?: string | null;
+          requested_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          bq_id?: string;
+          supplier_id?: string | null;
+          meal_type?: string | null;
+          quantity_meals?: number;
+          required_at?: string;
+          status?: string;
+          notes?: string | null;
+          requested_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
@@ -1044,6 +1161,11 @@ export type Database = {
         | "stock_out"
         | "adjustment"
         | "expired";
+      garbage_collection_status:
+        | "scheduled"
+        | "collected"
+        | "missed"
+        | "special_request";
     };
     CompositeTypes: { [_ in never]: never };
   };
