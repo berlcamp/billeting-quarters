@@ -35,7 +35,7 @@ export function MobileNav({ role }: MobileNavProps) {
       >
         <Menu className="size-5" />
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0">
+      <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border">
         <SheetHeader className="sr-only">
           <SheetTitle>Navigation</SheetTitle>
           <SheetDescription>Palaro Command site navigation</SheetDescription>
