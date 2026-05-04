@@ -372,6 +372,21 @@ export async function scanAttendance(
     .limit(1)
     .maybeSingle();
 
+  // Enforce 5-minute cooldown between scans of the same QR.
+  const COOLDOWN_MS = 5 * 60 * 1000;
+  if (lastToday) {
+    const elapsed = nowMs - new Date(lastToday.scanned_at).getTime();
+    if (elapsed < COOLDOWN_MS) {
+      const secsLeft = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+      const m = Math.floor(secsLeft / 60);
+      const s = secsLeft % 60;
+      const wait = m > 0 ? `${m}m ${s}s` : `${s}s`;
+      return fail(
+        `${target.full_name ?? "This personnel"} was scanned recently. Try again in ${wait}.`,
+      );
+    }
+  }
+
   const nextType: AttendanceType =
     lastToday?.type === "time_in" ? "time_out" : "time_in";
 
