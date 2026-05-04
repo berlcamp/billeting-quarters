@@ -487,7 +487,7 @@ export function IncidentForm({ sites, delegations }: IncidentFormProps) {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-2 sticky bottom-0 bg-background py-3">
+        <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="outline"

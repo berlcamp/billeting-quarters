@@ -4,21 +4,8 @@ import { CommandCenterOverview } from "@/components/command-center/command-cente
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasAnyPermission } from "@/lib/permissions";
 import { getIncidents } from "@/lib/actions/incidents";
+import { getAllReferrals } from "@/lib/actions/referrals";
 import { getSites } from "@/lib/actions/sites";
-import { createAdminClient } from "@/lib/supabase/admin";
-
-async function getAllReferrals() {
-  // Direct query — no dedicated action yet for "all referrals". Gated by the
-  // page-level role check above (which is at least incident.view).
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .schema("palaro")
-    .from("referrals")
-    .select("*")
-    .order("referred_at", { ascending: false })
-    .limit(500);
-  return error ? [] : (data ?? []);
-}
 
 export default async function CommandCenterPage() {
   const profile = await getCurrentProfile();
@@ -33,12 +20,13 @@ export default async function CommandCenterPage() {
     );
   }
 
-  const [incidentsResult, referrals, sitesResult] = await Promise.all([
+  const [incidentsResult, referralsResult, sitesResult] = await Promise.all([
     getIncidents(),
     getAllReferrals(),
     getSites(true),
   ]);
   const incidents = incidentsResult.error ? [] : (incidentsResult.data ?? []);
+  const referrals = referralsResult.error ? [] : (referralsResult.data ?? []);
   const sites = sitesResult.error ? [] : (sitesResult.data ?? []);
 
   return (

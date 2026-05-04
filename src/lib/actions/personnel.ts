@@ -598,13 +598,6 @@ export async function getAttendanceLogsForDtr(
     .limit(10000);
   if (error) return fail(error.message);
 
-  await recordAudit({
-    action: "view",
-    entity_type: "personnel_dtr",
-    changes: { from: fromIso, to: toIso },
-    user_id: auth.profile.id,
-  });
-
   return ok(data ?? []);
 }
 
@@ -624,13 +617,6 @@ export async function getPersonnelForIds(): Promise<ActionResult<Personnel[]>> {
     .eq("is_active", true)
     .order("full_name", { ascending: true });
   if (error) return fail(error.message);
-
-  // Audit a "view" on the bulk list — useful for tracking who exported IDs.
-  await recordAudit({
-    action: "view",
-    entity_type: "personnel_ids",
-    user_id: auth.profile.id,
-  });
 
   return ok(data ?? []);
 }

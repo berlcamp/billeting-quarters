@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 
@@ -13,7 +14,11 @@ export type AccessState =
 // to their palaro.profiles row. The DB trigger guarantees that any auth user has
 // a corresponding profile (or the OAuth flow is rejected before auth.users is
 // inserted), so a missing profile here is a defensive edge case.
-export async function checkAccess(): Promise<AccessState> {
+//
+// Wrapped in React.cache so layout + page + every server action in the same
+// render share a single auth.getUser() + profiles SELECT instead of repeating
+// them. Cache scope is one request render — never crosses requests.
+export const checkAccess = cache(async (): Promise<AccessState> => {
   const supabase = await createClient();
 
   const {
@@ -44,4 +49,4 @@ export async function checkAccess(): Promise<AccessState> {
   }
 
   return { status: "authorized", profile };
-}
+});

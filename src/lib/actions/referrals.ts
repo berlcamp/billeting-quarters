@@ -44,6 +44,30 @@ export async function getMyFieldReferrals(): Promise<ActionResult<Referral[]>> {
   return ok(data ?? []);
 }
 
+// All-referrals feed for the command center overview. Gated to anyone with
+// broad operational visibility (incident.view) — the same gate the page itself
+// uses, so this stays consistent with the dashboard's audience.
+export async function getAllReferrals(): Promise<ActionResult<Referral[]>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (
+    !hasPermission(profile, "incident.view") &&
+    !hasPermission(profile, "admin.manage")
+  ) {
+    return fail("You don't have permission to view referrals.");
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .schema("palaro")
+    .from("referrals")
+    .select("*")
+    .order("referred_at", { ascending: false })
+    .limit(500);
+  if (error) return fail(error.message);
+  return ok(data ?? []);
+}
+
 // Returns all field-to-UCF referrals visible to the caller.
 // Future: filter to user's primary_assignment_site_id when role is medical_ucf and assignment is set.
 export async function getUcfInbox(): Promise<ActionResult<Referral[]>> {

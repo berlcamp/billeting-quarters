@@ -1,15 +1,16 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { checkAccess, type Profile } from "./access-check";
 import { hasRole, type UserRole } from "@/lib/permissions";
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
+});
 
 export async function getCurrentProfile(): Promise<Profile | null> {
   const access = await checkAccess();
