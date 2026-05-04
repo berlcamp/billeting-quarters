@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -61,24 +62,26 @@ export function UserMenu({ email, fullName, role, avatarUrl }: UserMenuProps) {
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">{fullName ?? email}</span>
-            <span className="text-xs text-muted-foreground">{email}</span>
-            {role ? (
-              <span className="mt-1 font-mono text-[10px] uppercase text-muted-foreground">
-                {role}
-              </span>
-            ) : null}
-          </div>
-        </DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">{fullName ?? email}</span>
+              <span className="text-xs text-muted-foreground">{email}</span>
+              {role ? (
+                <span className="mt-1 font-mono text-[10px] uppercase text-muted-foreground">
+                  {role}
+                </span>
+              ) : null}
+            </div>
+          </DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
           <User className="size-4" />
           Profile
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={handleSignOut} disabled={signingOut}>
+        <DropdownMenuItem onClick={handleSignOut} disabled={signingOut}>
           <LogOut className="size-4" />
           {signingOut ? "Signing out…" : "Sign out"}
         </DropdownMenuItem>
