@@ -2,20 +2,19 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { ROLE_LABELS, type UserRole } from "@/lib/permissions";
 import type { Database } from "@/types/database";
 
-type Profile = Database["palaro"]["Tables"]["profiles"]["Row"];
+type Personnel = Database["palaro"]["Tables"]["personnel"]["Row"];
 
 interface Props {
-  profile: Profile;
+  personnel: Personnel;
   side: "front" | "back";
 }
 
 // PPDMS ID QR envelope. Versioned so we can change the format later
 // without breaking older printed cards (the scanner accepts raw UUIDs too).
-function buildQrPayload(profileId: string): string {
-  return JSON.stringify({ v: 1, id: profileId });
+function buildQrPayload(personnelId: string): string {
+  return JSON.stringify({ v: 1, id: personnelId });
 }
 
 const TEMPLATE_SRC = "/id-assets/id-template.png";
@@ -36,13 +35,13 @@ const COORDS = {
 // underneath).
 const TEMPLATE_NAVY = "#1e3a8a";
 
-export function IdCard({ profile, side }: Props) {
+export function IdCard({ personnel, side }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (side !== "back") return;
     let cancelled = false;
-    QRCode.toDataURL(buildQrPayload(profile.id), {
+    QRCode.toDataURL(buildQrPayload(personnel.id), {
       errorCorrectionLevel: "M",
       margin: 1,
       width: 320,
@@ -56,13 +55,11 @@ export function IdCard({ profile, side }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [profile.id, side]);
+  }, [personnel.id, side]);
 
-  // Subtitle under the name. Falls back to role label, then the literal word
-  // "Committee" so the strip never goes empty.
-  const subtitle =
-    profile.designation ??
-    (profile.role ? ROLE_LABELS[profile.role as UserRole] : "Committee");
+  // Subtitle under the name. Designation overrides committee when present;
+  // committee is required on the personnel record so the strip never empties.
+  const subtitle = personnel.designation ?? personnel.committee;
 
   return (
     <div className="break-inside-avoid">
@@ -100,7 +97,7 @@ export function IdCard({ profile, side }: Props) {
               // eslint-disable-next-line @next/next/no-img-element -- data: URL
               <img
                 src={qrDataUrl}
-                alt={`QR for ${profile.full_name ?? profile.email}`}
+                alt={`QR for ${personnel.full_name}`}
                 className="size-full object-contain p-1"
               />
             ) : null}
@@ -116,7 +113,7 @@ export function IdCard({ profile, side }: Props) {
             className="text-center font-extrabold uppercase leading-none text-white"
             style={{ fontSize: "clamp(11px, 7cqw, 38px)" }}
           >
-            {profile.full_name ?? profile.email}
+            {personnel.full_name}
           </span>
         </div>
 

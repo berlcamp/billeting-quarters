@@ -14,7 +14,7 @@ export default async function IdGeneratorPage() {
   }
 
   const result = await getPersonnelForIds();
-  const profiles = result.error ? [] : (result.data ?? []);
+  const personnel = result.error ? [] : (result.data ?? []);
 
   return (
     <div className="space-y-6">
@@ -27,7 +27,7 @@ export default async function IdGeneratorPage() {
           Failed to load personnel: {result.error}
         </div>
       ) : (
-        <IdRoster profiles={profiles} />
+        <IdRoster personnel={personnel} />
       )}
     </div>
   );

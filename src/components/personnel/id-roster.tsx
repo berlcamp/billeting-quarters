@@ -12,41 +12,40 @@ import {
 } from "@/components/ui/select";
 import { PrintButton } from "@/components/reports/print-button";
 import { IdCard } from "./id-card";
-import { ROLE_LABELS, type UserRole } from "@/lib/permissions";
 import type { Database } from "@/types/database";
 
-type Profile = Database["palaro"]["Tables"]["profiles"]["Row"];
+type Personnel = Database["palaro"]["Tables"]["personnel"]["Row"];
 
 interface Props {
-  profiles: Profile[];
+  personnel: Personnel[];
 }
 
-const ALL_ROLES = "all";
+const ALL_COMMITTEES = "all";
 
-export function IdRoster({ profiles }: Props) {
+export function IdRoster({ personnel }: Props) {
   const [query, setQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<UserRole | typeof ALL_ROLES>(
-    ALL_ROLES,
-  );
+  const [committee, setCommittee] = useState<string>(ALL_COMMITTEES);
 
-  const roles = useMemo(() => {
-    const set = new Set<UserRole>();
-    for (const p of profiles) if (p.role) set.add(p.role as UserRole);
+  const committees = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of personnel) if (p.committee) set.add(p.committee);
     return Array.from(set).sort();
-  }, [profiles]);
+  }, [personnel]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return profiles.filter((p) => {
-      if (roleFilter !== ALL_ROLES && p.role !== roleFilter) return false;
+    return personnel.filter((p) => {
+      if (committee !== ALL_COMMITTEES && p.committee !== committee)
+        return false;
       if (!q) return true;
       return (
-        (p.full_name?.toLowerCase().includes(q) ?? false) ||
-        p.email.toLowerCase().includes(q) ||
+        p.full_name.toLowerCase().includes(q) ||
+        p.committee.toLowerCase().includes(q) ||
+        (p.designation?.toLowerCase().includes(q) ?? false) ||
         (p.agency?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [profiles, query, roleFilter]);
+  }, [personnel, query, committee]);
 
   return (
     <div className="space-y-4">
@@ -58,29 +57,27 @@ export function IdRoster({ profiles }: Props) {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, email, agency…"
+              placeholder="Search name, committee, agency…"
               className="pl-9"
             />
           </div>
           <Select
-            value={roleFilter}
-            onValueChange={(v) =>
-              setRoleFilter((v ?? ALL_ROLES) as typeof roleFilter)
-            }
+            value={committee}
+            onValueChange={(v) => setCommittee(v ?? ALL_COMMITTEES)}
           >
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-56">
               <SelectValue>
                 {(v: string | null) => {
-                  if (!v || v === ALL_ROLES) return "All roles";
-                  return ROLE_LABELS[v as UserRole];
+                  if (!v || v === ALL_COMMITTEES) return "All committees";
+                  return v;
                 }}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_ROLES}>All roles</SelectItem>
-              {roles.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {ROLE_LABELS[r]}
+              <SelectItem value={ALL_COMMITTEES}>All committees</SelectItem>
+              {committees.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -113,8 +110,8 @@ export function IdRoster({ profiles }: Props) {
               key={p.id}
               className="grid grid-cols-2 gap-2 break-inside-avoid"
             >
-              <IdCard profile={p} side="front" />
-              <IdCard profile={p} side="back" />
+              <IdCard personnel={p} side="front" />
+              <IdCard personnel={p} side="back" />
             </div>
           ))}
         </div>

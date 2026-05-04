@@ -161,7 +161,7 @@ export default async function AuthPage({
       </section>
 
       {/* ─────────────────── RIGHT · SIGN-IN ─────────────────── */}
-      <section className="relative flex flex-1 flex-col bg-[#faf7ed] px-6 py-10 text-[#0a1740] sm:px-10 lg:px-14 lg:py-12">
+      <section className="relative flex flex-1 flex-col overflow-hidden bg-[#faf7ed] px-6 py-10 text-[#0a1740] sm:px-10 lg:px-14 lg:py-12">
         {/* dot grid */}
         <div
           aria-hidden

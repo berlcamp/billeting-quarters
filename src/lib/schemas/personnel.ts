@@ -2,6 +2,39 @@ import { z } from "zod";
 
 const optionalText = z.string().trim().max(500).optional();
 const optionalShortText = z.string().trim().max(200).optional();
+const optionalUuid = z
+  .string()
+  .uuid()
+  .nullable()
+  .optional()
+  .or(z.literal("").transform(() => null));
+
+// =============================================================================
+// PERSONNEL RECORDS (the people we issue ID cards to and scan for attendance —
+// NOT auth/system users)
+// =============================================================================
+
+export const createPersonnelSchema = z.object({
+  full_name: z.string().trim().min(1, "Full name is required").max(200),
+  designation: optionalShortText,
+  committee: z.string().trim().min(1, "Committee is required").max(200),
+  area_assigned: optionalShortText,
+  site_id: optionalUuid,
+  agency: optionalShortText,
+  contact_number: z.string().trim().max(50).optional(),
+  photo_url: z.string().url().max(1000).optional().or(z.literal("")),
+  is_active: z.boolean().optional(),
+});
+export type CreatePersonnelInput = z.infer<typeof createPersonnelSchema>;
+
+export const updatePersonnelSchema = createPersonnelSchema.extend({
+  id: z.string().uuid(),
+});
+export type UpdatePersonnelInput = z.infer<typeof updatePersonnelSchema>;
+
+export const deletePersonnelSchema = z.object({
+  id: z.string().uuid(),
+});
 
 export const createDutySchema = z
   .object({
@@ -58,7 +91,7 @@ export const recordAttendanceSchema = z.object({
 });
 export type RecordAttendanceInput = z.infer<typeof recordAttendanceSchema>;
 
-// QR scan: a single profile id (UUID); type is auto-decided server-side
+// QR scan: a single personnel id (UUID); type is auto-decided server-side
 // based on the personnel's most recent attendance log for the day.
 export const scanAttendanceSchema = z.object({
   scanned_value: z

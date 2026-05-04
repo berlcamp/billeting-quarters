@@ -12,7 +12,7 @@ import { formatManila } from "@/lib/timezone";
 import type { Database } from "@/types/database";
 
 type Duty = Database["palaro"]["Tables"]["duty_schedules"]["Row"];
-type Profile = Database["palaro"]["Tables"]["profiles"]["Row"];
+type Personnel = Database["palaro"]["Tables"]["personnel"]["Row"];
 type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
   "id" | "name" | "site_type"
@@ -20,7 +20,7 @@ type Site = Pick<
 
 interface Props {
   duties: Duty[];
-  personnel: Profile[];
+  personnel: Personnel[];
   sites: Site[];
 }
 
@@ -28,7 +28,7 @@ export function DutyTable({ duties, personnel, sites }: Props) {
   const router = useRouter();
 
   const personnelMap = useMemo(() => {
-    const m = new Map<string, Profile>();
+    const m = new Map<string, Personnel>();
     for (const p of personnel) m.set(p.id, p);
     return m;
   }, [personnel]);
@@ -57,11 +57,11 @@ export function DutyTable({ duties, personnel, sites }: Props) {
         const p = personnelMap.get(d.personnel_id);
         return (
           <div className="flex flex-col">
-            <span className="font-medium">
-              {p?.full_name ?? p?.email ?? "Unknown"}
-            </span>
-            {p?.agency ? (
-              <span className="text-xs text-muted-foreground">{p.agency}</span>
+            <span className="font-medium">{p?.full_name ?? "Unknown"}</span>
+            {p?.committee ? (
+              <span className="text-xs text-muted-foreground">
+                {p.committee}
+              </span>
             ) : null}
           </div>
         );
@@ -140,8 +140,8 @@ export function DutyTable({ duties, personnel, sites }: Props) {
         predicate: (d, q) => {
           const p = personnelMap.get(d.personnel_id);
           return (
-            (p?.full_name?.toLowerCase().includes(q) ?? false) ||
-            (p?.email.toLowerCase().includes(q) ?? false) ||
+            (p?.full_name.toLowerCase().includes(q) ?? false) ||
+            (p?.committee.toLowerCase().includes(q) ?? false) ||
             (d.shift_label?.toLowerCase().includes(q) ?? false)
           );
         },

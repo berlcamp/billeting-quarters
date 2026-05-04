@@ -40,7 +40,7 @@ import {
 } from "@/lib/schemas/personnel";
 import type { Database } from "@/types/database";
 
-type Profile = Database["palaro"]["Tables"]["profiles"]["Row"];
+type Personnel = Database["palaro"]["Tables"]["personnel"]["Row"];
 type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
   "id" | "name" | "site_type"
@@ -72,7 +72,7 @@ function plusHoursLocal(hours: number): string {
 
 interface Props {
   trigger: ReactNode;
-  personnel: Profile[];
+  personnel: Personnel[];
   sites: Site[];
   duty?: Duty;
 }
@@ -156,7 +156,7 @@ export function DutyFormDialog({ trigger, personnel, sites, duty }: Props) {
                           {(v: string | null) => {
                             const p = personnel.find((x) => x.id === v);
                             return p ? (
-                              p.full_name || p.email
+                              p.full_name
                             ) : (
                               <span className="text-muted-foreground">
                                 Select personnel
@@ -169,7 +169,13 @@ export function DutyFormDialog({ trigger, personnel, sites, duty }: Props) {
                     <SelectContent>
                       {personnel.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.full_name || p.email}
+                          {p.full_name}
+                          {p.committee ? (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {p.committee}
+                            </span>
+                          ) : null}
                         </SelectItem>
                       ))}
                     </SelectContent>

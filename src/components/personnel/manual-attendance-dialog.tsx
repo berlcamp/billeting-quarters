@@ -44,8 +44,8 @@ import {
 import type { Database } from "@/types/database";
 
 type Personnel = Pick<
-  Database["palaro"]["Tables"]["profiles"]["Row"],
-  "id" | "full_name" | "email" | "role" | "agency"
+  Database["palaro"]["Tables"]["personnel"]["Row"],
+  "id" | "full_name" | "committee" | "designation" | "agency"
 >;
 type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
@@ -125,7 +125,7 @@ export function ManualAttendanceDialog({ personnel, sites }: Props) {
                           {(v: string | null) => {
                             const p = personnel.find((x) => x.id === v);
                             return p ? (
-                              p.full_name || p.email
+                              p.full_name
                             ) : (
                               <span className="text-muted-foreground">
                                 Select personnel
@@ -138,7 +138,13 @@ export function ManualAttendanceDialog({ personnel, sites }: Props) {
                     <SelectContent>
                       {personnel.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.full_name || p.email}
+                          {p.full_name}
+                          {p.committee ? (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {p.committee}
+                            </span>
+                          ) : null}
                         </SelectItem>
                       ))}
                     </SelectContent>

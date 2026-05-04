@@ -610,6 +610,54 @@ export type Database = {
         };
         Relationships: [];
       };
+      personnel: {
+        Row: {
+          id: string;
+          full_name: string;
+          designation: string | null;
+          committee: string;
+          area_assigned: string | null;
+          site_id: string | null;
+          agency: string | null;
+          contact_number: string | null;
+          photo_url: string | null;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          full_name: string;
+          designation?: string | null;
+          committee: string;
+          area_assigned?: string | null;
+          site_id?: string | null;
+          agency?: string | null;
+          contact_number?: string | null;
+          photo_url?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          full_name?: string;
+          designation?: string | null;
+          committee?: string;
+          area_assigned?: string | null;
+          site_id?: string | null;
+          agency?: string | null;
+          contact_number?: string | null;
+          photo_url?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       duty_schedules: {
         Row: {
           id: string;

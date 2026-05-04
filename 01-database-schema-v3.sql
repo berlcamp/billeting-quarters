@@ -458,12 +458,36 @@ CREATE INDEX idx_vehicle_logs_site ON palaro.vehicle_logs(site_id, scanned_at DE
 
 
 -- =====================
--- PERSONNEL DUTY & ATTENDANCE
+-- PERSONNEL, DUTY & ATTENDANCE
 -- =====================
+
+-- palaro.personnel = the people we issue ID cards to and scan for attendance.
+-- They are NOT auth users (no email, never sign in). System users live in
+-- palaro.profiles; the two are deliberately separate populations.
+CREATE TABLE palaro.personnel (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name TEXT NOT NULL,
+  designation TEXT,                              -- job title, e.g. "Lifeguard"
+  committee TEXT NOT NULL,                       -- e.g. "Medical Committee"
+  area_assigned TEXT,                            -- free-text granular detail
+  site_id UUID REFERENCES palaro.sites(id),
+  agency TEXT,
+  contact_number TEXT,
+  photo_url TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by UUID REFERENCES palaro.profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_personnel_committee ON palaro.personnel(committee);
+CREATE INDEX idx_personnel_site ON palaro.personnel(site_id);
+CREATE INDEX idx_personnel_active ON palaro.personnel(is_active);
+CREATE INDEX idx_personnel_full_name ON palaro.personnel(full_name);
 
 CREATE TABLE palaro.duty_schedules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  personnel_id UUID NOT NULL REFERENCES palaro.profiles(id) ON DELETE CASCADE,
+  personnel_id UUID NOT NULL REFERENCES palaro.personnel(id) ON DELETE CASCADE,
   site_id UUID REFERENCES palaro.sites(id),
   duty_start TIMESTAMPTZ NOT NULL,
   duty_end TIMESTAMPTZ NOT NULL,
@@ -477,11 +501,11 @@ CREATE INDEX idx_duty_personnel_time ON palaro.duty_schedules(personnel_id, duty
 
 CREATE TABLE palaro.attendance_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  personnel_id UUID NOT NULL REFERENCES palaro.profiles(id),
+  personnel_id UUID NOT NULL REFERENCES palaro.personnel(id) ON DELETE CASCADE,
   site_id UUID REFERENCES palaro.sites(id),
   type palaro.attendance_type NOT NULL,
   scanned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  scanned_by UUID REFERENCES palaro.profiles(id),
+  scanned_by UUID REFERENCES palaro.profiles(id),  -- system user who scanned
   notes TEXT
 );
 

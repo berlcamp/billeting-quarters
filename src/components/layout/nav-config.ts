@@ -5,6 +5,8 @@ import {
   Building2,
   Calendar,
   ClipboardCheck,
+  ClipboardList,
+  Contact,
   Crown,
   Flag,
   HeartPulse,
@@ -148,6 +150,12 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Personnel",
     items: [
       {
+        label: "Personnel",
+        href: "/dashboard/personnel/list",
+        icon: Contact,
+        roles: ["personnel_admin"],
+      },
+      {
         label: "Duty Schedule",
         href: "/dashboard/personnel/duty",
         icon: Calendar,
@@ -157,6 +165,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Attendance",
         href: "/dashboard/personnel/attendance",
         icon: ClipboardCheck,
+        roles: ["personnel_admin"],
+      },
+      {
+        label: "DTR",
+        href: "/dashboard/personnel/dtr",
+        icon: ClipboardList,
         roles: ["personnel_admin"],
       },
       {
