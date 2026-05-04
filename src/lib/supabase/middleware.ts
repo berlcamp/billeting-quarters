@@ -50,36 +50,11 @@ export async function updateSession(request: NextRequest) {
     return response;
   }
 
-  // Unauthenticated visitors can browse public marketing-style routes, but
-  // hitting any protected app route bounces them to /auth.
-  if (!user) {
-    if (isProtectedPath(pathname)) {
-      const target = new URL("/auth", request.url);
-      return NextResponse.redirect(target);
-    }
-    return response;
-  }
-
-  // Authenticated — verify the profile is active and roled.
-  const { data: profile } = await supabase
-    .schema("palaro")
-    .from("profiles")
-    .select("status, role")
-    .eq("auth_user_id", user.id)
-    .single();
-
-  if (!profile) {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/auth/not-authorized", request.url));
-  }
-
-  if (profile.status === "suspended") {
-    return NextResponse.redirect(new URL("/auth/suspended", request.url));
-  }
-
-  if (profile.status !== "active" || !profile.role) {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/auth/not-authorized", request.url));
+  // Bounce unauthenticated visitors off protected routes.
+  // Suspended / not-authorized checks are handled by requireActiveProfile()
+  // inside the dashboard layout — keeping middleware to a single network call.
+  if (!user && isProtectedPath(pathname)) {
+    return NextResponse.redirect(new URL("/auth", request.url));
   }
 
   return response;
