@@ -1,8 +1,11 @@
+import Link from "next/link";
+import { HelpCircle } from "lucide-react";
 import { Breadcrumbs } from "./breadcrumbs";
 import { MobileNav } from "./mobile-nav";
 import { NotificationBell } from "./notification-bell";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
+import { buttonVariants } from "@/components/ui/button";
 import type { Profile } from "@/lib/auth/access-check";
 
 interface TopbarProps {
@@ -17,6 +20,14 @@ export function Topbar({ profile }: TopbarProps) {
         <Breadcrumbs />
       </div>
       <div className="flex items-center gap-1">
+        <Link
+          href="/dashboard/help"
+          aria-label="User guide"
+          title="User guide"
+          className={buttonVariants({ size: "icon", variant: "ghost" })}
+        >
+          <HelpCircle className="size-4" />
+        </Link>
         <NotificationBell profileId={profile.id} role={profile.role} />
         <ThemeToggle />
         <UserMenu

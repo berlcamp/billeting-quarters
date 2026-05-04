@@ -8,6 +8,7 @@ import {
   Crown,
   Flag,
   HeartPulse,
+  HelpCircle,
   Hospital,
   LayoutDashboard,
   MapPin,
@@ -173,6 +174,12 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/dashboard/reports",
         icon: FileText,
         roles: ["delegation_head", "command_center"],
+      },
+      {
+        label: "User Guide",
+        href: "/dashboard/help",
+        icon: HelpCircle,
+        // No `roles` — visible to every signed-in user.
       },
     ],
   },
