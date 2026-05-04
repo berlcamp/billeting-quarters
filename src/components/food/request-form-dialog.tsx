@@ -38,7 +38,6 @@ import {
   createRequestSchema,
   type CreateRequestInput,
 } from "@/lib/schemas/food";
-import { MEAL_TYPES, MEAL_TYPE_LABELS } from "@/lib/labels";
 import type { Database } from "@/types/database";
 
 type Request = Database["palaro"]["Tables"]["food_requests"]["Row"];
@@ -50,7 +49,6 @@ type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
   "id" | "name" | "site_type"
 >;
-type MealType = (typeof MEAL_TYPES)[number];
 
 const NO_SUPPLIER = "__none__";
 
@@ -84,19 +82,14 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
-  const defaultMealType = (
-    request && MEAL_TYPES.includes(request.meal_type as MealType)
-      ? (request.meal_type as MealType)
-      : "lunch"
-  ) as MealType;
-
   const form = useForm<CreateRequestInput>({
     resolver: zodResolver(createRequestSchema),
     defaultValues: {
       bq_id: request?.bq_id ?? "",
       supplier_id: request?.supplier_id ?? null,
-      meal_type: defaultMealType,
-      quantity_meals: request?.quantity_meals ?? 50,
+      item_name: request?.item_name ?? "",
+      unit: request?.unit ?? "kg",
+      quantity: request?.quantity ?? 1,
       required_at: request
         ? isoToLocal(request.required_at)
         : plusHoursLocal(4),
@@ -109,15 +102,16 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
       form.reset({
         bq_id: request?.bq_id ?? "",
         supplier_id: request?.supplier_id ?? null,
-        meal_type: defaultMealType,
-        quantity_meals: request?.quantity_meals ?? 50,
+        item_name: request?.item_name ?? "",
+        unit: request?.unit ?? "kg",
+        quantity: request?.quantity ?? 1,
         required_at: request
           ? isoToLocal(request.required_at)
           : plusHoursLocal(4),
         notes: request?.notes ?? undefined,
       });
     }
-  }, [open, request, defaultMealType, form]);
+  }, [open, request, form]);
 
   async function onSubmit(values: CreateRequestInput) {
     setSubmitting(true);
@@ -133,7 +127,7 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
       });
       return;
     }
-    toast.success(isEdit ? "Request updated" : "Meal request submitted");
+    toast.success(isEdit ? "Request updated" : "Food request submitted");
     setOpen(false);
     router.refresh();
   }
@@ -144,7 +138,7 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Edit meal request" : "Request meals"}
+            {isEdit ? "Edit food request" : "Request food"}
           </DialogTitle>
           <DialogDescription>
             BQs file requests; command center confirms a supplier and tracks
@@ -188,57 +182,59 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="item_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Food item</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. Chicken, Rice, Bottled water"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
-                name="meal_type"
+                name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Meal</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={(v) => field.onChange(v as MealType)}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue>
-                            {(v: string | null) =>
-                              v && MEAL_TYPES.includes(v as MealType)
-                                ? MEAL_TYPE_LABELS[v as MealType]
-                                : "Pick"
-                            }
-                          </SelectValue>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {MEAL_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {MEAL_TYPE_LABELS[t]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Quantity</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        {...field}
+                        value={field.value ?? 0}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value === "" ? 0 : Number(e.target.value),
+                          )
+                        }
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="quantity_meals"
+                name="unit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Meal count</FormLabel>
+                    <FormLabel>Unit</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        min={1}
+                        placeholder="kg, pcs, sacks…"
                         {...field}
-                        value={field.value ?? 1}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value === "" ? 0 : Number(e.target.value),
-                          )
-                        }
+                        value={field.value ?? ""}
                       />
                     </FormControl>
                     <FormMessage />
@@ -307,7 +303,7 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
                   <FormControl>
                     <Textarea
                       rows={2}
-                      placeholder="Dietary restrictions, drop-off instructions…"
+                      placeholder="Specifications, drop-off instructions…"
                       {...field}
                       value={field.value ?? ""}
                     />

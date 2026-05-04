@@ -53,8 +53,7 @@ export function SupplierFormDialog({ trigger, supplier }: Props) {
       contact_person: supplier?.contact_person ?? undefined,
       contact_number: supplier?.contact_number ?? undefined,
       email: supplier?.email ?? "",
-      cuisine_type: supplier?.cuisine_type ?? undefined,
-      capacity_meals_per_day: supplier?.capacity_meals_per_day ?? undefined,
+      business_category: supplier?.business_category ?? undefined,
       notes: supplier?.notes ?? undefined,
     },
   });
@@ -66,8 +65,7 @@ export function SupplierFormDialog({ trigger, supplier }: Props) {
         contact_person: supplier?.contact_person ?? undefined,
         contact_number: supplier?.contact_number ?? undefined,
         email: supplier?.email ?? "",
-        cuisine_type: supplier?.cuisine_type ?? undefined,
-        capacity_meals_per_day: supplier?.capacity_meals_per_day ?? undefined,
+        business_category: supplier?.business_category ?? undefined,
         notes: supplier?.notes ?? undefined,
       });
     }
@@ -168,50 +166,23 @@ export function SupplierFormDialog({ trigger, supplier }: Props) {
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="cuisine_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cuisine</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Filipino, Halal…"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="capacity_meals_per_day"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Daily capacity</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        {...field}
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value === ""
-                              ? undefined
-                              : Number(e.target.value),
-                          )
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="business_category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Business category</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Catering, Bakery, Wet market…"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="notes"

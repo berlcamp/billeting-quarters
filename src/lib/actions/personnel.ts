@@ -28,6 +28,7 @@ const DUTY_PATH = "/dashboard/personnel/duty";
 const ATTENDANCE_PATH = "/dashboard/personnel/attendance";
 const IDS_PATH = "/dashboard/personnel/ids";
 const DTR_PATH = "/dashboard/personnel/dtr";
+const PERSONNEL_PHOTO_BUCKET = "personnel-photos";
 
 async function requirePersonnelManager() {
   const profile = await getCurrentProfile();
@@ -619,4 +620,81 @@ export async function getPersonnelForIds(): Promise<ActionResult<Personnel[]>> {
   if (error) return fail(error.message);
 
   return ok(data ?? []);
+}
+
+// =============================================================================
+// PERSONNEL PHOTOS
+// =============================================================================
+
+// Browser posts a (compressed) image as FormData; service-role uploads it to a
+// private bucket. The returned `path` is what we persist in personnel.photo_url.
+export async function uploadPersonnelPhoto(
+  formData: FormData,
+): Promise<ActionResult<{ path: string }>> {
+  const auth = await requirePersonnelManager();
+  if (!auth.ok) return fail(auth.error);
+
+  const file = formData.get("file");
+  if (!(file instanceof File)) return fail("No file provided.");
+  if (file.size === 0) return fail("Empty file.");
+  if (file.size > 2_500_000) {
+    return fail("File too large after compression. Try a smaller photo.");
+  }
+
+  const ext = (file.name.split(".").pop() ?? "jpg")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  const stamp = Date.now();
+  const random = Math.random().toString(36).slice(2, 8);
+  const path = `${auth.profile.id}/${stamp}-${random}.${ext || "jpg"}`;
+
+  const admin = createAdminClient();
+  const { error } = await admin.storage
+    .from(PERSONNEL_PHOTO_BUCKET)
+    .upload(path, file, {
+      contentType: file.type || "image/jpeg",
+      upsert: false,
+    });
+
+  if (error) return fail(error.message);
+  return ok({ path });
+}
+
+// 1-hour signed URL for displaying a personnel photo from the private bucket.
+export async function getPersonnelPhotoUrl(
+  path: string,
+): Promise<ActionResult<{ url: string }>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(PERSONNEL_PHOTO_BUCKET)
+    .createSignedUrl(path, 60 * 60);
+  if (error) return fail(error.message);
+  return ok({ url: data.signedUrl });
+}
+
+// Batch variant for the IDs roster — one round-trip instead of N.
+// Returns a map of path → signed URL; missing paths are simply omitted.
+export async function getPersonnelPhotoUrls(
+  paths: string[],
+): Promise<ActionResult<Record<string, string>>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (paths.length === 0) return ok({});
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from(PERSONNEL_PHOTO_BUCKET)
+    .createSignedUrls(paths, 60 * 60);
+  if (error) return fail(error.message);
+
+  const out: Record<string, string> = {};
+  for (const item of data ?? []) {
+    if (item.path && item.signedUrl && !item.error) {
+      out[item.path] = item.signedUrl;
+    }
+  }
+  return ok(out);
 }

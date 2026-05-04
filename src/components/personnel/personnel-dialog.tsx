@@ -37,6 +37,7 @@ import {
   createPersonnelSchema,
   type CreatePersonnelInput,
 } from "@/lib/schemas/personnel";
+import { PhotoUploadField } from "./photo-upload-field";
 import type { Database } from "@/types/database";
 
 type Personnel = Database["palaro"]["Tables"]["personnel"]["Row"];
@@ -285,12 +286,11 @@ export function PersonnelDialog({
             name="photo_url"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Photo URL</FormLabel>
+                <FormLabel>Photo</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="https://…"
-                    {...field}
-                    value={field.value ?? ""}
+                  <PhotoUploadField
+                    value={field.value}
+                    onChange={field.onChange}
                   />
                 </FormControl>
                 <FormMessage />

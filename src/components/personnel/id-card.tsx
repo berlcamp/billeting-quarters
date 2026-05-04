@@ -9,6 +9,8 @@ type Personnel = Database["palaro"]["Tables"]["personnel"]["Row"];
 interface Props {
   personnel: Personnel;
   side: "front" | "back";
+  /** Pre-resolved signed URL for personnel.photo_url (front side only). */
+  photoUrl?: string | null;
 }
 
 // PPDMS ID QR envelope. Versioned so we can change the format later
@@ -24,6 +26,9 @@ const TEMPLATE_SRC = "/id-assets/id-template.png";
 const COORDS = {
   // White photo / QR box in the upper-middle area.
   qrBox: { top: "35%", left: "32%", width: "36%", height: "24%" },
+  // Slightly larger than qrBox so the photo fully covers the template's white
+  // box (otherwise a thin white border peeks around the image).
+  photoBox: { top: "33%", left: "30%", width: "40%", height: "28%" },
   // Name strip — large bold caps. Sits over "INSERT NAME" in the template.
   name: { top: "60.5%", left: "4%", right: "4%", height: "11%" },
   // Smaller italic role/committee strip — sits over "COMMITTEE".
@@ -35,7 +40,7 @@ const COORDS = {
 // underneath).
 const TEMPLATE_NAVY = "#1e3a8a";
 
-export function IdCard({ personnel, side }: Props) {
+export function IdCard({ personnel, side, photoUrl }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -101,6 +106,22 @@ export function IdCard({ personnel, side }: Props) {
                 className="size-full object-contain p-1"
               />
             ) : null}
+          </div>
+        ) : null}
+
+        {/* Photo ID — front only. Sized slightly larger than the QR box so it
+            fully covers the template's white photo area. */}
+        {side === "front" && photoUrl ? (
+          <div
+            className="absolute overflow-hidden bg-white"
+            style={COORDS.photoBox}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- signed URL */}
+            <img
+              src={photoUrl}
+              alt={`Photo of ${personnel.full_name}`}
+              className="size-full object-cover"
+            />
           </div>
         ) : null}
 

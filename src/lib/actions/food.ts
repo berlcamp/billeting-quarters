@@ -88,8 +88,7 @@ export async function createSupplier(
       contact_person: data.contact_person || null,
       contact_number: data.contact_number || null,
       email: data.email || null,
-      cuisine_type: data.cuisine_type || null,
-      capacity_meals_per_day: data.capacity_meals_per_day ?? null,
+      business_category: data.business_category || null,
       notes: data.notes || null,
     })
     .select("id")
@@ -129,8 +128,7 @@ export async function updateSupplier(
       contact_person: data.contact_person || null,
       contact_number: data.contact_number || null,
       email: data.email || null,
-      cuisine_type: data.cuisine_type || null,
-      capacity_meals_per_day: data.capacity_meals_per_day ?? null,
+      business_category: data.business_category || null,
       notes: data.notes || null,
     })
     .eq("id", id);
@@ -231,8 +229,9 @@ export async function createRequest(
     .insert({
       bq_id: data.bq_id,
       supplier_id: data.supplier_id || null,
-      meal_type: data.meal_type,
-      quantity_meals: data.quantity_meals,
+      item_name: data.item_name,
+      unit: data.unit,
+      quantity: data.quantity,
       required_at: requiredIso,
       status: "pending",
       notes: data.notes || null,
@@ -248,8 +247,9 @@ export async function createRequest(
     entity_id: inserted.id,
     changes: {
       bq_id: data.bq_id,
-      meal_type: data.meal_type,
-      quantity_meals: data.quantity_meals,
+      item_name: data.item_name,
+      unit: data.unit,
+      quantity: data.quantity,
       required_at: requiredIso,
     },
     user_id: auth.profile.id,
@@ -279,8 +279,9 @@ export async function updateRequest(
     .update({
       bq_id: data.bq_id,
       supplier_id: data.supplier_id || null,
-      meal_type: data.meal_type,
-      quantity_meals: data.quantity_meals,
+      item_name: data.item_name,
+      unit: data.unit,
+      quantity: data.quantity,
       required_at: requiredIso,
       notes: data.notes || null,
     })
@@ -292,8 +293,9 @@ export async function updateRequest(
     entity_type: "food_request",
     entity_id: id,
     changes: {
-      meal_type: data.meal_type,
-      quantity_meals: data.quantity_meals,
+      item_name: data.item_name,
+      unit: data.unit,
+      quantity: data.quantity,
     },
     user_id: auth.profile.id,
   });

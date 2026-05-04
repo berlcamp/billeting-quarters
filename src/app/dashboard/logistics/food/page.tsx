@@ -38,19 +38,17 @@ export default async function FoodSupplyPage() {
 
   const pending = requests.filter((r) => r.status === "pending").length;
   const confirmed = requests.filter((r) => r.status === "confirmed").length;
-  const mealsToday = requests
-    .filter((r) => {
-      const required = Date.parse(r.required_at);
-      const nowMs = new Date().getTime();
-      return required > nowMs && required - nowMs < 24 * 60 * 60 * 1000;
-    })
-    .reduce((acc, r) => acc + r.quantity_meals, 0);
+  const dueSoon = requests.filter((r) => {
+    const required = Date.parse(r.required_at);
+    const nowMs = new Date().getTime();
+    return required > nowMs && required - nowMs < 24 * 60 * 60 * 1000;
+  }).length;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Food Supply"
-        description="Caterer roster and BQ meal requests."
+        description="Caterer roster and BQ food requests."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <RequestFormDialog
@@ -59,7 +57,7 @@ export default async function FoodSupplyPage() {
               trigger={
                 <Button variant="outline">
                   <UtensilsCrossed className="size-4" />
-                  Request meals
+                  Request food
                 </Button>
               }
             />
@@ -80,12 +78,12 @@ export default async function FoodSupplyPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Pending requests" value={pending} accent={pending > 0} />
         <StatCard label="Confirmed" value={confirmed} />
-        <StatCard label="Meals due (24h)" value={mealsToday} />
+        <StatCard label="Due (24h)" value={dueSoon} />
       </div>
 
       <Tabs defaultValue="requests">
         <TabsList>
-          <TabsTrigger value="requests">Meal requests</TabsTrigger>
+          <TabsTrigger value="requests">Food requests</TabsTrigger>
           <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
         </TabsList>
 
