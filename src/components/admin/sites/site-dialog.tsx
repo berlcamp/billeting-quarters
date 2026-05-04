@@ -46,6 +46,7 @@ interface SiteDialogProps {
   /** Controls the dialog when in edit mode. Ignored when no `site` prop is set. */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onOpenChangeComplete?: (open: boolean) => void;
 }
 
 const emptyValues: CreateSiteInput = {
@@ -74,7 +75,7 @@ function siteToValues(site: Site): CreateSiteInput {
   };
 }
 
-export function SiteDialog({ site, open: controlledOpen, onOpenChange }: SiteDialogProps) {
+export function SiteDialog({ site, open: controlledOpen, onOpenChange, onOpenChangeComplete }: SiteDialogProps) {
   const isEdit = !!site;
   const [internalOpen, setInternalOpen] = useState(false);
   const open = isEdit ? !!controlledOpen : internalOpen;
@@ -321,7 +322,7 @@ export function SiteDialog({ site, open: controlledOpen, onOpenChange }: SiteDia
 
   if (isEdit) {
     return (
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={setOpen} onOpenChangeComplete={onOpenChangeComplete}>
         {dialog}
       </Dialog>
     );

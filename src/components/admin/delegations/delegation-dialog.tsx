@@ -49,6 +49,7 @@ interface DelegationDialogProps {
   bqSites: Pick<Site, "id" | "name">[];
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onOpenChangeComplete?: (open: boolean) => void;
 }
 
 const emptyValues: CreateDelegationInput = {
@@ -84,6 +85,7 @@ export function DelegationDialog({
   bqSites,
   open: controlledOpen,
   onOpenChange,
+  onOpenChangeComplete,
 }: DelegationDialogProps) {
   const isEdit = !!delegation;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -356,7 +358,7 @@ export function DelegationDialog({
 
   if (isEdit) {
     return (
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={setOpen} onOpenChangeComplete={onOpenChangeComplete}>
         {dialog}
       </Dialog>
     );

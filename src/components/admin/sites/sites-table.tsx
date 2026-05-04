@@ -27,6 +27,7 @@ interface SitesTableProps {
 
 export function SitesTable({ sites }: SitesTableProps) {
   const [editing, setEditing] = useState<Site | null>(null);
+  const [stableEditing, setStableEditing] = useState<Site | null>(null);
   const [deletingTarget, setDeletingTarget] = useState<Site | null>(null);
   const [typeFilter, setTypeFilter] = useState<SiteType | "all">("all");
   const router = useRouter();
@@ -157,13 +158,16 @@ export function SitesTable({ sites }: SitesTableProps) {
           title: "No sites yet",
           description: "Add your first BQ, Playing Venue, UCF, hospital, or clinic.",
         }}
-        onRowClick={(row) => setEditing(row)}
+        onRowClick={(row) => { setStableEditing(row); setEditing(row); }}
       />
-      <SiteDialog
-        site={editing}
-        open={!!editing}
-        onOpenChange={(o) => !o && setEditing(null)}
-      />
+      {stableEditing && (
+        <SiteDialog
+          site={stableEditing}
+          open={!!editing}
+          onOpenChange={(o) => !o && setEditing(null)}
+          onOpenChangeComplete={(o) => !o && setStableEditing(null)}
+        />
+      )}
       <ConfirmDialog
         open={!!deletingTarget}
         onOpenChange={(o) => !o && setDeletingTarget(null)}

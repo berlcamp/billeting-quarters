@@ -21,6 +21,9 @@ interface DelegationsTableProps {
 
 export function DelegationsTable({ delegations, bqSites }: DelegationsTableProps) {
   const [editing, setEditing] = useState<Delegation | null>(null);
+  // Keeps the last-opened delegation alive during the close animation so the
+  // dialog stays in edit mode and doesn't flash to create mode mid-animation.
+  const [stableEditing, setStableEditing] = useState<Delegation | null>(null);
   const [deletingTarget, setDeletingTarget] = useState<Delegation | null>(null);
   const router = useRouter();
 
@@ -153,14 +156,17 @@ export function DelegationsTable({ delegations, bqSites }: DelegationsTableProps
           description:
             "Add the 17 PH regions. Run the seed file in supabase/seed.sql to bulk-insert them.",
         }}
-        onRowClick={(row) => setEditing(row)}
+        onRowClick={(row) => { setStableEditing(row); setEditing(row); }}
       />
-      <DelegationDialog
-        delegation={editing}
-        bqSites={bqSites}
-        open={!!editing}
-        onOpenChange={(o) => !o && setEditing(null)}
-      />
+      {stableEditing && (
+        <DelegationDialog
+          delegation={stableEditing}
+          bqSites={bqSites}
+          open={!!editing}
+          onOpenChange={(o) => !o && setEditing(null)}
+          onOpenChangeComplete={(o) => !o && setStableEditing(null)}
+        />
+      )}
       <ConfirmDialog
         open={!!deletingTarget}
         onOpenChange={(o) => !o && setDeletingTarget(null)}
