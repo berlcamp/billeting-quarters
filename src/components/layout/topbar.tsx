@@ -16,7 +16,7 @@ export function Topbar({ profile }: TopbarProps) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4 lg:px-6 print:hidden">
       <MobileNav role={profile.role} />
-      <div className="flex-1 min-w-0">
+      <div className="hidden sm:block flex-1 min-w-0">
         <Breadcrumbs />
       </div>
       <div className="flex items-center gap-1">
