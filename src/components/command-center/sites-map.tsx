@@ -142,7 +142,7 @@ export function SitesMap({ sites, incidents }: SitesMapProps) {
 
   if (allPoints.length === 0) {
     return (
-      <div className="flex h-[420px] items-center justify-center rounded-md border border-dashed bg-muted/20 text-sm text-muted-foreground">
+      <div className="flex h-[560px] items-center justify-center rounded-md border border-dashed bg-muted/20 text-sm text-muted-foreground">
         No sites with coordinates yet — set lat/lng on a site in Admin → Sites
         to populate the map.
       </div>
@@ -155,7 +155,7 @@ export function SitesMap({ sites, incidents }: SitesMapProps) {
         center={PH_CENTER}
         zoom={PH_ZOOM}
         scrollWheelZoom={false}
-        className="h-[480px] w-full"
+        className="h-[560px] w-full"
       >
         <TileLayer
           attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'

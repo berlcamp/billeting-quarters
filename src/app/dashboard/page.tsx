@@ -1,6 +1,7 @@
 import { Forbidden } from "@/components/shared/forbidden";
 import { PageHeader } from "@/components/layout/page-header";
 import { CommandCenterOverview } from "@/components/command-center/command-center-overview";
+import { FullscreenButton } from "@/components/command-center/fullscreen-button";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasAnyPermission } from "@/lib/permissions";
 import { getIncidents } from "@/lib/actions/incidents";
@@ -34,6 +35,7 @@ export default async function CommandCenterPage() {
       <PageHeader
         title="Command Center"
         description="Live operational overview across all delegations, sites, and incidents."
+        actions={<FullscreenButton />}
       />
       <CommandCenterOverview
         initialIncidents={incidents}

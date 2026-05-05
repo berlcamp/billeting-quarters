@@ -128,3 +128,15 @@
     @apply font-sans;
   }
 }
+
+html:fullscreen aside,
+html:fullscreen header,
+html:fullscreen footer {
+  display: none !important;
+}
+
+html:fullscreen main {
+  padding: 1.5rem;
+  overflow-y: auto;
+  height: 100vh;
+}
