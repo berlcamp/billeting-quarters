@@ -42,7 +42,8 @@ import {
   createGarbageRuleSchema,
   type CreateGarbageRuleInput,
 } from "@/lib/schemas/garbage";
-import { DAY_OF_WEEK_LABELS, ISO_DAYS } from "@/lib/garbage-week";
+import { DAY_OF_WEEK_SHORT, ISO_DAYS } from "@/lib/garbage-week";
+import { cn } from "@/lib/utils";
 import type { Database } from "@/types/database";
 
 type Rule = Database["palaro"]["Tables"]["garbage_schedule_rules"]["Row"];
@@ -63,8 +64,9 @@ interface Props {
 const emptyValues: CreateGarbageRuleInput = {
   collector_id: "",
   site_id: "",
-  day_of_week: 1,
+  days_of_week: [],
   time_of_day: "06:00",
+  time_of_day_pm: "",
   is_active: true,
   notes: "",
 };
@@ -77,8 +79,9 @@ function toValues(r: Rule): CreateGarbageRuleInput {
   return {
     collector_id: r.collector_id,
     site_id: r.site_id,
-    day_of_week: r.day_of_week,
+    days_of_week: [...(r.days_of_week ?? [])].sort((a, b) => a - b),
     time_of_day: trimTime(r.time_of_day),
+    time_of_day_pm: r.time_of_day_pm ? trimTime(r.time_of_day_pm) : "",
     is_active: r.is_active,
     notes: r.notes ?? "",
   };
@@ -214,50 +217,79 @@ export function ScheduleRuleDialog({
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="days_of_week"
+            render={({ field }) => {
+              const selected = new Set(field.value ?? []);
+              const toggle = (d: number) => {
+                const next = new Set(selected);
+                if (next.has(d)) next.delete(d);
+                else next.add(d);
+                field.onChange(Array.from(next).sort((a, b) => a - b));
+              };
+              return (
+                <FormItem>
+                  <FormLabel>Days of week</FormLabel>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ISO_DAYS.map((d) => {
+                      const isOn = selected.has(d);
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => toggle(d)}
+                          aria-pressed={isOn}
+                          className={cn(
+                            "h-9 min-w-12 rounded-md border px-3 text-xs font-medium transition-colors",
+                            isOn
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-background text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          {DAY_OF_WEEK_SHORT[d]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
           <div className="grid grid-cols-2 gap-3">
             <FormField
               control={form.control}
-              name="day_of_week"
+              name="time_of_day"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Day of week</FormLabel>
-                  <Select
-                    value={String(field.value ?? 1)}
-                    onValueChange={(v) => field.onChange(Number(v))}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue>
-                          {(v: string | null) => {
-                            const n = Number(v);
-                            return DAY_OF_WEEK_LABELS[n] ?? "Pick a day";
-                          }}
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {ISO_DAYS.map((d) => (
-                        <SelectItem key={d} value={String(d)}>
-                          {DAY_OF_WEEK_LABELS[d]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>AM time (PHT)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="time"
+                      step={60}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             <FormField
               control={form.control}
-              name="time_of_day"
+              name="time_of_day_pm"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Time (PHT)</FormLabel>
+                  <FormLabel>
+                    PM time{" "}
+                    <span className="text-muted-foreground">(optional)</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
                       type="time"
                       step={60}
-                      {...field}
+                      value={field.value ?? ""}
                       onChange={(e) => field.onChange(e.target.value)}
                     />
                   </FormControl>

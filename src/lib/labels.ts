@@ -287,30 +287,6 @@ export const SUPPLY_UNITS = [
   "set",
 ] as const;
 
-export type GarbageCollectionStatus =
-  Database["palaro"]["Enums"]["garbage_collection_status"];
-
-export const GARBAGE_STATUSES: readonly GarbageCollectionStatus[] = [
-  "scheduled",
-  "collected",
-  "missed",
-  "special_request",
-] as const;
-
-export const GARBAGE_STATUS_LABELS: Record<GarbageCollectionStatus, string> = {
-  scheduled: "Scheduled",
-  collected: "Collected",
-  missed: "Missed",
-  special_request: "Special request",
-};
-
-export const GARBAGE_STATUS_BADGE: Record<GarbageCollectionStatus, string> = {
-  scheduled: "bg-blue-100 text-blue-800",
-  collected: "bg-green-100 text-green-800",
-  missed: "bg-red-100 text-red-800",
-  special_request: "bg-yellow-100 text-yellow-800",
-};
-
 // Food request lifecycle is a free-form TEXT column on the table — these are
 // the values the app produces. Anything else from a stale row maps to "other".
 export const FOOD_REQUEST_STATUSES = [

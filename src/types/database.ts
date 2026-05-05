@@ -1098,8 +1098,9 @@ export type Database = {
           id: string;
           collector_id: string;
           site_id: string;
-          day_of_week: number;
+          days_of_week: number[];
           time_of_day: string;
+          time_of_day_pm: string | null;
           is_active: boolean;
           notes: string | null;
           created_by: string | null;
@@ -1110,8 +1111,9 @@ export type Database = {
           id?: string;
           collector_id: string;
           site_id: string;
-          day_of_week: number;
+          days_of_week: number[];
           time_of_day: string;
+          time_of_day_pm?: string | null;
           is_active?: boolean;
           notes?: string | null;
           created_by?: string | null;
@@ -1122,8 +1124,9 @@ export type Database = {
           id?: string;
           collector_id?: string;
           site_id?: string;
-          day_of_week?: number;
+          days_of_week?: number[];
           time_of_day?: string;
+          time_of_day_pm?: string | null;
           is_active?: boolean;
           notes?: string | null;
           created_by?: string | null;

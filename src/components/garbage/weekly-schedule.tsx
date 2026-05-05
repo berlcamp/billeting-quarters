@@ -6,6 +6,13 @@ import { CalendarOff } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toggleGarbageCollected } from "@/lib/actions/garbage";
 import {
   DAY_OF_WEEK_LABELS,
@@ -32,6 +39,8 @@ interface Props {
   canLog: boolean;
 }
 
+const ALL_SITES = "__all__";
+
 export function WeeklySchedule({
   weekStart,
   collections,
@@ -46,6 +55,7 @@ export function WeeklySchedule({
   const [optimistic, setOptimistic] = useState<Map<string, boolean>>(
     () => new Map(),
   );
+  const [siteFilter, setSiteFilter] = useState<string>(ALL_SITES);
 
   const collectorMap = useMemo(() => {
     const m = new Map<string, Collector>();
@@ -59,11 +69,31 @@ export function WeeklySchedule({
     return m;
   }, [sites]);
 
+  const filteredCollections = useMemo(() => {
+    if (siteFilter === ALL_SITES) return collections;
+    return collections.filter((r) => r.site_id === siteFilter);
+  }, [collections, siteFilter]);
+
+  // Sites that actually have pickups this week — surfaced first in the
+  // filter dropdown so the common picks are easy to find. The full site
+  // list still appears below in case the user wants to confirm a site
+  // has zero pickups.
+  const siteIdsInWeek = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of collections) set.add(r.site_id);
+    return set;
+  }, [collections]);
+
+  const sortedSites = useMemo(
+    () => [...sites].sort((a, b) => a.name.localeCompare(b.name)),
+    [sites],
+  );
+
   // Group rows by ISO day-of-week (1..7) projected onto Manila.
   const byDay = useMemo(() => {
     const map = new Map<number, GarbageRow[]>();
     for (const d of ISO_DAYS) map.set(d, []);
-    for (const row of collections) {
+    for (const row of filteredCollections) {
       const dow = manilaIsoDayOfWeek(row.scheduled_at);
       map.get(dow)?.push(row);
     }
@@ -71,7 +101,7 @@ export function WeeklySchedule({
       list.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
     }
     return map;
-  }, [collections]);
+  }, [filteredCollections]);
 
   function isCollected(row: GarbageRow): boolean {
     const opt = optimistic.get(row.id);
@@ -102,9 +132,56 @@ export function WeeklySchedule({
     });
   }
 
+  const filteredCount = filteredCollections.length;
+  const totalCount = collections.length;
+  const isFiltered = siteFilter !== ALL_SITES;
+
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {ISO_DAYS.map((dow) => {
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">
+            Filter by site
+          </span>
+          <Select
+            value={siteFilter}
+            onValueChange={(v) => setSiteFilter(v ?? ALL_SITES)}
+          >
+            <SelectTrigger className="h-9 w-[260px]">
+              <SelectValue>
+                {(v: string | null) => {
+                  if (!v || v === ALL_SITES) return "All sites";
+                  return (
+                    sortedSites.find((s) => s.id === v)?.name ?? "Unknown site"
+                  );
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_SITES}>All sites</SelectItem>
+              {sortedSites.map((s) => {
+                const active = siteIdsInWeek.has(s.id);
+                return (
+                  <SelectItem key={s.id} value={s.id}>
+                    <span className={cn(!active && "text-muted-foreground")}>
+                      {s.name}
+                      {!active ? " · no pickups this week" : ""}
+                    </span>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+        {isFiltered ? (
+          <span className="text-xs text-muted-foreground">
+            Showing {filteredCount} of {totalCount} pickups
+          </span>
+        ) : null}
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {ISO_DAYS.map((dow) => {
         const dayYmd = addDaysYmd(weekStart, dow - 1);
         const rows = byDay.get(dow) ?? [];
         return (
@@ -204,6 +281,7 @@ export function WeeklySchedule({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

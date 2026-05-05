@@ -499,7 +499,6 @@ export async function getGarbageScheduleRules(
     .schema("palaro")
     .from("garbage_schedule_rules")
     .select("*")
-    .order("day_of_week", { ascending: true })
     .order("time_of_day", { ascending: true });
   if (!includeInactive) q = q.eq("is_active", true);
 
@@ -527,8 +526,11 @@ export async function createGarbageScheduleRule(
     .insert({
       collector_id: data.collector_id,
       site_id: data.site_id,
-      day_of_week: data.day_of_week,
+      days_of_week: Array.from(new Set(data.days_of_week)).sort(
+        (a, b) => a - b,
+      ),
       time_of_day: data.time_of_day,
+      time_of_day_pm: data.time_of_day_pm || null,
       is_active: data.is_active ?? true,
       notes: data.notes || null,
       created_by: auth.profile.id,
@@ -569,8 +571,11 @@ export async function updateGarbageScheduleRule(
     .update({
       collector_id: data.collector_id,
       site_id: data.site_id,
-      day_of_week: data.day_of_week,
+      days_of_week: Array.from(new Set(data.days_of_week)).sort(
+        (a, b) => a - b,
+      ),
       time_of_day: data.time_of_day,
+      time_of_day_pm: data.time_of_day_pm || null,
       is_active: data.is_active ?? true,
       notes: data.notes || null,
     })
@@ -626,11 +631,11 @@ export async function deleteGarbageScheduleRule(
 // ============================================================
 
 // Materialize one garbage_collections row per active rule for the given week
-// (Manila-local Monday → Sunday). Idempotent: re-running doesn't duplicate
-// rows because of the (schedule_rule_id, scheduled_at) unique index.
+// (Manila-local Monday → Sunday). Idempotent: queries existing rows for the
+// week and only inserts the missing (rule_id, scheduled_at) pairs. Already-
+// generated rows are preserved untouched (users may have ticked them off).
 //
-// Returns the count of newly created rows. Existing rows are not touched —
-// users may have already ticked them off.
+// Returns the count of newly created rows.
 export async function generateGarbageWeek(
   input: unknown,
 ): Promise<ActionResult<{ created: number }>> {
@@ -663,30 +668,62 @@ export async function generateGarbageWeek(
     );
   }
 
-  const rows = rules.map((r) => {
-    const ymd = days[r.day_of_week - 1];
-    const hhmm = trimTimeOfDay(r.time_of_day);
-    return {
-      site_id: r.site_id,
-      collector_id: r.collector_id,
-      schedule_rule_id: r.id,
-      scheduled_at: manilaLocalToUtcIso(ymd, hhmm),
-      status: "scheduled" as const,
-      is_special_request: false,
-      logged_by: auth.profile.id,
-    };
+  // Each rule fans out into (days_of_week × time slots). Multiple rows per
+  // rule share the same rule_id but differ in scheduled_at.
+  const targetRows = rules.flatMap((r) => {
+    const dayList = (r.days_of_week ?? []).filter((d) => d >= 1 && d <= 7);
+    const slots = [trimTimeOfDay(r.time_of_day)];
+    if (r.time_of_day_pm) slots.push(trimTimeOfDay(r.time_of_day_pm));
+    return dayList.flatMap((dow) => {
+      const ymd = days[dow - 1];
+      return slots.map((hhmm) => ({
+        site_id: r.site_id,
+        collector_id: r.collector_id,
+        schedule_rule_id: r.id,
+        scheduled_at: manilaLocalToUtcIso(ymd, hhmm),
+        status: "scheduled" as const,
+        is_special_request: false,
+        logged_by: auth.profile.id,
+      }));
+    });
   });
 
-  // onConflict matches the partial unique index uq_garbage_collections_rule_time.
-  // ignoreDuplicates so already-generated rows (possibly already ticked off)
-  // are preserved untouched.
+  // Find which (rule_id, scheduled_at) combos already exist in the week so
+  // we don't insert duplicates. Compare via epoch-ms so any string-format
+  // drift between what we INSERT vs what Supabase returns can't slip past.
+  const ruleIds = Array.from(
+    new Set(targetRows.map((r) => r.schedule_rule_id)),
+  );
+  const weekStartUtc = new Date(monUtc - MANILA_OFFSET_MS).toISOString();
+  const weekEndUtc = new Date(
+    monUtc + 7 * 24 * 60 * 60 * 1000 - MANILA_OFFSET_MS,
+  ).toISOString();
+
+  const { data: existing, error: existingErr } = await admin
+    .schema("palaro")
+    .from("garbage_collections")
+    .select("schedule_rule_id, scheduled_at")
+    .in("schedule_rule_id", ruleIds)
+    .gte("scheduled_at", weekStartUtc)
+    .lt("scheduled_at", weekEndUtc);
+  if (existingErr) return fail(existingErr.message);
+
+  const keyOf = (ruleId: string | null, scheduledAt: string) =>
+    `${ruleId}|${new Date(scheduledAt).getTime()}`;
+
+  const existingKeys = new Set(
+    (existing ?? []).map((r) => keyOf(r.schedule_rule_id, r.scheduled_at)),
+  );
+  const toInsert = targetRows.filter(
+    (r) => !existingKeys.has(keyOf(r.schedule_rule_id, r.scheduled_at)),
+  );
+
+  if (toInsert.length === 0) return ok({ created: 0 });
+
   const { data: inserted, error } = await admin
     .schema("palaro")
     .from("garbage_collections")
-    .upsert(rows, {
-      onConflict: "schedule_rule_id,scheduled_at",
-      ignoreDuplicates: true,
-    })
+    .insert(toInsert)
     .select("id");
   if (error) return fail(error.message);
 
@@ -701,6 +738,8 @@ export async function generateGarbageWeek(
     });
   }
 
-  revalidatePath(GARBAGE_PATH);
+  // No revalidatePath here: this action is invoked during the page's RSC
+  // render, which Next.js 16 forbids. The caller fetches fresh rows
+  // immediately after this returns, so revalidation is redundant anyway.
   return ok({ created });
 }

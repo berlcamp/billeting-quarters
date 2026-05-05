@@ -92,16 +92,25 @@ const timeOfDay = z
   .string()
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM (24h)");
 
+const optionalTimeOfDay = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM (24h)")
+  .nullable()
+  .optional()
+  .or(z.literal("").transform(() => null));
+
 const ruleFields = z.object({
   collector_id: z.string().uuid("Pick a collector."),
   site_id: z.string().uuid("Pick a site."),
-  // ISO day-of-week: 1 = Monday … 7 = Sunday.
-  day_of_week: z
-    .number()
-    .int()
-    .min(1, "Pick a day")
-    .max(7, "Pick a day"),
+  // ISO days-of-week: 1 = Monday … 7 = Sunday. One rule can cover multiple
+  // days that share the same time slots (e.g. Mon/Wed/Fri 06:00).
+  days_of_week: z
+    .array(z.number().int().min(1).max(7))
+    .min(1, "Pick at least one day"),
+  // Primary (AM) pickup time — required.
   time_of_day: timeOfDay,
+  // Optional second (PM) pickup time on the same day.
+  time_of_day_pm: optionalTimeOfDay,
   is_active: z.boolean().optional(),
   notes: optionalText,
 });

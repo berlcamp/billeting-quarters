@@ -10,7 +10,7 @@ import { DataTable, type DataTableColumn } from "@/components/shared/data-table"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ScheduleRuleDialog } from "./schedule-rule-dialog";
 import { deleteGarbageScheduleRule } from "@/lib/actions/garbage";
-import { DAY_OF_WEEK_LABELS } from "@/lib/garbage-week";
+import { DAY_OF_WEEK_LABELS, DAY_OF_WEEK_SHORT } from "@/lib/garbage-week";
 import type { Database } from "@/types/database";
 
 type Rule = Database["palaro"]["Tables"]["garbage_schedule_rules"]["Row"];
@@ -56,19 +56,27 @@ export function ScheduleRulesTable({ rules, collectors, sites }: Props) {
     router.refresh();
   }
 
+  function formatDays(days: number[] | null | undefined): string {
+    const sorted = [...(days ?? [])].sort((a, b) => a - b);
+    return sorted.map((d) => DAY_OF_WEEK_SHORT[d]).join(", ");
+  }
+
   const columns: DataTableColumn<Rule>[] = [
     {
-      id: "day",
-      header: "Day",
+      id: "days",
+      header: "Days",
       cell: (r) => (
-        <span className="font-medium">{DAY_OF_WEEK_LABELS[r.day_of_week]}</span>
+        <span className="font-medium">{formatDays(r.days_of_week)}</span>
       ),
     },
     {
       id: "time",
-      header: "Time (PHT)",
+      header: "Times (PHT)",
       cell: (r) => (
-        <span className="font-mono text-xs">{r.time_of_day.slice(0, 5)}</span>
+        <span className="font-mono text-xs">
+          {r.time_of_day.slice(0, 5)}
+          {r.time_of_day_pm ? ` · ${r.time_of_day_pm.slice(0, 5)}` : ""}
+        </span>
       ),
     },
     {
@@ -129,11 +137,20 @@ export function ScheduleRulesTable({ rules, collectors, sites }: Props) {
         rowKey={(r) => r.id}
         searchable={{
           placeholder: "Search by collector, site, day…",
-          predicate: (r, q) =>
-            (collectorMap.get(r.collector_id)?.toLowerCase().includes(q) ??
-              false) ||
-            (siteMap.get(r.site_id)?.toLowerCase().includes(q) ?? false) ||
-            DAY_OF_WEEK_LABELS[r.day_of_week].toLowerCase().includes(q),
+          predicate: (r, q) => {
+            const dayMatch = (r.days_of_week ?? []).some((d) =>
+              DAY_OF_WEEK_LABELS[d].toLowerCase().includes(q),
+            );
+            return (
+              (collectorMap
+                .get(r.collector_id)
+                ?.toLowerCase()
+                .includes(q) ??
+                false) ||
+              (siteMap.get(r.site_id)?.toLowerCase().includes(q) ?? false) ||
+              dayMatch
+            );
+          },
         }}
         empty={{
           title: "No schedule rules yet",
@@ -166,8 +183,12 @@ export function ScheduleRulesTable({ rules, collectors, sites }: Props) {
         description={
           deletingTarget ? (
             <>
-              The {DAY_OF_WEEK_LABELS[deletingTarget.day_of_week]}{" "}
-              {deletingTarget.time_of_day.slice(0, 5)} pickup at{" "}
+              The {formatDays(deletingTarget.days_of_week)}{" "}
+              {deletingTarget.time_of_day.slice(0, 5)}
+              {deletingTarget.time_of_day_pm
+                ? ` / ${deletingTarget.time_of_day_pm.slice(0, 5)}`
+                : ""}{" "}
+              pickup at{" "}
               <span className="font-medium">
                 {siteMap.get(deletingTarget.site_id) ?? "—"}
               </span>{" "}

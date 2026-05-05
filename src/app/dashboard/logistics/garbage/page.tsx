@@ -46,11 +46,14 @@ export default async function GarbageCollectionPage({ searchParams }: PageProps)
   const nextWeek = addDaysYmd(weekStart, 7);
   const today = manilaWeekStart();
 
-  // Auto-materialize this week's pickups from the active rules.
-  // Idempotent (unique index on schedule_rule_id, scheduled_at) so safe on
-  // every visit. Skip for non-managers — they don't have permission.
+  // Auto-materialize this week's pickups from the active rules. Idempotent —
+  // the action queries existing rows and inserts only the missing combos.
+  // Skip for non-managers (no permission). We capture the error so the page
+  // can surface it instead of silently rendering empty.
+  let generateError: string | null = null;
   if (canManage) {
-    await generateGarbageWeek({ week_start: weekStart });
+    const genRes = await generateGarbageWeek({ week_start: weekStart });
+    if (genRes.error) generateError = genRes.error;
   }
 
   const { startUtc, endUtc } = manilaWeekBoundsUtc(weekStart);
@@ -88,6 +91,13 @@ export default async function GarbageCollectionPage({ searchParams }: PageProps)
           ) : undefined
         }
       />
+
+      {generateError ? (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          Couldn&apos;t auto-generate this week:{" "}
+          <span className="font-mono text-xs">{generateError}</span>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card px-3 py-2">
         <div className="flex items-center gap-2">
