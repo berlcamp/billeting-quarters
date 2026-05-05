@@ -51,6 +51,53 @@ export async function getAllReferrals(): Promise<ActionResult<Referral[]>> {
   return ok(data ?? []);
 }
 
+// For a given set of incident IDs, returns the most recent referral per incident.
+// Used by the incidents list to show "where it was referred" alongside status.
+export async function getLatestReferralByIncident(
+  incidentIds: string[],
+): Promise<
+  ActionResult<
+    Map<
+      string,
+      Pick<Referral, "id" | "to_site_id" | "level" | "status" | "referred_at">
+    >
+  >
+> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (!hasPermission(profile, "incident.view")) {
+    return fail("You don't have permission to view referrals.");
+  }
+  if (incidentIds.length === 0) return ok(new Map());
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .schema("palaro")
+    .from("referrals")
+    .select("id, incident_id, to_site_id, level, status, referred_at")
+    .in("incident_id", incidentIds)
+    .order("referred_at", { ascending: false });
+  if (error) return fail(error.message);
+
+  const latest = new Map<
+    string,
+    Pick<Referral, "id" | "to_site_id" | "level" | "status" | "referred_at">
+  >();
+  for (const r of data ?? []) {
+    if (!r.incident_id) continue;
+    if (!latest.has(r.incident_id)) {
+      latest.set(r.incident_id, {
+        id: r.id,
+        to_site_id: r.to_site_id,
+        level: r.level,
+        status: r.status,
+        referred_at: r.referred_at,
+      });
+    }
+  }
+  return ok(latest);
+}
+
 // Returns all field-to-UCF referrals visible to the caller.
 // Future: filter to user's primary_assignment_site_id when role is medical_ucf and assignment is set.
 export async function getUcfInbox(): Promise<ActionResult<Referral[]>> {

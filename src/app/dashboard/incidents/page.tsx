@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Forbidden } from "@/components/shared/forbidden";
 import { IncidentsTable } from "@/components/incidents/incidents-table";
 import { getIncidents } from "@/lib/actions/incidents";
+import { getLatestReferralByIncident } from "@/lib/actions/referrals";
 import { getSites } from "@/lib/actions/sites";
 import { getDelegations } from "@/lib/actions/delegations";
 import { getCurrentProfile } from "@/lib/auth/session";
@@ -33,6 +34,18 @@ export default async function IncidentsPage() {
     delegations.map((d) => [d.id, { code: d.region_code, name: d.region_name }]),
   );
 
+  const referredIncidentIds = incidents
+    .filter((i) => i.status === "referred")
+    .map((i) => i.id);
+  const referralLookupResult =
+    referredIncidentIds.length > 0
+      ? await getLatestReferralByIncident(referredIncidentIds)
+      : null;
+  const referralLookup =
+    referralLookupResult && !referralLookupResult.error
+      ? (referralLookupResult.data ?? new Map())
+      : new Map();
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -56,6 +69,7 @@ export default async function IncidentsPage() {
           incidents={incidents}
           siteLookup={siteLookup}
           delegationLookup={delegationLookup}
+          referralLookup={referralLookup}
         />
       )}
     </div>

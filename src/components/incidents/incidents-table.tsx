@@ -20,20 +20,33 @@ import {
   INCIDENT_CATEGORIES,
   INCIDENT_CATEGORY_LABELS,
   INCIDENT_STATUS_LABELS,
+  REFERRAL_LEVEL_LABELS,
   SEVERITIES,
   SEVERITY_LABELS,
   type IncidentCategory,
   type IncidentSeverity,
   type IncidentStatus,
+  type ReferralLevel,
+  type ReferralStatus,
 } from "@/lib/labels";
 import type { Database } from "@/types/database";
 
 type Incident = Database["palaro"]["Tables"]["incidents"]["Row"];
 
+export type IncidentReferralLookupEntry = {
+  id: string;
+  to_site_id: string;
+  level: ReferralLevel;
+  status: ReferralStatus;
+  referred_at: string;
+};
+
 interface IncidentsTableProps {
   incidents: Incident[];
   siteLookup: Map<string, string>;
   delegationLookup: Map<string, { code: string; name: string }>;
+  /** Latest referral per incident_id; used to show "where it was referred" for incidents in 'referred' status. */
+  referralLookup?: Map<string, IncidentReferralLookupEntry>;
   /** When set, hides the category column + filter (the list is already scoped to one category). */
   lockedCategory?: IncidentCategory;
 }
@@ -50,6 +63,7 @@ export function IncidentsTable({
   incidents,
   siteLookup,
   delegationLookup,
+  referralLookup,
   lockedCategory,
 }: IncidentsTableProps) {
   const [statusFilter, setStatusFilter] = useState<IncidentStatus | "all">("all");
@@ -125,8 +139,26 @@ export function IncidentsTable({
     {
       id: "status",
       header: "Status",
-      className: "w-32",
-      cell: (row) => <StatusBadge variant="incident" status={row.status} />,
+      className: "w-44",
+      cell: (row) => {
+        const ref = row.status === "referred" ? referralLookup?.get(row.id) : undefined;
+        const destinationName = ref ? siteLookup.get(ref.to_site_id) : undefined;
+        return (
+          <div className="flex flex-col gap-1">
+            <StatusBadge variant="incident" status={row.status} />
+            {ref ? (
+              <div className="text-xs text-muted-foreground leading-tight">
+                <div className="truncate" title={destinationName ?? undefined}>
+                  → {destinationName ?? "Unknown site"}
+                </div>
+                <div className="text-[10px] uppercase tracking-wide opacity-70">
+                  {REFERRAL_LEVEL_LABELS[ref.level]}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        );
+      },
     },
     {
       id: "site",
@@ -175,10 +207,10 @@ export function IncidentsTable({
       columns={columns}
       rowKey={(row) => row.id}
       searchable={{
-        placeholder: "Search by title or incident #…",
+        placeholder: "Search by title or affected person…",
         predicate: (row, q) =>
           row.title.toLowerCase().includes(q) ||
-          row.incident_number.toLowerCase().includes(q),
+          (row.affected_person_name?.toLowerCase().includes(q) ?? false),
       }}
       filters={
         <>

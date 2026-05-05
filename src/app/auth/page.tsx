@@ -238,8 +238,12 @@ export default async function AuthPage({
         </div>
 
         {/* footer chrome */}
-        <footer className="relative z-10 flex items-end justify-between font-[var(--font-geist-mono)] text-[10px] uppercase tracking-[0.22em] text-[#0a1740]/50">
+        <footer className="relative z-10 flex flex-col gap-2 font-[var(--font-geist-mono)] text-[10px] uppercase tracking-[0.22em] text-[#0a1740]/50 sm:flex-row sm:items-end sm:justify-between">
           <span>© Palaro Command · DepEd</span>
+          <span className="text-[#0a1740]/65">
+            Developed and Powered by{" "}
+            <span className="text-[#0a1740]">Keri Tech</span>
+          </span>
           <span className="hidden sm:inline">v4.7 · 2026 edition</span>
         </footer>
       </section>
