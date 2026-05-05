@@ -693,46 +693,43 @@ export const MODULE_GUIDES: ModuleGuide[] = [
     slug: "garbage",
     title: "Garbage Collection",
     summary:
-      "Schedule pickups across sites and log whether they were collected or missed.",
+      "Maintain a registry of collectors and a recurring weekly schedule. Each week's pickups are generated automatically and ticked off as they're collected.",
     icon: Trash2,
     category: "Logistics",
     audience: ["logistics_officer", "garbage_logger", "command_center"],
     sections: [
       {
-        heading: "Schedule a pickup",
+        heading: "Add collectors and rules (one-time setup)",
         steps: [
           {
-            text: "Logistics → Garbage → \"Schedule pickup\".",
+            text: "Logistics → Garbage → Settings.",
           },
           {
-            text: "Pick the site, scheduled time (PHT), optional collector name, and any notes.",
+            text: "Under Collectors, add each crew with coordinator name, vehicle description, and contact number.",
           },
           {
-            text: "Tick \"Special request\" if this is outside the regular route — the row is flagged for visibility.",
+            text: "Under Weekly schedule rules, add one rule per recurring pickup: collector + site + day of week + time (PHT).",
           },
           {
-            text: "Save.",
+            text: "Toggle a rule inactive to skip it from future weeks without deleting history.",
           },
         ],
       },
       {
-        heading: "Mark collected or missed",
+        heading: "Tick off pickups during the week",
         body: [
-          "When the crew arrives (or doesn't), update the row from the table.",
+          "The main page shows the current week as a 7-day grid. Pickups are generated automatically from the active rules.",
         ],
         steps: [
           {
-            text: "Find the row (it'll be in the Scheduled status by default).",
+            text: "Find the pickup under its day. Time, site, coordinator, and vehicle are all shown inline.",
           },
           {
-            text: "Click the green check to mark Collected — collected_at is stamped automatically.",
+            text: "Tick the checkbox once collected — the row stamps collected_at and dims for visual confirmation. Untick to revert if you marked the wrong row.",
           },
           {
-            text: "Click the red X to mark Missed — provide a reason if you have one. Missed pickups stay in the system so you can re-schedule.",
+            text: "Use the prev/next arrows to navigate weeks. \"This week\" jumps back to today.",
           },
-        ],
-        tips: [
-          "Overdue (>30 min late) pickups are highlighted in the stat cards at the top — work that list first during your morning pass.",
         ],
       },
     ],

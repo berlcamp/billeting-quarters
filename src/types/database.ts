@@ -1024,6 +1024,8 @@ export type Database = {
           status: Database["palaro"]["Enums"]["garbage_collection_status"];
           is_special_request: boolean;
           collector_name: string | null;
+          collector_id: string | null;
+          schedule_rule_id: string | null;
           notes: string | null;
           logged_by: string | null;
           created_at: string;
@@ -1036,6 +1038,8 @@ export type Database = {
           status?: Database["palaro"]["Enums"]["garbage_collection_status"];
           is_special_request?: boolean;
           collector_name?: string | null;
+          collector_id?: string | null;
+          schedule_rule_id?: string | null;
           notes?: string | null;
           logged_by?: string | null;
           created_at?: string;
@@ -1048,9 +1052,83 @@ export type Database = {
           status?: Database["palaro"]["Enums"]["garbage_collection_status"];
           is_special_request?: boolean;
           collector_name?: string | null;
+          collector_id?: string | null;
+          schedule_rule_id?: string | null;
           notes?: string | null;
           logged_by?: string | null;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      garbage_collectors: {
+        Row: {
+          id: string;
+          coordinator_name: string;
+          vehicle_description: string | null;
+          contact_number: string | null;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          coordinator_name: string;
+          vehicle_description?: string | null;
+          contact_number?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          coordinator_name?: string;
+          vehicle_description?: string | null;
+          contact_number?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      garbage_schedule_rules: {
+        Row: {
+          id: string;
+          collector_id: string;
+          site_id: string;
+          day_of_week: number;
+          time_of_day: string;
+          is_active: boolean;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          collector_id: string;
+          site_id: string;
+          day_of_week: number;
+          time_of_day: string;
+          is_active?: boolean;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          collector_id?: string;
+          site_id?: string;
+          day_of_week?: number;
+          time_of_day?: string;
+          is_active?: boolean;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
