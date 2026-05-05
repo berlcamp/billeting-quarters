@@ -61,13 +61,13 @@ export const deleteGarbageSchema = z.object({ id: z.string().uuid() });
 // ---------- Collectors registry (palaro.garbage_collectors) ----------
 
 const collectorFields = z.object({
-  swm_coordinator_name: z
+  driver_name: z
     .string()
     .trim()
-    .min(1, "SWM Coordinator name is required")
+    .min(1, "Driver name is required")
     .max(200),
+  swm_coordinator_name: z.string().trim().max(200).nullable().optional(),
   city_enro_coordinator_name: z.string().trim().max(200).nullable().optional(),
-  driver_name: z.string().trim().max(200).nullable().optional(),
   vehicle_description: z.string().trim().max(300).nullable().optional(),
   contact_number: z.string().trim().max(50).nullable().optional(),
   is_active: z.boolean().optional(),

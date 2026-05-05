@@ -367,7 +367,7 @@ export async function getGarbageCollectors(
     .schema("palaro")
     .from("garbage_collectors")
     .select("*")
-    .order("swm_coordinator_name", { ascending: true });
+    .order("driver_name", { ascending: true });
   if (!includeInactive) q = q.eq("is_active", true);
 
   const { data, error } = await q;
@@ -392,9 +392,9 @@ export async function createGarbageCollector(
     .schema("palaro")
     .from("garbage_collectors")
     .insert({
-      swm_coordinator_name: data.swm_coordinator_name,
+      driver_name: data.driver_name,
+      swm_coordinator_name: data.swm_coordinator_name || null,
       city_enro_coordinator_name: data.city_enro_coordinator_name || null,
-      driver_name: data.driver_name || null,
       vehicle_description: data.vehicle_description || null,
       contact_number: data.contact_number || null,
       is_active: data.is_active ?? true,
@@ -434,9 +434,9 @@ export async function updateGarbageCollector(
     .schema("palaro")
     .from("garbage_collectors")
     .update({
-      swm_coordinator_name: data.swm_coordinator_name,
+      driver_name: data.driver_name,
+      swm_coordinator_name: data.swm_coordinator_name || null,
       city_enro_coordinator_name: data.city_enro_coordinator_name || null,
-      driver_name: data.driver_name || null,
       vehicle_description: data.vehicle_description || null,
       contact_number: data.contact_number || null,
       is_active: data.is_active ?? true,

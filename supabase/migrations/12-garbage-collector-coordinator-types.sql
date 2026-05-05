@@ -3,8 +3,10 @@
 --   * City ENRO Coordinator — the city-side environment office contact
 --
 -- Existing coordinator_name values are migrated into swm_coordinator_name so we
--- don't lose any data; city_enro_coordinator_name starts NULL and is filled
--- in via the settings UI.
+-- don't lose any data; both new columns are nullable. The driver name (added
+-- in migration 11) is the only required identifier on a collector now —
+-- enforced at the application layer to keep migrations from blocking on
+-- pre-existing rows that have no driver on file yet.
 --
 -- Run in Supabase SQL Editor.
 
@@ -15,9 +17,6 @@ ALTER TABLE palaro.garbage_collectors
 UPDATE palaro.garbage_collectors
   SET swm_coordinator_name = coordinator_name
   WHERE swm_coordinator_name IS NULL;
-
-ALTER TABLE palaro.garbage_collectors
-  ALTER COLUMN swm_coordinator_name SET NOT NULL;
 
 ALTER TABLE palaro.garbage_collectors
   DROP COLUMN IF EXISTS coordinator_name;

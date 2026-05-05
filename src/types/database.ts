@@ -1063,7 +1063,7 @@ export type Database = {
       garbage_collectors: {
         Row: {
           id: string;
-          swm_coordinator_name: string;
+          swm_coordinator_name: string | null;
           city_enro_coordinator_name: string | null;
           driver_name: string | null;
           vehicle_description: string | null;
@@ -1075,7 +1075,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          swm_coordinator_name: string;
+          swm_coordinator_name?: string | null;
           city_enro_coordinator_name?: string | null;
           driver_name?: string | null;
           vehicle_description?: string | null;
@@ -1087,7 +1087,7 @@ export type Database = {
         };
         Update: {
           id?: string;
-          swm_coordinator_name?: string;
+          swm_coordinator_name?: string | null;
           city_enro_coordinator_name?: string | null;
           driver_name?: string | null;
           vehicle_description?: string | null;

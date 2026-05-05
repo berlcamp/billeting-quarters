@@ -46,9 +46,9 @@ interface Props {
 }
 
 const emptyValues: CreateGarbageCollectorInput = {
+  driver_name: "",
   swm_coordinator_name: "",
   city_enro_coordinator_name: "",
-  driver_name: "",
   vehicle_description: "",
   contact_number: "",
   is_active: true,
@@ -56,9 +56,9 @@ const emptyValues: CreateGarbageCollectorInput = {
 
 function toValues(c: Collector): CreateGarbageCollectorInput {
   return {
-    swm_coordinator_name: c.swm_coordinator_name,
-    city_enro_coordinator_name: c.city_enro_coordinator_name ?? "",
     driver_name: c.driver_name ?? "",
+    swm_coordinator_name: c.swm_coordinator_name ?? "",
+    city_enro_coordinator_name: c.city_enro_coordinator_name ?? "",
     vehicle_description: c.vehicle_description ?? "",
     contact_number: c.contact_number ?? "",
     is_active: c.is_active,
@@ -125,12 +125,12 @@ export function CollectorDialog({
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           <FormField
             control={form.control}
-            name="swm_coordinator_name"
+            name="driver_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>SWM Coordinator name</FormLabel>
+                <FormLabel>Driver name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Juan Dela Cruz" {...field} />
+                  <Input placeholder="Pedro Santos" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -138,13 +138,16 @@ export function CollectorDialog({
           />
           <FormField
             control={form.control}
-            name="city_enro_coordinator_name"
+            name="swm_coordinator_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>City ENRO Coordinator name</FormLabel>
+                <FormLabel>
+                  SWM Coordinator name{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Maria Santos"
+                    placeholder="Juan Dela Cruz"
                     {...field}
                     value={field.value ?? ""}
                   />
@@ -155,13 +158,16 @@ export function CollectorDialog({
           />
           <FormField
             control={form.control}
-            name="driver_name"
+            name="city_enro_coordinator_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Driver name</FormLabel>
+                <FormLabel>
+                  City ENRO Coordinator name{" "}
+                  <span className="text-muted-foreground">(optional)</span>
+                </FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Pedro Santos"
+                    placeholder="Maria Santos"
                     {...field}
                     value={field.value ?? ""}
                   />

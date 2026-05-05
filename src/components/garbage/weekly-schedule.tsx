@@ -217,12 +217,10 @@ export function WeeklySchedule({
                   const collector = row.collector_id
                     ? collectorMap.get(row.collector_id)
                     : undefined;
-                  const collectorLabel =
-                    collector?.swm_coordinator_name ??
-                    row.collector_name ??
-                    "—";
+                  const driver =
+                    collector?.driver_name ?? row.collector_name ?? "—";
+                  const swm = collector?.swm_coordinator_name;
                   const enro = collector?.city_enro_coordinator_name;
-                  const driver = collector?.driver_name;
                   const vehicle = collector?.vehicle_description;
                   return (
                     <li
@@ -267,9 +265,9 @@ export function WeeklySchedule({
                           ) : null}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          SWM: {collectorLabel}
+                          Driver: {driver}
+                          {swm ? ` · SWM: ${swm}` : ""}
                           {enro ? ` · ENRO: ${enro}` : ""}
-                          {driver ? ` · Driver: ${driver}` : ""}
                           {vehicle ? ` · ${vehicle}` : ""}
                         </div>
                         {row.collected_at && collected ? (

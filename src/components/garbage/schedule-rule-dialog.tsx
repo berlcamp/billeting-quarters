@@ -160,7 +160,7 @@ export function ScheduleRuleDialog({
                         {(v: string | null) => {
                           const c = collectors.find((x) => x.id === v);
                           return c ? (
-                            c.swm_coordinator_name
+                            (c.driver_name ?? "—")
                           ) : (
                             <span className="text-muted-foreground">
                               Pick a collector
@@ -173,7 +173,7 @@ export function ScheduleRuleDialog({
                   <SelectContent>
                     {collectors.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.swm_coordinator_name}
+                        {(c.driver_name ?? "—")}
                       </SelectItem>
                     ))}
                   </SelectContent>

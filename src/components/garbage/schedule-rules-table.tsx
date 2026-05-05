@@ -34,7 +34,7 @@ export function ScheduleRulesTable({ rules, collectors, sites }: Props) {
 
   const collectorMap = useMemo(() => {
     const m = new Map<string, string>();
-    for (const c of collectors) m.set(c.id, c.swm_coordinator_name);
+    for (const c of collectors) m.set(c.id, c.driver_name ?? "—");
     return m;
   }, [collectors]);
 
