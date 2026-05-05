@@ -105,6 +105,6 @@ export const scanAttendanceSchema = z.object({
     .string()
     .min(1, "Scan value is empty")
     .max(500),
-  site_id: z.string().uuid().nullable().optional(),
+  site_id: z.string().uuid("Select a site before scanning."),
 });
 export type ScanAttendanceInput = z.infer<typeof scanAttendanceSchema>;

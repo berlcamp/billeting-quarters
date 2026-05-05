@@ -494,6 +494,7 @@ export async function scanAttendance(
     type: AttendanceType;
     personnel_id: string;
     full_name: string | null;
+    photo_url: string | null;
   }>
 > {
   const auth = await requireAttendanceRecorder();
@@ -531,7 +532,7 @@ export async function scanAttendance(
   const { data: target } = await admin
     .schema("palaro")
     .from("personnel")
-    .select("id, full_name, is_active")
+    .select("id, full_name, is_active, photo_url")
     .eq("id", personnelId)
     .single();
   if (!target) return fail("Personnel not found for scanned ID.");
@@ -605,6 +606,7 @@ export async function scanAttendance(
     type: inserted.type,
     personnel_id: personnelId,
     full_name: target.full_name,
+    photo_url: target.photo_url,
   });
 }
 
