@@ -34,6 +34,8 @@ interface IncidentsTableProps {
   incidents: Incident[];
   siteLookup: Map<string, string>;
   delegationLookup: Map<string, { code: string; name: string }>;
+  /** When set, hides the category column + filter (the list is already scoped to one category). */
+  lockedCategory?: IncidentCategory;
 }
 
 const INCIDENT_STATUSES: readonly IncidentStatus[] = [
@@ -48,6 +50,7 @@ export function IncidentsTable({
   incidents,
   siteLookup,
   delegationLookup,
+  lockedCategory,
 }: IncidentsTableProps) {
   const [statusFilter, setStatusFilter] = useState<IncidentStatus | "all">("all");
   const [severityFilter, setSeverityFilter] = useState<IncidentSeverity | "all">(
@@ -99,16 +102,20 @@ export function IncidentsTable({
         </div>
       ),
     },
-    {
-      id: "category",
-      header: "Category",
-      className: "w-28",
-      cell: (row) => (
-        <span className="text-sm text-muted-foreground">
-          {INCIDENT_CATEGORY_LABELS[row.category]}
-        </span>
-      ),
-    },
+    ...(lockedCategory
+      ? []
+      : [
+          {
+            id: "category",
+            header: "Category",
+            className: "w-28",
+            cell: (row: Incident) => (
+              <span className="text-sm text-muted-foreground">
+                {INCIDENT_CATEGORY_LABELS[row.category]}
+              </span>
+            ),
+          },
+        ]),
     {
       id: "severity",
       header: "Severity",
@@ -225,32 +232,34 @@ export function IncidentsTable({
               ))}
             </SelectContent>
           </Select>
-          <Select
-            value={categoryFilter}
-            onValueChange={(v) =>
-              setCategoryFilter(v as IncidentCategory | "all")
-            }
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue>
-                {(v: string | null) =>
-                  !v || v === "all"
-                    ? "All categories"
-                    : v in INCIDENT_CATEGORY_LABELS
-                      ? INCIDENT_CATEGORY_LABELS[v as IncidentCategory]
-                      : v
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              {INCIDENT_CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {INCIDENT_CATEGORY_LABELS[c]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {lockedCategory ? null : (
+            <Select
+              value={categoryFilter}
+              onValueChange={(v) =>
+                setCategoryFilter(v as IncidentCategory | "all")
+              }
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue>
+                  {(v: string | null) =>
+                    !v || v === "all"
+                      ? "All categories"
+                      : v in INCIDENT_CATEGORY_LABELS
+                        ? INCIDENT_CATEGORY_LABELS[v as IncidentCategory]
+                        : v
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {INCIDENT_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {INCIDENT_CATEGORY_LABELS[c]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </>
       }
       empty={{

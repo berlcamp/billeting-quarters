@@ -11,11 +11,14 @@ import { fail, ok, type ActionResult } from "./types";
 import type { Database } from "@/types/database";
 
 type Incident = Database["palaro"]["Tables"]["incidents"]["Row"];
+type IncidentCategory = Database["palaro"]["Enums"]["incident_category"];
 
 const INCIDENTS_PATH = "/dashboard/incidents";
 const INCIDENT_PHOTO_BUCKET = "incident-photos";
 
-export async function getIncidents(): Promise<ActionResult<Incident[]>> {
+export async function getIncidents(
+  category?: IncidentCategory,
+): Promise<ActionResult<Incident[]>> {
   const profile = await getCurrentProfile();
   if (!profile) return fail("Not authenticated.");
   if (!hasPermission(profile, "incident.view")) {
@@ -23,12 +26,14 @@ export async function getIncidents(): Promise<ActionResult<Incident[]>> {
   }
 
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let query = admin
     .schema("palaro")
     .from("incidents")
     .select("*")
     .order("reported_at", { ascending: false })
     .limit(500);
+  if (category) query = query.eq("category", category);
+  const { data, error } = await query;
   if (error) return fail(error.message);
   return ok(data ?? []);
 }

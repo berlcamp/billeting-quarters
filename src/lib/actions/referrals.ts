@@ -22,27 +22,10 @@ import type { Database, Json } from "@/types/database";
 type Referral = Database["palaro"]["Tables"]["referrals"]["Row"];
 type NotificationInsert = Database["palaro"]["Tables"]["notifications"]["Insert"];
 
-const FIELD_PATH = "/dashboard/medical/field";
+const MEDICAL_INCIDENTS_PATH = "/dashboard/medical/incidents";
 const UCF_PATH = "/dashboard/medical/ucf";
 const HOSPITAL_PATH = "/dashboard/medical/hospital";
 const INCIDENTS_PATH = "/dashboard/incidents";
-
-export async function getMyFieldReferrals(): Promise<ActionResult<Referral[]>> {
-  const profile = await getCurrentProfile();
-  if (!profile) return fail("Not authenticated.");
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .schema("palaro")
-    .from("referrals")
-    .select("*")
-    .eq("level", "field_to_ucf")
-    .eq("referred_by", profile.id)
-    .order("referred_at", { ascending: false })
-    .limit(500);
-  if (error) return fail(error.message);
-  return ok(data ?? []);
-}
 
 // All-referrals feed for the command center overview. Gated to anyone with
 // broad operational visibility (incident.view) — the same gate the page itself
@@ -253,7 +236,7 @@ export async function dischargeReferral(
 
   revalidatePath(UCF_PATH);
   revalidatePath(`${UCF_PATH}/${id}`);
-  revalidatePath(FIELD_PATH);
+  revalidatePath(MEDICAL_INCIDENTS_PATH);
   return ok();
 }
 
@@ -391,7 +374,7 @@ export async function createFieldReferral(
     user_id: profile.id,
   });
 
-  revalidatePath(FIELD_PATH);
+  revalidatePath(MEDICAL_INCIDENTS_PATH);
   revalidatePath(UCF_PATH);
   if (data.incident_id) {
     revalidatePath(`${INCIDENTS_PATH}/${data.incident_id}`);

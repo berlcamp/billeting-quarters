@@ -75,8 +75,8 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Medical",
     items: [
       {
-        label: "Field",
-        href: "/dashboard/medical/field",
+        label: "Medical Incidents",
+        href: "/dashboard/medical/incidents",
         icon: HeartPulse,
         roles: ["medical_field"],
       },
