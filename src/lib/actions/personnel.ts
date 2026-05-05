@@ -238,6 +238,40 @@ export async function deletePersonnel(
   return ok();
 }
 
+// Reverse of deletePersonnel — flips is_active back to true so the row is
+// pickable again in ID generator, attendance, and DTR.
+export async function reactivatePersonnel(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const auth = await requirePersonnelManager();
+  if (!auth.ok) return fail(auth.error);
+
+  const parsed = deletePersonnelSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .schema("palaro")
+    .from("personnel")
+    .update({ is_active: true })
+    .eq("id", parsed.data.id);
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "personnel",
+    entity_id: parsed.data.id,
+    user_id: auth.profile.id,
+    changes: { is_active: true },
+  });
+
+  revalidatePath(PERSONNEL_PATH);
+  revalidatePath(IDS_PATH);
+  return ok();
+}
+
 // =============================================================================
 // DUTY SCHEDULES
 // =============================================================================

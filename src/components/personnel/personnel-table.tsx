@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,7 +16,7 @@ import {
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { PersonnelDialog } from "./personnel-dialog";
-import { deletePersonnel } from "@/lib/actions/personnel";
+import { deletePersonnel, reactivatePersonnel } from "@/lib/actions/personnel";
 import type { Database } from "@/types/database";
 
 type Personnel = Database["palaro"]["Tables"]["personnel"]["Row"];
@@ -30,12 +31,16 @@ interface Props {
 }
 
 const ALL = "all";
+type StatusFilter = "all" | "active" | "inactive";
 
 export function PersonnelTable({ personnel, sites }: Props) {
   const [editing, setEditing] = useState<Personnel | null>(null);
   const [stableEditing, setStableEditing] = useState<Personnel | null>(null);
   const [deletingTarget, setDeletingTarget] = useState<Personnel | null>(null);
+  const [reactivatingTarget, setReactivatingTarget] =
+    useState<Personnel | null>(null);
   const [committeeFilter, setCommitteeFilter] = useState<string>(ALL);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const router = useRouter();
 
   const siteMap = useMemo(() => {
@@ -51,10 +56,14 @@ export function PersonnelTable({ personnel, sites }: Props) {
   }, [personnel]);
 
   const filtered = useMemo(() => {
-    return personnel.filter(
-      (p) => committeeFilter === ALL || p.committee === committeeFilter,
-    );
-  }, [personnel, committeeFilter]);
+    return personnel.filter((p) => {
+      if (committeeFilter !== ALL && p.committee !== committeeFilter)
+        return false;
+      if (statusFilter === "active" && !p.is_active) return false;
+      if (statusFilter === "inactive" && p.is_active) return false;
+      return true;
+    });
+  }, [personnel, committeeFilter, statusFilter]);
 
   async function handleDelete() {
     if (!deletingTarget) return;
@@ -65,6 +74,18 @@ export function PersonnelTable({ personnel, sites }: Props) {
     }
     toast.success(`${deletingTarget.full_name} archived`);
     setDeletingTarget(null);
+    router.refresh();
+  }
+
+  async function handleReactivate() {
+    if (!reactivatingTarget) return;
+    const result = await reactivatePersonnel({ id: reactivatingTarget.id });
+    if (result.error) {
+      toast.error("Reactivate failed", { description: result.error });
+      return;
+    }
+    toast.success(`${reactivatingTarget.full_name} reactivated`);
+    setReactivatingTarget(null);
     router.refresh();
   }
 
@@ -116,22 +137,47 @@ export function PersonnelTable({ personnel, sites }: Props) {
         ),
     },
     {
+      id: "status",
+      header: "Status",
+      cell: (p) =>
+        p.is_active ? (
+          <Badge variant="secondary">Active</Badge>
+        ) : (
+          <Badge variant="outline" className="text-muted-foreground">
+            Inactive
+          </Badge>
+        ),
+    },
+    {
       id: "actions",
       header: "",
       className: "w-12 text-right",
-      cell: (p) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            setDeletingTarget(p);
-          }}
-          aria-label={`Archive ${p.full_name}`}
-        >
-          <Trash2 className="size-4 text-muted-foreground" />
-        </Button>
-      ),
+      cell: (p) =>
+        p.is_active ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeletingTarget(p);
+            }}
+            aria-label={`Archive ${p.full_name}`}
+          >
+            <Trash2 className="size-4 text-muted-foreground" />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              setReactivatingTarget(p);
+            }}
+            aria-label={`Reactivate ${p.full_name}`}
+          >
+            <RotateCcw className="size-4 text-muted-foreground" />
+          </Button>
+        ),
     },
   ];
 
@@ -150,26 +196,51 @@ export function PersonnelTable({ personnel, sites }: Props) {
             (p.agency?.toLowerCase().includes(q) ?? false),
         }}
         filters={
-          <Select
-            value={committeeFilter}
-            onValueChange={(v) => setCommitteeFilter(v ?? ALL)}
-          >
-            <SelectTrigger className="w-[220px]">
-              <SelectValue>
-                {(v: string | null) =>
-                  !v || v === ALL ? "All committees" : v
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All committees</SelectItem>
-              {committees.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <>
+            <Select
+              value={committeeFilter}
+              onValueChange={(v) => setCommitteeFilter(v ?? ALL)}
+            >
+              <SelectTrigger className="w-[220px]">
+                <SelectValue>
+                  {(v: string | null) =>
+                    !v || v === ALL ? "All committees" : v
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All committees</SelectItem>
+                {committees.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={statusFilter}
+              onValueChange={(v) =>
+                setStatusFilter((v as StatusFilter) ?? "all")
+              }
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue>
+                  {(v: string | null) =>
+                    v === "active"
+                      ? "Active"
+                      : v === "inactive"
+                        ? "Inactive"
+                        : "All statuses"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
         }
         empty={{
           title: "No personnel yet",
@@ -206,6 +277,24 @@ export function PersonnelTable({ personnel, sites }: Props) {
         confirmLabel="Archive"
         variant="destructive"
         onConfirm={handleDelete}
+      />
+      <ConfirmDialog
+        open={!!reactivatingTarget}
+        onOpenChange={(o) => !o && setReactivatingTarget(null)}
+        title="Reactivate this personnel?"
+        description={
+          reactivatingTarget ? (
+            <>
+              <span className="font-medium">
+                {reactivatingTarget.full_name}
+              </span>{" "}
+              will be set active again and reappear in ID, DTR, and attendance
+              pickers.
+            </>
+          ) : null
+        }
+        confirmLabel="Reactivate"
+        onConfirm={handleReactivate}
       />
     </>
   );
