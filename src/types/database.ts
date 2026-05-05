@@ -1139,8 +1139,7 @@ export type Database = {
           contact_person: string | null;
           contact_number: string | null;
           email: string | null;
-          cuisine_type: string | null;
-          capacity_meals_per_day: number | null;
+          business_category: string | null;
           is_active: boolean;
           notes: string | null;
           created_at: string;
@@ -1151,8 +1150,7 @@ export type Database = {
           contact_person?: string | null;
           contact_number?: string | null;
           email?: string | null;
-          cuisine_type?: string | null;
-          capacity_meals_per_day?: number | null;
+          business_category?: string | null;
           is_active?: boolean;
           notes?: string | null;
           created_at?: string;
@@ -1163,8 +1161,7 @@ export type Database = {
           contact_person?: string | null;
           contact_number?: string | null;
           email?: string | null;
-          cuisine_type?: string | null;
-          capacity_meals_per_day?: number | null;
+          business_category?: string | null;
           is_active?: boolean;
           notes?: string | null;
           created_at?: string;
@@ -1176,8 +1173,9 @@ export type Database = {
           id: string;
           bq_id: string;
           supplier_id: string | null;
-          meal_type: string | null;
-          quantity_meals: number;
+          item_name: string;
+          unit: string;
+          quantity: number;
           required_at: string;
           status: string;
           notes: string | null;
@@ -1188,8 +1186,9 @@ export type Database = {
           id?: string;
           bq_id: string;
           supplier_id?: string | null;
-          meal_type?: string | null;
-          quantity_meals: number;
+          item_name: string;
+          unit: string;
+          quantity: number;
           required_at: string;
           status?: string;
           notes?: string | null;
@@ -1200,8 +1199,9 @@ export type Database = {
           id?: string;
           bq_id?: string;
           supplier_id?: string | null;
-          meal_type?: string | null;
-          quantity_meals?: number;
+          item_name?: string;
+          unit?: string;
+          quantity?: number;
           required_at?: string;
           status?: string;
           notes?: string | null;

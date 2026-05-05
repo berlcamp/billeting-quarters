@@ -20,8 +20,6 @@ import {
   FOOD_REQUEST_STATUSES,
   FOOD_REQUEST_STATUS_BADGE,
   FOOD_REQUEST_STATUS_LABELS,
-  MEAL_TYPES,
-  MEAL_TYPE_LABELS,
   type FoodRequestStatus,
 } from "@/lib/labels";
 import { formatManila } from "@/lib/timezone";
@@ -37,9 +35,12 @@ type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
   "id" | "name" | "site_type"
 >;
-type MealType = (typeof MEAL_TYPES)[number];
 
 const ALL_STATUS = "__all__";
+
+function formatQuantity(q: number): string {
+  return Number.isInteger(q) ? String(q) : q.toFixed(2).replace(/\.?0+$/, "");
+}
 
 interface Props {
   requests: Request[];
@@ -116,20 +117,17 @@ export function RequestsTable({
       cell: (r) => bqMap.get(r.bq_id) ?? "—",
     },
     {
-      id: "meal",
-      header: "Meal",
-      cell: (r) => {
-        const m = r.meal_type ?? "";
-        return MEAL_TYPES.includes(m as MealType)
-          ? MEAL_TYPE_LABELS[m as MealType]
-          : (m || "—");
-      },
+      id: "item",
+      header: "Item",
+      cell: (r) => r.item_name || "—",
     },
     {
       id: "qty",
-      header: "Count",
+      header: "Quantity",
       cell: (r) => (
-        <span className="font-mono text-sm">{r.quantity_meals}</span>
+        <span className="font-mono text-sm">
+          {formatQuantity(r.quantity)} {r.unit}
+        </span>
       ),
     },
     {
@@ -229,10 +227,11 @@ export function RequestsTable({
       rowKey={(r) => r.id}
       pageSize={20}
       searchable={{
-        placeholder: "Search BQ, meal, supplier…",
+        placeholder: "Search BQ, item, supplier…",
         predicate: (r, q) =>
           (bqMap.get(r.bq_id)?.toLowerCase().includes(q) ?? false) ||
-          (r.meal_type?.toLowerCase().includes(q) ?? false) ||
+          (r.item_name?.toLowerCase().includes(q) ?? false) ||
+          (r.unit?.toLowerCase().includes(q) ?? false) ||
           (r.supplier_id
             ? (supplierMap.get(r.supplier_id)?.toLowerCase().includes(q) ??
               false)
@@ -265,7 +264,7 @@ export function RequestsTable({
       }
       empty={{
         title: "No requests yet",
-        description: "File the first meal request to get started.",
+        description: "File the first food request to get started.",
       }}
     />
   );

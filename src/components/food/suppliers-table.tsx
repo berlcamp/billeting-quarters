@@ -39,9 +39,9 @@ export function SuppliersTable({ suppliers, canManage }: Props) {
       cell: (s) => (
         <div className="flex flex-col">
           <span className="font-medium">{s.name}</span>
-          {s.cuisine_type ? (
+          {s.business_category ? (
             <span className="text-xs text-muted-foreground">
-              {s.cuisine_type}
+              {s.business_category}
             </span>
           ) : null}
         </div>
@@ -72,13 +72,11 @@ export function SuppliersTable({ suppliers, canManage }: Props) {
         ),
     },
     {
-      id: "capacity",
-      header: "Daily capacity",
+      id: "category",
+      header: "Category",
       cell: (s) =>
-        s.capacity_meals_per_day ? (
-          <span className="font-mono text-sm">
-            {s.capacity_meals_per_day} meals
-          </span>
+        s.business_category ? (
+          <span className="text-sm">{s.business_category}</span>
         ) : (
           <span className="text-muted-foreground">—</span>
         ),
@@ -123,13 +121,13 @@ export function SuppliersTable({ suppliers, canManage }: Props) {
         placeholder: "Search supplier…",
         predicate: (s, q) =>
           s.name.toLowerCase().includes(q) ||
-          (s.cuisine_type?.toLowerCase().includes(q) ?? false) ||
+          (s.business_category?.toLowerCase().includes(q) ?? false) ||
           (s.contact_person?.toLowerCase().includes(q) ?? false),
       }}
       empty={{
         title: "No suppliers yet",
         description: canManage
-          ? "Add a caterer to start routing meal requests."
+          ? "Add a supplier to start routing food requests."
           : "Suppliers will appear here once added by command center.",
       }}
     />

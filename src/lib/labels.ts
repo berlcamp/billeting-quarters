@@ -335,12 +335,3 @@ export const FOOD_REQUEST_STATUS_BADGE: Record<FoodRequestStatus, string> = {
   delivered: "bg-green-100 text-green-800",
   cancelled: "bg-gray-100 text-gray-800",
 };
-
-export const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"] as const;
-
-export const MEAL_TYPE_LABELS: Record<(typeof MEAL_TYPES)[number], string> = {
-  breakfast: "Breakfast",
-  lunch: "Lunch",
-  dinner: "Dinner",
-  snack: "Snack",
-};

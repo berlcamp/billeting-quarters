@@ -22,7 +22,14 @@ export const createPersonnelSchema = z.object({
   site_id: optionalUuid,
   agency: optionalShortText,
   contact_number: z.string().trim().max(50).optional(),
-  photo_url: z.string().url().max(1000).optional().or(z.literal("")),
+  // Storage path inside the `personnel-photos` bucket (e.g. "<uploader>/<stamp>-<rand>.jpg").
+  // Empty string normalizes to undefined so the DB column ends up null.
+  photo_url: z
+    .string()
+    .trim()
+    .max(1000)
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
   is_active: z.boolean().optional(),
 });
 export type CreatePersonnelInput = z.infer<typeof createPersonnelSchema>;

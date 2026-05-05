@@ -14,8 +14,7 @@ const supplierFields = z.object({
     .email("Invalid email")
     .optional()
     .or(z.literal("")),
-  cuisine_type: optionalShortText,
-  capacity_meals_per_day: z.number().int().min(0).max(100_000).optional(),
+  business_category: optionalShortText,
   notes: optionalText,
 });
 
@@ -29,17 +28,19 @@ export type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>;
 
 export const deleteSupplierSchema = z.object({ id: z.string().uuid() });
 
-export const mealTypeSchema = z.enum(["breakfast", "lunch", "dinner", "snack"]);
-
 const requestFields = z.object({
   bq_id: z.string().uuid("Pick a billeting quarter."),
   supplier_id: z.string().uuid().nullable().optional(),
-  meal_type: mealTypeSchema,
-  quantity_meals: z
-    .number({ message: "Meal count is required" })
-    .int()
-    .min(1, "At least 1 meal")
-    .max(100_000),
+  item_name: z
+    .string()
+    .trim()
+    .min(1, "Food item is required")
+    .max(200),
+  unit: z.string().trim().min(1, "Unit is required").max(40),
+  quantity: z
+    .number({ message: "Quantity is required" })
+    .min(0.01, "Quantity must be greater than 0")
+    .max(1_000_000),
   required_at: z
     .string()
     .min(1, "Required time is needed")

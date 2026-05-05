@@ -18,11 +18,13 @@ type Personnel = Database["palaro"]["Tables"]["personnel"]["Row"];
 
 interface Props {
   personnel: Personnel[];
+  /** Map of personnel.photo_url (storage path) → signed URL, resolved server-side. */
+  photoUrls: Record<string, string>;
 }
 
 const ALL_COMMITTEES = "all";
 
-export function IdRoster({ personnel }: Props) {
+export function IdRoster({ personnel, photoUrls }: Props) {
   const [query, setQuery] = useState("");
   const [committee, setCommittee] = useState<string>(ALL_COMMITTEES);
 
@@ -105,15 +107,18 @@ export function IdRoster({ personnel }: Props) {
         // On print we force 1 pair per row so each printed page is one set of
         // back-to-back cards aligned for folding/duplex.
         <div className="grid gap-4 lg:grid-cols-2 print:grid-cols-1 print:gap-3">
-          {filtered.map((p) => (
-            <div
-              key={p.id}
-              className="grid grid-cols-2 gap-2 break-inside-avoid"
-            >
-              <IdCard personnel={p} side="front" />
-              <IdCard personnel={p} side="back" />
-            </div>
-          ))}
+          {filtered.map((p) => {
+            const photoUrl = p.photo_url ? photoUrls[p.photo_url] : undefined;
+            return (
+              <div
+                key={p.id}
+                className="grid grid-cols-2 gap-2 break-inside-avoid"
+              >
+                <IdCard personnel={p} side="front" photoUrl={photoUrl} />
+                <IdCard personnel={p} side="back" />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

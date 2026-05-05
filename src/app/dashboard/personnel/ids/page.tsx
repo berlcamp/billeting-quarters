@@ -3,7 +3,10 @@ import { Forbidden } from "@/components/shared/forbidden";
 import { IdRoster } from "@/components/personnel/id-roster";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
-import { getPersonnelForIds } from "@/lib/actions/personnel";
+import {
+  getPersonnelForIds,
+  getPersonnelPhotoUrls,
+} from "@/lib/actions/personnel";
 
 export default async function IdGeneratorPage() {
   const profile = await getCurrentProfile();
@@ -16,6 +19,12 @@ export default async function IdGeneratorPage() {
   const result = await getPersonnelForIds();
   const personnel = result.error ? [] : (result.data ?? []);
 
+  const photoPaths = personnel
+    .map((p) => p.photo_url)
+    .filter((path): path is string => !!path);
+  const photoRes = await getPersonnelPhotoUrls(photoPaths);
+  const photoUrls = photoRes.data ?? {};
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -27,7 +36,7 @@ export default async function IdGeneratorPage() {
           Failed to load personnel: {result.error}
         </div>
       ) : (
-        <IdRoster personnel={personnel} />
+        <IdRoster personnel={personnel} photoUrls={photoUrls} />
       )}
     </div>
   );
