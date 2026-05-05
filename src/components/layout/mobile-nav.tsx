@@ -38,7 +38,7 @@ export function MobileNav({ role }: MobileNavProps) {
       <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border">
         <SheetHeader className="sr-only">
           <SheetTitle>Navigation</SheetTitle>
-          <SheetDescription>Palaro Command site navigation</SheetDescription>
+          <SheetDescription>Palaro Bayugan Command site navigation</SheetDescription>
         </SheetHeader>
         <div className="overflow-y-auto h-full">
           <SidebarNav role={role} onNavigate={() => setOpen(false)} />

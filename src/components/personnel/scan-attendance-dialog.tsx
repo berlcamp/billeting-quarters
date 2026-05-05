@@ -217,7 +217,7 @@ export function ScanAttendanceDialog({ sites }: Props) {
           <DialogHeader>
             <DialogTitle>Scan ID QR code</DialogTitle>
             <DialogDescription>
-              Point the camera at a Palaro Command personnel QR code. Time-in/out
+              Point the camera at a Palaro Bayugan Command personnel QR code. Time-in/out
               is chosen automatically based on the most recent scan today.
             </DialogDescription>
           </DialogHeader>

@@ -102,7 +102,7 @@ export function AttendanceTable({ logs, personnel, sites }: Props) {
       empty={{
         title: "No attendance recorded today",
         description:
-          "Scan a Palaro Command QR code or use Manual entry to record the first log.",
+          "Scan a Palaro Bayugan Command QR code or use Manual entry to record the first log.",
       }}
     />
   );

@@ -80,7 +80,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
       {
         heading: "What is PPDMS?",
         body: [
-          "Palaro Command (PPDMS) is the operations platform for the Palarong Pambansa. It coordinates incidents, medical referrals, VIP movements, venues, transportation, personnel, supplies, and food across every Billeting Quarter (BQ) and Playing Venue (PV).",
+          "Palaro Bayugan Command (PPDMS) is the operations platform for the Palarong Pambansa. It coordinates incidents, medical referrals, VIP movements, venues, transportation, personnel, supplies, and food across every Billeting Quarter (BQ) and Playing Venue (PV).",
           "Everything you do in the app is timestamped and audited for compliance with the Data Privacy Act (RA 10173).",
         ],
       },
@@ -878,7 +878,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
     slug: "personnel-ids",
     title: "ID Generator",
     summary:
-      "Print Palaro Command ID cards with embedded QR for attendance scanning.",
+      "Print Palaro Bayugan Command ID cards with embedded QR for attendance scanning.",
     icon: BadgeCheck,
     category: "Personnel",
     audience: ["personnel_admin"],

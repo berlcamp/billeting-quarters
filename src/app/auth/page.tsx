@@ -86,7 +86,7 @@ export default async function AuthPage({
               P
             </span>
             <div className="flex flex-col gap-0.5">
-              <span className="text-white/85">Palaro Command · Deck</span>
+              <span className="text-white/85">Palaro Bayugan Command · Deck</span>
               <span className="text-white/40">Operations · build 4.7.1</span>
             </div>
           </div>
@@ -146,13 +146,15 @@ export default async function AuthPage({
           </div>
         </div>
 
-        {/* ── pulled tagline ── */}
-        <div className="relative z-10 mt-14 max-w-md font-[var(--font-bricolage)] lg:mt-10">
-          <p className="font-[var(--font-fraunces)] text-[28px] leading-[1.05] font-light italic text-white/95 sm:text-[34px]">
-            Unlocking the future,{" "}
-            <span className="text-[#f5c526]">through sports.</span>
-          </p>
-          <p className="mt-3 max-w-sm text-[14px] leading-relaxed text-white/55">
+        {/* ── brand ── */}
+        <div className="relative z-10 mt-14 max-w-xl font-[var(--font-bricolage)] lg:mt-10">
+          <h2 className="font-[var(--font-fraunces)] text-[44px] leading-[0.98] font-light tracking-tight text-white sm:text-[58px] lg:text-[64px]">
+            <span className="block">
+              Palaro <span className="italic text-[#f5c526]">Bayugan</span>
+            </span>
+            <span className="block">Command</span>
+          </h2>
+          <p className="mt-4 max-w-sm text-[14px] leading-relaxed text-white/55">
             One platform for billeting, transport, venues, medical, and
             incident command — orchestrating the 2026 national games.
           </p>
@@ -239,7 +241,7 @@ export default async function AuthPage({
 
         {/* footer chrome */}
         <footer className="relative z-10 flex flex-col gap-2 font-[var(--font-geist-mono)] text-[10px] uppercase tracking-[0.22em] text-[#0a1740]/50 sm:flex-row sm:items-end sm:justify-between">
-          <span>© Palaro Command · DepEd</span>
+          <span>© Palaro Bayugan Command · DepEd</span>
           <span className="text-[#0a1740]/65">
             Developed and Powered by{" "}
             <span className="text-[#0a1740]">Keri Tech</span>

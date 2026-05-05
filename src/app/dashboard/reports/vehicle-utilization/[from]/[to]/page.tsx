@@ -68,7 +68,7 @@ export default async function VehicleUtilizationReportPage({
 
       <header className="space-y-1 border-b pb-4">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Palaro Command
+          Palaro Bayugan Command
         </p>
         <h1 className="text-2xl font-bold tracking-tight">
           Vehicle Utilization

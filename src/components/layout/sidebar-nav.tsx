@@ -27,7 +27,7 @@ export function SidebarNav({ role, onNavigate }: SidebarNavProps) {
         </div>
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-sm font-bold tracking-wide text-white">
-            Palaro Command
+            Palaro Bayugan Command
           </span>
           <span className="truncate text-[10px] tracking-wide text-white/40">
             Palarong Pambansa

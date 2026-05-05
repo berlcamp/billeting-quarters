@@ -20,7 +20,7 @@ export default async function SuspendedPage() {
               Account suspended
             </CardTitle>
             <CardDescription>
-              Your Palaro Command account has been suspended.
+              Your Palaro Bayugan Command account has been suspended.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

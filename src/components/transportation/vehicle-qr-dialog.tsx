@@ -72,7 +72,7 @@ export function VehicleQrDialog({ trigger, vehicle }: Props) {
           }}
         >
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Palaro Command — Vehicle ID
+            Palaro Bayugan Command — Vehicle ID
           </p>
           {dataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- data: URL, no Next/Image needed

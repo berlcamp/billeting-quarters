@@ -8,7 +8,7 @@ export default async function HelpIndexPage() {
     <div className="space-y-6">
       <PageHeader
         title="User Guide"
-        description="Module-by-module instructions for using Palaro Command. Search any keyword or browse by category."
+        description="Module-by-module instructions for using Palaro Bayugan Command. Search any keyword or browse by category."
       />
       <HelpSearch role={profile?.role ?? null} />
     </div>
