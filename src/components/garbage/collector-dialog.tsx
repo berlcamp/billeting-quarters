@@ -46,7 +46,9 @@ interface Props {
 }
 
 const emptyValues: CreateGarbageCollectorInput = {
-  coordinator_name: "",
+  swm_coordinator_name: "",
+  city_enro_coordinator_name: "",
+  driver_name: "",
   vehicle_description: "",
   contact_number: "",
   is_active: true,
@@ -54,7 +56,9 @@ const emptyValues: CreateGarbageCollectorInput = {
 
 function toValues(c: Collector): CreateGarbageCollectorInput {
   return {
-    coordinator_name: c.coordinator_name,
+    swm_coordinator_name: c.swm_coordinator_name,
+    city_enro_coordinator_name: c.city_enro_coordinator_name ?? "",
+    driver_name: c.driver_name ?? "",
     vehicle_description: c.vehicle_description ?? "",
     contact_number: c.contact_number ?? "",
     is_active: c.is_active,
@@ -121,12 +125,46 @@ export function CollectorDialog({
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
           <FormField
             control={form.control}
-            name="coordinator_name"
+            name="swm_coordinator_name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Coordinator name</FormLabel>
+                <FormLabel>SWM Coordinator name</FormLabel>
                 <FormControl>
                   <Input placeholder="Juan Dela Cruz" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="city_enro_coordinator_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>City ENRO Coordinator name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Maria Santos"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="driver_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Driver name</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Pedro Santos"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

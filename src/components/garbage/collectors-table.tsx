@@ -31,16 +31,32 @@ export function CollectorsTable({ collectors }: Props) {
       toast.error("Delete failed", { description: result.error });
       return;
     }
-    toast.success(`${deletingTarget.coordinator_name} removed`);
+    toast.success(`${deletingTarget.swm_coordinator_name} removed`);
     setDeletingTarget(null);
     router.refresh();
   }
 
   const columns: DataTableColumn<Collector>[] = [
     {
-      id: "coordinator",
-      header: "Coordinator",
-      cell: (c) => <span className="font-medium">{c.coordinator_name}</span>,
+      id: "swm_coordinator",
+      header: "SWM Coordinator",
+      cell: (c) => (
+        <span className="font-medium">{c.swm_coordinator_name}</span>
+      ),
+    },
+    {
+      id: "city_enro_coordinator",
+      header: "City ENRO Coordinator",
+      cell: (c) =>
+        c.city_enro_coordinator_name ?? (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      id: "driver",
+      header: "Driver",
+      cell: (c) =>
+        c.driver_name ?? <span className="text-muted-foreground">—</span>,
     },
     {
       id: "vehicle",
@@ -86,7 +102,7 @@ export function CollectorsTable({ collectors }: Props) {
             e.stopPropagation();
             setDeletingTarget(c);
           }}
-          aria-label={`Remove ${c.coordinator_name}`}
+          aria-label={`Remove ${c.swm_coordinator_name}`}
         >
           <Trash2 className="size-4 text-muted-foreground" />
         </Button>
@@ -103,7 +119,9 @@ export function CollectorsTable({ collectors }: Props) {
         searchable={{
           placeholder: "Search by name, vehicle, contact…",
           predicate: (c, q) =>
-            c.coordinator_name.toLowerCase().includes(q) ||
+            c.swm_coordinator_name.toLowerCase().includes(q) ||
+            (c.city_enro_coordinator_name?.toLowerCase().includes(q) ?? false) ||
+            (c.driver_name?.toLowerCase().includes(q) ?? false) ||
             (c.vehicle_description?.toLowerCase().includes(q) ?? false) ||
             (c.contact_number?.toLowerCase().includes(q) ?? false),
         }}
@@ -137,7 +155,7 @@ export function CollectorsTable({ collectors }: Props) {
           deletingTarget ? (
             <>
               <span className="font-medium">
-                {deletingTarget.coordinator_name}
+                {deletingTarget.swm_coordinator_name}
               </span>{" "}
               and any of their schedule rules will be removed. Already-generated
               pickups stay in history.
