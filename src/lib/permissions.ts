@@ -108,6 +108,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "referral.create_field_to_ucf",
   ],
   medical_ucf: [
+    "incident.create",
     "incident.view",
     "referral.accept",
     "referral.assess",
@@ -128,8 +129,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "clinic.manage",
     "supplies.manage",
   ],
-  protocol_officer: ["incident.view", "vip.manage"],
+  protocol_officer: ["incident.create", "incident.view", "vip.manage"],
   logistics_officer: [
+    "incident.create",
     "incident.view",
     "vehicle.manage",
     "garbage.manage",
@@ -137,23 +139,24 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   ],
   personnel_admin: ["personnel.manage", "attendance.record"],
   venue_manager: [
+    "incident.create",
     "incident.view",
     "venue.book",
     "venue.approve_special",
     "heat_index.record",
     "food.request",
   ],
-  delegation_head: ["incident.view", "food.request"],
+  delegation_head: ["incident.create", "incident.view", "food.request"],
   transportation_dispatcher: ["vehicle.manage", "vehicle.scan"],
   garbage_logger: [
     "incident.create",
     "incident.view",
     "garbage.log",
   ],
-  food_supplier_admin: ["incident.view", "food.manage"],
-  // Read-only access to the Command Center dashboard and the Incidents module.
-  // Cannot create, update, resolve, or refer incidents.
-  incident_monitoring: ["incident.view"],
+  food_supplier_admin: ["incident.create", "incident.view", "food.manage"],
+  // Access to the Command Center dashboard and the Incidents module.
+  // Can view and create incidents; cannot update, resolve, or refer.
+  incident_monitoring: ["incident.create", "incident.view"],
 };
 
 type ProfileLike =
