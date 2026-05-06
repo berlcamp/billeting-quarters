@@ -6,10 +6,7 @@ import { getUsers } from "@/lib/actions/profiles";
 import { requireRole } from "@/lib/auth/session";
 
 export default async function AdminUsersPage() {
-  const { allowed, profile } = await requireRole([
-    "super_admin",
-    "command_center",
-  ]);
+  const { allowed, profile } = await requireRole(["super_admin"]);
   if (!allowed || !profile) return <Forbidden />;
 
   const result = await getUsers();

@@ -204,7 +204,7 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Users",
         href: "/dashboard/admin/users",
         icon: Users,
-        roles: ["command_center"],
+        roles: [], // super_admin only
       },
       {
         label: "Sites",

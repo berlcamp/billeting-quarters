@@ -93,8 +93,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "heat_index.record",
     "heat_index.override",
     "venue.approve_special",
-    "user.invite",
-    "user.manage",
     "sites.manage",
     "delegations.manage",
     "reports.view",
