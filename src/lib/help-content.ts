@@ -24,7 +24,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import type { UserRole } from "@/lib/permissions";
+import type { Permission, UserRole } from "@/lib/permissions";
 
 // One step in a numbered "how to" list. Optional `note` shows below the step
 // in a softer tone — use it for keyboard shortcuts, validation hints, or
@@ -51,6 +51,10 @@ export interface ModuleGuide {
   // Roles that touch this module day-to-day. Omit / empty means "all signed-in
   // users". Used to filter the index for relevance.
   audience?: UserRole[];
+  // Permissions that gate "create / add a record" in this module. The guide
+  // page derives the role badges from ROLE_PERMISSIONS so they auto-update if
+  // the permission map changes. Omit when the module has no creatable record.
+  createPermissions?: readonly Permission[];
   // Sidebar grouping on the help index — mirrors the main nav grouping.
   category:
     | "Getting started"
@@ -164,6 +168,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "incidents",
     title: "Incidents",
+    createPermissions: ["incident.create"],
     summary:
       "Universal entry point for any operational event — medical, utility, security, facility, VIP, or other.",
     icon: AlertTriangle,
@@ -230,6 +235,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "vip",
     title: "VIP Tracking",
+    createPermissions: ["vip.manage"],
     summary:
       "Estimated and actual arrival/departure times for VIPs being escorted by Protocol Officers.",
     icon: Crown,
@@ -279,6 +285,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "heat-index",
     title: "Heat Index",
+    createPermissions: ["heat_index.record"],
     summary:
       "Record temperature + humidity at venues; the system computes heat index and recommends suspension when it gets dangerous.",
     icon: Thermometer,
@@ -342,6 +349,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "medical-field",
     title: "Medical — Field",
+    createPermissions: ["incident.create", "referral.create_field_to_ucf"],
     summary:
       "First responders triage at the venue and refer up to UCF when needed.",
     icon: HeartPulse,
@@ -390,6 +398,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "medical-ucf",
     title: "Medical — UCF",
+    createPermissions: ["referral.create_ucf_to_hospital"],
     summary:
       "Urgent Care Facility staff: receive Field referrals, assess, treat, and either discharge or escalate to Hospital.",
     icon: Stethoscope,
@@ -429,6 +438,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "medical-hospital",
     title: "Medical — Hospital",
+    createPermissions: ["incident.create"],
     summary:
       "Hospital reception: receive UCF referrals or log direct admittances; manage admit/discharge.",
     icon: Hospital,
@@ -473,6 +483,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "medical-clinic",
     title: "Medical — Clinic",
+    createPermissions: ["clinic.manage"],
     summary:
       "Open clinic for walk-in patients (athletes, staff, spectators with non-acute needs).",
     icon: Pill,
@@ -516,6 +527,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "medical-supplies",
     title: "Medical Supplies",
+    createPermissions: ["supplies.manage"],
     summary:
       "Inventory tracking with low-stock and expiry warnings for clinics, UCFs, and hospitals.",
     icon: Package,
@@ -580,6 +592,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "transportation",
     title: "Transportation",
+    createPermissions: ["vehicle.manage"],
     summary:
       "Vehicle catalogue, QR-based in/out scanning, and route management for shuttles, ambulances, and service vehicles.",
     icon: Truck,
@@ -636,6 +649,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "venues",
     title: "Venues",
+    createPermissions: ["venue.book"],
     summary:
       "Practice slot booking on a day-grid view, with conflict detection and special-request approval.",
     icon: MapPin,
@@ -692,6 +706,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "garbage",
     title: "Garbage Collection",
+    createPermissions: ["garbage.log", "garbage.manage"],
     summary:
       "Maintain a registry of collectors and a recurring weekly schedule. Each week's pickups are generated automatically and ticked off as they're collected.",
     icon: Trash2,
@@ -738,6 +753,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "food",
     title: "Food Supply",
+    createPermissions: ["food.request", "food.manage"],
     summary:
       "Caterer roster and meal requests from BQs through to delivery confirmation.",
     icon: UtensilsCrossed,
@@ -800,6 +816,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "personnel-duty",
     title: "Duty Schedule",
+    createPermissions: ["personnel.manage"],
     summary:
       "Plan personnel shifts across sites — who is where, when.",
     icon: Calendar,
@@ -835,6 +852,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "personnel-attendance",
     title: "Attendance",
+    createPermissions: ["attendance.record"],
     summary:
       "Time-in / time-out tracking via QR scanning of personnel ID cards.",
     icon: ClipboardCheck,
@@ -877,6 +895,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "personnel-ids",
     title: "ID Generator",
+    createPermissions: ["personnel.manage"],
     summary:
       "Print Palaro Bayugan Command ID cards with embedded QR for attendance scanning.",
     icon: BadgeCheck,
@@ -958,6 +977,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "admin-users",
     title: "User Management",
+    createPermissions: ["user.invite"],
     summary:
       "Invite users, assign roles, and manage account status.",
     icon: Users,
@@ -1002,6 +1022,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "admin-sites",
     title: "Sites",
+    createPermissions: ["sites.manage"],
     summary:
       "Manage Billeting Quarters, Playing Venues, UCFs, hospitals, clinics, and command centers.",
     icon: Building2,
@@ -1033,6 +1054,7 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "admin-delegations",
     title: "Delegations",
+    createPermissions: ["delegations.manage"],
     summary:
       "The 17 Philippine regions competing as teams.",
     icon: Flag,

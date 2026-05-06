@@ -1,5 +1,7 @@
-import { CheckCircle2, Info, Lightbulb, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Info, Lightbulb, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { GuideSection, ModuleGuide } from "@/lib/help-content";
+import { ROLE_LABELS, rolesWithAnyPermission } from "@/lib/permissions";
 
 interface Props {
   guide: ModuleGuide;
@@ -7,6 +9,9 @@ interface Props {
 
 export function GuideRenderer({ guide }: Props) {
   const Icon = guide.icon;
+  const creators = guide.createPermissions
+    ? rolesWithAnyPermission(guide.createPermissions)
+    : [];
   return (
     <article className="space-y-8">
       <header className="space-y-2 border-b pb-6">
@@ -21,6 +26,29 @@ export function GuideRenderer({ guide }: Props) {
         <h1 className="text-2xl font-bold tracking-tight">{guide.title}</h1>
         <p className="text-sm text-muted-foreground">{guide.summary}</p>
       </header>
+
+      {creators.length > 0 ? (
+        <section
+          aria-label="Who can create records in this module"
+          className="rounded-md border border-emerald-200/60 bg-emerald-50/60 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/30"
+        >
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+            <ShieldCheck className="size-3.5" />
+            Who can add records
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {creators.map((role) => (
+              <Badge
+                key={role}
+                variant={role === "super_admin" ? "default" : "secondary"}
+                className="text-[11px] font-normal"
+              >
+                {ROLE_LABELS[role]}
+              </Badge>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <nav
         aria-label="On this page"

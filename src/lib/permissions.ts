@@ -106,6 +106,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "incident.view",
     "incident.update",
     "referral.create_field_to_ucf",
+    "heat_index.record",
   ],
   medical_ucf: [
     "incident.create",
@@ -202,4 +203,17 @@ export function hasRole(
 
 export function isSuperAdmin(profile: ProfileLike): boolean {
   return profileRoles(profile).includes("super_admin");
+}
+
+// Returns the roles that hold ANY of the given permissions, preserving the
+// canonical USER_ROLES ordering. Used by the help guides to show "who can
+// create records in this module" without having to maintain a parallel list.
+export function rolesWithAnyPermission(
+  permissions: readonly Permission[],
+): UserRole[] {
+  if (permissions.length === 0) return [];
+  return USER_ROLES.filter((role) => {
+    const granted = ROLE_PERMISSIONS[role];
+    return permissions.some((p) => granted.includes(p));
+  });
 }
