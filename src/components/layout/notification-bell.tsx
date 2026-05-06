@@ -26,7 +26,7 @@ type Notification = Database["palaro"]["Tables"]["notifications"]["Row"];
 
 interface NotificationBellProps {
   profileId: string;
-  role: UserRole | null;
+  roles: readonly UserRole[];
 }
 
 const SEVERITY_ACCENT: Record<string, string> = {
@@ -35,7 +35,7 @@ const SEVERITY_ACCENT: Record<string, string> = {
   info: "border-l-blue-500",
 };
 
-export function NotificationBell({ profileId, role }: NotificationBellProps) {
+export function NotificationBell({ profileId, roles }: NotificationBellProps) {
   const [initial, setInitial] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -54,7 +54,7 @@ export function NotificationBell({ profileId, role }: NotificationBellProps) {
 
   const notifications = useRealtimeNotifications(initial, {
     profileId,
-    role,
+    roles,
     onCritical: (n) => {
       toast.error(n.title, {
         description: n.body ?? undefined,

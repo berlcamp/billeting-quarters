@@ -11,7 +11,7 @@ type Notification = Database["palaro"]["Tables"]["notifications"]["Row"];
 
 const NOTIFICATIONS_PATH = "/dashboard/notifications";
 
-// Returns notifications addressed to the current user (by id) OR to their role.
+// Returns notifications addressed to the current user (by id) OR to ANY of their roles.
 export async function getMyNotifications(
   limit = 100,
 ): Promise<ActionResult<Notification[]>> {
@@ -19,8 +19,11 @@ export async function getMyNotifications(
   if (!profile) return fail("Not authenticated.");
 
   const admin = createAdminClient();
-  const orFilter = profile.role
-    ? `recipient_id.eq.${profile.id},recipient_role.eq.${profile.role}`
+  const roleFilters = (profile.roles ?? [])
+    .map((r) => `recipient_role.eq.${r}`)
+    .join(",");
+  const orFilter = roleFilters
+    ? `recipient_id.eq.${profile.id},${roleFilters}`
     : `recipient_id.eq.${profile.id}`;
 
   const { data, error } = await admin
@@ -66,15 +69,18 @@ export async function markAllNotificationsRead(): Promise<ActionResult<void>> {
   if (!profile) return fail("Not authenticated.");
 
   const admin = createAdminClient();
-  // Mark unread notifications addressed to me (id) or my role.
+  // Mark unread notifications addressed to me (id) or ANY of my roles.
   let query = admin
     .schema("palaro")
     .from("notifications")
     .update({ is_read: true, read_at: new Date().toISOString() })
     .eq("is_read", false);
 
-  query = profile.role
-    ? query.or(`recipient_id.eq.${profile.id},recipient_role.eq.${profile.role}`)
+  const roleFilters = (profile.roles ?? [])
+    .map((r) => `recipient_role.eq.${r}`)
+    .join(",");
+  query = roleFilters
+    ? query.or(`recipient_id.eq.${profile.id},${roleFilters}`)
     : query.eq("recipient_id", profile.id);
 
   const { error } = await query;

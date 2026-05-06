@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { Pause, Play } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -32,7 +33,7 @@ type Profile = Database["palaro"]["Tables"]["profiles"]["Row"];
 interface UsersTableProps {
   users: Profile[];
   currentProfileId: string;
-  currentRole: UserRole | null;
+  currentRoles: readonly UserRole[];
 }
 
 function initialsOf(profile: Profile): string {
@@ -47,7 +48,7 @@ function initialsOf(profile: Profile): string {
 export function UsersTable({
   users,
   currentProfileId,
-  currentRole,
+  currentRoles,
 }: UsersTableProps) {
   const [editing, setEditing] = useState<Profile | null>(null);
   const [roleFilter, setRoleFilter] = useState<UserRole | "all">("all");
@@ -56,10 +57,12 @@ export function UsersTable({
   );
   const [pendingStatusFor, setPendingStatusFor] = useState<string | null>(null);
   const router = useRouter();
+  const callerIsSuper = currentRoles.includes("super_admin");
 
   const filtered = useMemo(() => {
     return users.filter((u) => {
-      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      const roles = u.roles ?? [];
+      if (roleFilter !== "all" && !roles.includes(roleFilter)) return false;
       if (statusFilter !== "all" && u.status !== statusFilter) return false;
       return true;
     });
@@ -106,13 +109,27 @@ export function UsersTable({
       ),
     },
     {
-      id: "role",
-      header: "Role",
-      cell: (row) => (
-        <span className="text-sm">
-          {row.role ? ROLE_LABELS[row.role] : "—"}
-        </span>
-      ),
+      id: "roles",
+      header: "Roles",
+      cell: (row) => {
+        const roles = row.roles ?? [];
+        if (roles.length === 0) {
+          return <span className="text-sm text-muted-foreground">—</span>;
+        }
+        return (
+          <div className="flex flex-wrap gap-1">
+            {roles.map((role) => (
+              <Badge
+                key={role}
+                variant={role === "super_admin" ? "default" : "secondary"}
+                className="text-[10px] font-normal"
+              >
+                {ROLE_LABELS[role]}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
     },
     {
       id: "status",
@@ -143,10 +160,8 @@ export function UsersTable({
       className: "w-32 text-right",
       cell: (row) => {
         const isSelf = row.id === currentProfileId;
-        const isSuperAdmin = row.role === "super_admin";
-        const cannotChange =
-          isSelf ||
-          (isSuperAdmin && currentRole !== "super_admin");
+        const targetIsSuper = (row.roles ?? []).includes("super_admin");
+        const cannotChange = isSelf || (targetIsSuper && !callerIsSuper);
         return (
           <div className="flex justify-end">
             <Button
@@ -243,7 +258,7 @@ export function UsersTable({
       <EditUserDialog
         user={editing}
         currentProfileId={currentProfileId}
-        currentRole={currentRole}
+        currentRoles={currentRoles}
         onClose={() => setEditing(null)}
       />
     </>

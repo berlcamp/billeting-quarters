@@ -8,11 +8,11 @@ import { canSeeNavItem, NAV_SECTIONS } from "./nav-config";
 import type { UserRole } from "@/lib/permissions";
 
 interface SidebarNavProps {
-  role: UserRole | null;
+  roles: readonly UserRole[];
   onNavigate?: () => void;
 }
 
-export function SidebarNav({ role, onNavigate }: SidebarNavProps) {
+export function SidebarNav({ roles, onNavigate }: SidebarNavProps) {
   const pathname = usePathname();
 
   return (
@@ -38,7 +38,7 @@ export function SidebarNav({ role, onNavigate }: SidebarNavProps) {
       <div className="flex-1 overflow-y-auto py-2">
         {NAV_SECTIONS.map((section, sectionIdx) => {
           const visibleItems = section.items.filter((item) =>
-            canSeeNavItem(role, item),
+            canSeeNavItem(roles, item),
           );
           if (visibleItems.length === 0) return null;
 

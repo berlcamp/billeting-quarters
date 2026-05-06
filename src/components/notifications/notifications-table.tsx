@@ -31,7 +31,7 @@ type Notification = Database["palaro"]["Tables"]["notifications"]["Row"];
 interface NotificationsTableProps {
   initial: Notification[];
   profileId: string;
-  role: UserRole | null;
+  roles: readonly UserRole[];
 }
 
 type ReadFilter = "all" | "unread" | "read";
@@ -54,7 +54,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 export function NotificationsTable({
   initial,
   profileId,
-  role,
+  roles,
 }: NotificationsTableProps) {
   const [busy, setBusy] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -64,7 +64,7 @@ export function NotificationsTable({
 
   const notifications = useRealtimeNotifications(initial, {
     profileId,
-    role,
+    roles,
   });
 
   const categories = useMemo(() => {

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +41,7 @@ import {
 } from "@/lib/permissions";
 import {
   updateUserDetails,
-  updateUserRole,
+  updateUserRoles,
   updateUserStatus,
 } from "@/lib/actions/profiles";
 import {
@@ -55,21 +56,27 @@ const editFormSchema = z.object({
   full_name: z.string().trim().max(200).optional(),
   agency: z.string().trim().max(200).optional(),
   designation: z.string().trim().max(200).optional(),
-  role: userRoleSchema,
+  roles: z.array(userRoleSchema).min(1, "Pick at least one role"),
   status: profileStatusSchema,
 });
 type EditFormValues = z.infer<typeof editFormSchema>;
 
 interface EditUserDialogProps {
   user: Profile | null;
-  currentRole: UserRole | null;
+  currentRoles: readonly UserRole[];
   currentProfileId: string;
   onClose: () => void;
 }
 
+function arraysEqualUnordered<T>(a: readonly T[], b: readonly T[]): boolean {
+  if (a.length !== b.length) return false;
+  const sa = new Set(a);
+  return b.every((v) => sa.has(v));
+}
+
 export function EditUserDialog({
   user,
-  currentRole,
+  currentRoles,
   currentProfileId,
   onClose,
 }: EditUserDialogProps) {
@@ -82,7 +89,7 @@ export function EditUserDialog({
       full_name: user?.full_name ?? "",
       agency: user?.agency ?? "",
       designation: user?.designation ?? "",
-      role: (user?.role ?? "command_center") as UserRole,
+      roles: (user?.roles ?? []) as UserRole[],
       status: user?.status === "suspended" ? "suspended" : "active",
     },
   });
@@ -93,7 +100,7 @@ export function EditUserDialog({
       full_name: user.full_name ?? "",
       agency: user.agency ?? "",
       designation: user.designation ?? "",
-      role: (user.role ?? "command_center") as UserRole,
+      roles: (user.roles ?? []) as UserRole[],
       status: user.status === "suspended" ? "suspended" : "active",
     });
   }, [user, form]);
@@ -101,9 +108,13 @@ export function EditUserDialog({
   if (!user) return null;
 
   const isSelf = user.id === currentProfileId;
-  const targetIsSuperAdmin = user.role === "super_admin";
-  const canChangeSuperAdminBits =
-    currentRole === "super_admin" || !targetIsSuperAdmin;
+  const callerIsSuper = currentRoles.includes("super_admin");
+  const targetWasSuper = (user.roles ?? []).includes("super_admin");
+  const canEditTarget = callerIsSuper || !targetWasSuper;
+
+  const availableRoles: readonly UserRole[] = callerIsSuper
+    ? USER_ROLES
+    : USER_ROLES.filter((r) => r !== "super_admin");
 
   async function onSubmit(values: EditFormValues) {
     if (!user) return;
@@ -121,14 +132,15 @@ export function EditUserDialog({
       return;
     }
 
-    if (values.role !== user.role) {
-      const roleResult = await updateUserRole({
+    const currentTargetRoles = (user.roles ?? []) as UserRole[];
+    if (!arraysEqualUnordered(values.roles, currentTargetRoles)) {
+      const rolesResult = await updateUserRoles({
         user_id: user.id,
-        role: values.role,
+        roles: values.roles,
       });
-      if (roleResult.error) {
+      if (rolesResult.error) {
         setSubmitting(false);
-        toast.error("Role update failed", { description: roleResult.error });
+        toast.error("Roles update failed", { description: rolesResult.error });
         return;
       }
     }
@@ -150,11 +162,6 @@ export function EditUserDialog({
     router.refresh();
     onClose();
   }
-
-  const availableRoles: readonly UserRole[] =
-    currentRole === "super_admin"
-      ? USER_ROLES
-      : USER_ROLES.filter((r) => r !== "super_admin");
 
   return (
     <Dialog open={!!user} onOpenChange={(o) => !o && onClose()}>
@@ -208,46 +215,53 @@ export function EditUserDialog({
             />
             <FormField
               control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    disabled={!canChangeSuperAdminBits || (isSelf && currentRole === "super_admin")}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue>
-                          {(v: string | null) =>
-                            v && v in ROLE_LABELS ? (
-                              ROLE_LABELS[v as UserRole]
-                            ) : (
-                              <span className="text-muted-foreground">
-                                Select a role
-                              </span>
-                            )
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {availableRoles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {ROLE_LABELS[role]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {isSelf && currentRole === "super_admin" ? (
-                    <p className="text-xs text-muted-foreground">
-                      You can&rsquo;t demote yourself from super admin.
-                    </p>
-                  ) : null}
-                  <FormMessage />
-                </FormItem>
-              )}
+              name="roles"
+              render={({ field }) => {
+                const selected = (field.value ?? []) as UserRole[];
+                const lockSelfDemote =
+                  isSelf && callerIsSuper; // can't toggle off super_admin on self
+                const toggle = (role: UserRole, checked: boolean) => {
+                  if (lockSelfDemote && role === "super_admin" && !checked) {
+                    return;
+                  }
+                  const next = checked
+                    ? Array.from(new Set([...selected, role]))
+                    : selected.filter((r) => r !== role);
+                  field.onChange(next);
+                };
+                return (
+                  <FormItem>
+                    <FormLabel>Roles</FormLabel>
+                    <div className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-2">
+                      {availableRoles.map((role) => {
+                        const checked = selected.includes(role);
+                        const disabled =
+                          !canEditTarget ||
+                          (lockSelfDemote && role === "super_admin");
+                        return (
+                          <label
+                            key={role}
+                            className="flex cursor-pointer items-center gap-2 text-sm"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              disabled={disabled}
+                              onCheckedChange={(v) => toggle(role, !!v)}
+                            />
+                            <span>{ROLE_LABELS[role]}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {lockSelfDemote ? (
+                      <p className="text-xs text-muted-foreground">
+                        You can&rsquo;t demote yourself from super admin.
+                      </p>
+                    ) : null}
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
             <FormField
               control={form.control}
@@ -258,7 +272,7 @@ export function EditUserDialog({
                   <Select
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
-                    disabled={!canChangeSuperAdminBits || isSelf}
+                    disabled={!canEditTarget || isSelf}
                   >
                     <FormControl>
                       <SelectTrigger>

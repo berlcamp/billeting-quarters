@@ -25,7 +25,7 @@ export default async function NotificationsPage() {
         <NotificationsTable
           initial={notifications}
           profileId={profile.id}
-          role={profile.role}
+          roles={profile.roles}
         />
       )}
     </div>

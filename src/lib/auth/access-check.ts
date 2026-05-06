@@ -44,7 +44,7 @@ export const checkAccess = cache(async (): Promise<AccessState> => {
     return { status: "suspended", profile };
   }
 
-  if (profile.status !== "active" || !profile.role) {
+  if (profile.status !== "active" || (profile.roles?.length ?? 0) === 0) {
     return { status: "not_authorized", email: profile.email };
   }
 

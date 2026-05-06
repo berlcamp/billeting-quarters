@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
   let { data: profile } = await supabase
     .schema("palaro")
     .from("profiles")
-    .select("status, role")
+    .select("status, roles")
     .eq("auth_user_id", user.id)
     .single();
 
@@ -67,14 +67,13 @@ export async function GET(request: NextRequest) {
     const { data: invited } = await admin
       .schema("palaro")
       .from("profiles")
-      .select("id, status, role, full_name, avatar_url")
+      .select("id, status, roles, full_name, avatar_url")
       .eq("email", user.email)
       .is("auth_user_id", null)
       .eq("status", "active")
-      .not("role", "is", null)
       .maybeSingle();
 
-    if (invited) {
+    if (invited && (invited.roles?.length ?? 0) > 0) {
       const meta = (user.user_metadata ?? {}) as {
         full_name?: string;
         avatar_url?: string;
@@ -91,7 +90,7 @@ export async function GET(request: NextRequest) {
         .eq("id", invited.id);
 
       if (!linkError) {
-        profile = { status: invited.status, role: invited.role };
+        profile = { status: invited.status, roles: invited.roles };
       }
     }
   }
@@ -107,7 +106,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/suspended", url.origin));
   }
 
-  if (profile.status !== "active" || !profile.role) {
+  if (profile.status !== "active" || (profile.roles?.length ?? 0) === 0) {
     await supabase.auth.signOut();
     return NextResponse.redirect(
       new URL("/auth/not-authorized", url.origin),

@@ -10,18 +10,18 @@ type Notification = Database["palaro"]["Tables"]["notifications"]["Row"];
 interface UseRealtimeNotificationsOptions {
   /** Profile id of the current viewer — used to filter notifications addressed to me. */
   profileId: string;
-  /** Role of the current viewer — also used to surface role-broadcasts. */
-  role: UserRole | null;
+  /** Roles of the current viewer — also used to surface role-broadcasts. */
+  roles: readonly UserRole[];
   /** Fired once per inserted notification with severity = critical. */
   onCritical?: (notification: Notification) => void;
 }
 
-// Mirrors palaro.notifications, filtered to "addressed to me OR to my role".
+// Mirrors palaro.notifications, filtered to "addressed to me OR to any of my roles".
 // Realtime postgres_changes doesn't easily support OR-filters, so we subscribe
 // to all events and filter client-side.
 export function useRealtimeNotifications(
   initial: Notification[],
-  { profileId, role, onCritical }: UseRealtimeNotificationsOptions,
+  { profileId, roles, onCritical }: UseRealtimeNotificationsOptions,
 ) {
   const [notifications, setNotifications] = useState<Notification[]>(initial);
 
@@ -30,7 +30,7 @@ export function useRealtimeNotifications(
     (payload) => {
       if (payload.eventType === "INSERT") {
         const next = payload.new as Notification;
-        if (!isForMe(next, profileId, role)) return;
+        if (!isForMe(next, profileId, roles)) return;
         setNotifications((prev) => {
           if (prev.some((n) => n.id === next.id)) return prev;
           return [next, ...prev];
@@ -55,9 +55,9 @@ export function useRealtimeNotifications(
 function isForMe(
   n: Notification,
   profileId: string,
-  role: UserRole | null,
+  roles: readonly UserRole[],
 ): boolean {
   if (n.recipient_id === profileId) return true;
-  if (role && n.recipient_role === role) return true;
+  if (n.recipient_role && roles.includes(n.recipient_role)) return true;
   return false;
 }

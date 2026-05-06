@@ -249,7 +249,7 @@ export async function createMovement(
       vehicle_info: data.vehicle_info || null,
       escort_count: data.escort_count ?? null,
       notes: data.notes || null,
-      protocol_officer_id: auth.profile.role === "protocol_officer"
+      protocol_officer_id: auth.profile.roles.includes("protocol_officer")
         ? auth.profile.id
         : null,
       updated_by: auth.profile.id,

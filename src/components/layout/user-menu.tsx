@@ -19,7 +19,7 @@ import { createClient } from "@/lib/supabase/client";
 interface UserMenuProps {
   email: string;
   fullName: string | null;
-  role: string | null;
+  roles: readonly string[];
   avatarUrl: string | null;
 }
 
@@ -34,7 +34,7 @@ function getInitials(fullName: string | null, email: string): string {
   return email.slice(0, 2).toUpperCase();
 }
 
-export function UserMenu({ email, fullName, role, avatarUrl }: UserMenuProps) {
+export function UserMenu({ email, fullName, roles, avatarUrl }: UserMenuProps) {
   const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
 
@@ -67,9 +67,9 @@ export function UserMenu({ email, fullName, role, avatarUrl }: UserMenuProps) {
             <div className="flex flex-col">
               <span className="text-sm font-medium">{fullName ?? email}</span>
               <span className="text-xs text-muted-foreground">{email}</span>
-              {role ? (
+              {roles.length > 0 ? (
                 <span className="mt-1 font-mono text-[10px] uppercase text-muted-foreground">
-                  {role}
+                  {roles.join(" · ")}
                 </span>
               ) : null}
             </div>

@@ -366,7 +366,7 @@ export async function createFieldReferral(
     .schema("palaro")
     .from("profiles")
     .select("id")
-    .eq("role", "medical_ucf")
+    .contains("roles", ["medical_ucf"])
     .eq("status", "active")
     .eq("primary_assignment_site_id", data.to_site_id);
 
@@ -527,7 +527,7 @@ export async function createUcfToHospitalReferral(
     .schema("palaro")
     .from("profiles")
     .select("id")
-    .eq("role", "medical_hospital")
+    .contains("roles", ["medical_hospital"])
     .eq("status", "active")
     .eq("primary_assignment_site_id", data.to_site_id);
 

@@ -74,7 +74,7 @@ CREATE TABLE palaro.profiles (
   full_name TEXT,
   email TEXT UNIQUE NOT NULL,
   phone TEXT,
-  role palaro.user_role,
+  roles palaro.user_role[] NOT NULL DEFAULT '{}',
   status palaro.profile_status NOT NULL DEFAULT 'pending',
   agency TEXT,
   designation TEXT,
@@ -89,7 +89,7 @@ CREATE TABLE palaro.profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_profiles_role ON palaro.profiles(role);
+CREATE INDEX idx_profiles_roles ON palaro.profiles USING GIN(roles);
 CREATE INDEX idx_profiles_active ON palaro.profiles(is_active);
 CREATE INDEX idx_profiles_status ON palaro.profiles(status);
 CREATE INDEX idx_profiles_email ON palaro.profiles(email);
@@ -692,7 +692,7 @@ BEGIN
   WHERE email = NEW.email
     AND auth_user_id IS NULL
     AND status = 'active'
-    AND role IS NOT NULL
+    AND cardinality(roles) > 0
   LIMIT 1;
 
   IF existing_profile_id IS NULL THEN
@@ -726,10 +726,10 @@ CREATE TRIGGER palaro_on_auth_user_created
 -- Pre-create Berl's profile so first Google sign-in instantly activates as super_admin.
 -- auth_user_id is NULL until he signs in; the trigger will fill it.
 
-INSERT INTO palaro.profiles (email, full_name, role, status, invited_at)
-VALUES ('berlcamp@gmail.com', 'Berl Camp', 'super_admin', 'active', NOW())
+INSERT INTO palaro.profiles (email, full_name, roles, status, invited_at)
+VALUES ('berlcamp@gmail.com', 'Berl Camp', ARRAY['super_admin']::palaro.user_role[], 'active', NOW())
 ON CONFLICT (email) DO UPDATE
-  SET role = 'super_admin', status = 'active';
+  SET roles = ARRAY['super_admin']::palaro.user_role[], status = 'active';
 
 
 -- =====================
@@ -743,11 +743,17 @@ ALTER TABLE palaro.clinic_patients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE palaro.clinic_visits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE palaro.notifications ENABLE ROW LEVEL SECURITY;
 
--- Helper function: get current user's role (looks up by auth_user_id)
-CREATE OR REPLACE FUNCTION palaro.current_user_role()
-RETURNS palaro.user_role AS $$
-  SELECT role FROM palaro.profiles
+-- Helper function: get current user's roles array (looks up by auth_user_id).
+CREATE OR REPLACE FUNCTION palaro.current_user_roles()
+RETURNS palaro.user_role[] AS $$
+  SELECT roles FROM palaro.profiles
   WHERE auth_user_id = auth.uid() AND status = 'active';
+$$ LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = palaro, public;
+
+-- Convenience predicate for RLS readability.
+CREATE OR REPLACE FUNCTION palaro.current_user_has_role(target palaro.user_role)
+RETURNS BOOLEAN AS $$
+  SELECT target = ANY(palaro.current_user_roles());
 $$ LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = palaro, public;
 
 -- Helper function: get current user's profile id
@@ -763,19 +769,22 @@ $$ LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = palaro, public;
 
 -- Profiles: read own, super_admin and command_center read all
 CREATE POLICY "Users can read own profile" ON palaro.profiles FOR SELECT USING (auth.uid() = auth_user_id);
-CREATE POLICY "Super admin reads all profiles" ON palaro.profiles FOR SELECT USING (palaro.current_user_role() = 'super_admin');
-CREATE POLICY "Command center reads all profiles" ON palaro.profiles FOR SELECT USING (palaro.current_user_role() = 'command_center');
+CREATE POLICY "Super admin reads all profiles" ON palaro.profiles FOR SELECT USING (palaro.current_user_has_role('super_admin'));
+CREATE POLICY "Command center reads all profiles" ON palaro.profiles FOR SELECT USING (palaro.current_user_has_role('command_center'));
 
 -- Incidents: any authenticated active user can read; medical+admin roles can edit
 CREATE POLICY "Authenticated reads incidents" ON palaro.incidents FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Reporters create incidents" ON palaro.incidents FOR INSERT WITH CHECK (reported_by = palaro.current_profile_id());
 CREATE POLICY "Admins update incidents" ON palaro.incidents FOR UPDATE USING (
-  palaro.current_user_role() IN ('super_admin', 'command_center', 'medical_field', 'medical_ucf', 'medical_hospital')
+  palaro.current_user_roles() && ARRAY[
+    'super_admin', 'command_center',
+    'medical_field', 'medical_ucf', 'medical_hospital'
+  ]::palaro.user_role[]
 );
 
 -- Notifications: recipient sees own, plus role broadcasts
 CREATE POLICY "User sees own notifications" ON palaro.notifications FOR SELECT USING (
-  recipient_id = palaro.current_profile_id() OR recipient_role = palaro.current_user_role()
+  recipient_id = palaro.current_profile_id() OR recipient_role = ANY(palaro.current_user_roles())
 );
 
 

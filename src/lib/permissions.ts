@@ -151,14 +151,23 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   food_supplier_admin: ["incident.view", "food.manage"],
 };
 
-type ProfileLike = { role: UserRole | null } | null | undefined;
+type ProfileLike =
+  | { roles: readonly UserRole[] | UserRole[] | null | undefined }
+  | null
+  | undefined;
 
+function profileRoles(profile: ProfileLike): readonly UserRole[] {
+  return profile?.roles ?? [];
+}
+
+// A profile holds the union of permissions across every role assigned to it.
 export function hasPermission(
   profile: ProfileLike,
   permission: Permission,
 ): boolean {
-  if (!profile?.role) return false;
-  return ROLE_PERMISSIONS[profile.role].includes(permission);
+  return profileRoles(profile).some((role) =>
+    ROLE_PERMISSIONS[role].includes(permission),
+  );
 }
 
 export function hasAnyPermission(
@@ -179,5 +188,10 @@ export function hasRole(
   profile: ProfileLike,
   allowedRoles: readonly UserRole[],
 ): boolean {
-  return !!profile?.role && allowedRoles.includes(profile.role);
+  const roles = profileRoles(profile);
+  return roles.some((r) => allowedRoles.includes(r));
+}
+
+export function isSuperAdmin(profile: ProfileLike): boolean {
+  return profileRoles(profile).includes("super_admin");
 }

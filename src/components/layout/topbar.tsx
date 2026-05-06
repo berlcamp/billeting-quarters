@@ -15,7 +15,7 @@ interface TopbarProps {
 export function Topbar({ profile }: TopbarProps) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4 lg:px-6 print:hidden">
-      <MobileNav role={profile.role} />
+      <MobileNav roles={profile.roles} />
       <div className="hidden sm:block flex-1 min-w-0">
         <Breadcrumbs />
       </div>
@@ -28,12 +28,12 @@ export function Topbar({ profile }: TopbarProps) {
         >
           <HelpCircle className="size-4" />
         </Link>
-        <NotificationBell profileId={profile.id} role={profile.role} />
+        <NotificationBell profileId={profile.id} roles={profile.roles} />
         <ThemeToggle />
         <UserMenu
           email={profile.email}
           fullName={profile.full_name}
-          role={profile.role}
+          roles={profile.roles}
           avatarUrl={profile.avatar_url}
         />
       </div>

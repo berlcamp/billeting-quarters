@@ -20,7 +20,7 @@ export type Database = {
           full_name: string | null;
           email: string;
           phone: string | null;
-          role: Database["palaro"]["Enums"]["user_role"] | null;
+          roles: Database["palaro"]["Enums"]["user_role"][];
           status: Database["palaro"]["Enums"]["profile_status"];
           agency: string | null;
           designation: string | null;
@@ -40,7 +40,7 @@ export type Database = {
           full_name?: string | null;
           email: string;
           phone?: string | null;
-          role?: Database["palaro"]["Enums"]["user_role"] | null;
+          roles?: Database["palaro"]["Enums"]["user_role"][];
           status?: Database["palaro"]["Enums"]["profile_status"];
           agency?: string | null;
           designation?: string | null;
@@ -60,7 +60,7 @@ export type Database = {
           full_name?: string | null;
           email?: string;
           phone?: string | null;
-          role?: Database["palaro"]["Enums"]["user_role"] | null;
+          roles?: Database["palaro"]["Enums"]["user_role"][];
           status?: Database["palaro"]["Enums"]["profile_status"];
           agency?: string | null;
           designation?: string | null;

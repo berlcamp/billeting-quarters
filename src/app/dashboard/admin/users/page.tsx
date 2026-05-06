@@ -17,7 +17,7 @@ export default async function AdminUsersPage() {
       <PageHeader
         title="Users"
         description="Invite and manage system users."
-        actions={<InviteUserDialog currentRole={profile.role} />}
+        actions={<InviteUserDialog currentRoles={profile.roles} />}
       />
       {result.error ? (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
@@ -27,7 +27,7 @@ export default async function AdminUsersPage() {
         <UsersTable
           users={users}
           currentProfileId={profile.id}
-          currentRole={profile.role}
+          currentRoles={profile.roles}
         />
       )}
     </div>

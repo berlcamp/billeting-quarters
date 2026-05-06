@@ -229,13 +229,14 @@ export const NAV_SECTIONS: NavSection[] = [
 ];
 
 // Super admin sees every item. Otherwise the item's `roles` list controls visibility
-// (omit = visible to all signed-in users).
+// (omit = visible to all signed-in users). A user with multiple roles passes if
+// ANY of their roles is allowed by the item.
 export function canSeeNavItem(
-  role: UserRole | null | undefined,
+  roles: readonly UserRole[] | null | undefined,
   item: NavItem,
 ): boolean {
-  if (!role) return false;
-  if (role === "super_admin") return true;
+  if (!roles || roles.length === 0) return false;
+  if (roles.includes("super_admin")) return true;
   if (!item.roles) return true;
-  return item.roles.includes(role);
+  return roles.some((r) => item.roles!.includes(r));
 }

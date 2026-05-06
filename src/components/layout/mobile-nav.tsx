@@ -15,10 +15,10 @@ import { SidebarNav } from "./sidebar-nav";
 import type { UserRole } from "@/lib/permissions";
 
 interface MobileNavProps {
-  role: UserRole | null;
+  roles: readonly UserRole[];
 }
 
-export function MobileNav({ role }: MobileNavProps) {
+export function MobileNav({ roles }: MobileNavProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -41,7 +41,7 @@ export function MobileNav({ role }: MobileNavProps) {
           <SheetDescription>Palaro Bayugan Command site navigation</SheetDescription>
         </SheetHeader>
         <div className="overflow-y-auto h-full">
-          <SidebarNav role={role} onNavigate={() => setOpen(false)} />
+          <SidebarNav roles={roles} onNavigate={() => setOpen(false)} />
         </div>
       </SheetContent>
     </Sheet>

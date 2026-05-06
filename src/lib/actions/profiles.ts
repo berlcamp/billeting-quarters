@@ -7,7 +7,7 @@ import { hasPermission } from "@/lib/permissions";
 import {
   inviteUserSchema,
   updateUserDetailsSchema,
-  updateUserRoleSchema,
+  updateUserRolesSchema,
   updateUserStatusSchema,
 } from "@/lib/schemas/profiles";
 import { recordAudit } from "./audit";
@@ -58,9 +58,10 @@ export async function inviteUser(
     return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
   const data = parsed.data;
+  const callerIsSuper = auth.profile.roles.includes("super_admin");
 
   // Only super_admin can grant the super_admin role.
-  if (data.role === "super_admin" && auth.profile.role !== "super_admin") {
+  if (data.roles.includes("super_admin") && !callerIsSuper) {
     return fail("Only a super admin can invite another super admin.");
   }
 
@@ -81,7 +82,7 @@ export async function inviteUser(
     .insert({
       email: data.email,
       full_name: data.full_name?.trim() || null,
-      role: data.role,
+      roles: data.roles,
       agency: data.agency?.trim() || null,
       status: "active",
       auth_user_id: null,
@@ -99,7 +100,7 @@ export async function inviteUser(
     entity_id: inserted.id,
     changes: {
       email: data.email,
-      role: data.role,
+      roles: data.roles.join(","),
       status: "active",
     },
     user_id: auth.profile.id,
@@ -109,45 +110,51 @@ export async function inviteUser(
   return ok({ id: inserted.id });
 }
 
-export async function updateUserRole(
+export async function updateUserRoles(
   input: unknown,
 ): Promise<ActionResult<void>> {
   const auth = await requireUserManager();
   if (!auth.ok) return fail(auth.error);
 
-  const parsed = updateUserRoleSchema.safeParse(input);
+  const parsed = updateUserRolesSchema.safeParse(input);
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
-  const { user_id, role } = parsed.data;
+  const { user_id, roles } = parsed.data;
+  const callerIsSuper = auth.profile.roles.includes("super_admin");
 
-  // Only super_admin can promote anyone to super_admin.
-  if (role === "super_admin" && auth.profile.role !== "super_admin") {
+  // Only super_admin can grant the super_admin role.
+  if (roles.includes("super_admin") && !callerIsSuper) {
     return fail("Only a super admin can grant the super admin role.");
   }
 
   // Self-protection: cannot demote yourself out of super_admin.
-  if (user_id === auth.profile.id && auth.profile.role === "super_admin" && role !== "super_admin") {
+  if (
+    user_id === auth.profile.id &&
+    callerIsSuper &&
+    !roles.includes("super_admin")
+  ) {
     return fail("You cannot demote yourself from super admin.");
   }
 
   const admin = createAdminClient();
 
-  // If target is currently super_admin and we're not super_admin, reject.
+  // If target currently has super_admin and the caller is not super_admin, reject.
   const { data: target } = await admin
     .schema("palaro")
     .from("profiles")
-    .select("role")
+    .select("roles")
     .eq("id", user_id)
     .single();
-  if (target?.role === "super_admin" && auth.profile.role !== "super_admin") {
-    return fail("Only a super admin can change another super admin's role.");
+  const targetWasSuper = target?.roles?.includes("super_admin") ?? false;
+  if (targetWasSuper && !callerIsSuper) {
+    return fail("Only a super admin can change another super admin's roles.");
   }
 
   const { error } = await admin
     .schema("palaro")
     .from("profiles")
-    .update({ role })
+    .update({ roles })
     .eq("id", user_id);
   if (error) return fail(error.message);
 
@@ -155,7 +162,10 @@ export async function updateUserRole(
     action: "update",
     entity_type: "profile",
     entity_id: user_id,
-    changes: { role, previous_role: target?.role ?? null },
+    changes: {
+      roles: roles.join(","),
+      previous_roles: (target?.roles ?? []).join(","),
+    },
     user_id: auth.profile.id,
   });
 
@@ -185,10 +195,11 @@ export async function updateUserStatus(
   const { data: target } = await admin
     .schema("palaro")
     .from("profiles")
-    .select("role")
+    .select("roles")
     .eq("id", user_id)
     .single();
-  if (target?.role === "super_admin" && auth.profile.role !== "super_admin") {
+  const targetIsSuper = target?.roles?.includes("super_admin") ?? false;
+  if (targetIsSuper && !auth.profile.roles.includes("super_admin")) {
     return fail("Only a super admin can change another super admin's status.");
   }
 

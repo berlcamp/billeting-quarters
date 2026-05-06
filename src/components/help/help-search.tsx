@@ -18,16 +18,18 @@ import {
 } from "@/lib/help-content";
 
 interface Props {
-  // Currently signed-in user's role — drives the "for your role" section.
-  // null when nothing relevant should be highlighted.
-  role: UserRole | null;
+  // Currently signed-in user's roles — drives the "for your role" section.
+  roles: readonly UserRole[];
 }
 
-function isRelevantTo(guide: ModuleGuide, role: UserRole | null): boolean {
-  if (!role) return false;
-  if (role === "super_admin") return true;
+function isRelevantTo(
+  guide: ModuleGuide,
+  roles: readonly UserRole[],
+): boolean {
+  if (roles.length === 0) return false;
+  if (roles.includes("super_admin")) return true;
   if (!guide.audience || guide.audience.length === 0) return true;
-  return guide.audience.includes(role);
+  return roles.some((r) => guide.audience!.includes(r));
 }
 
 function matchesQuery(guide: ModuleGuide, q: string): boolean {
@@ -52,7 +54,7 @@ function matchesQuery(guide: ModuleGuide, q: string): boolean {
     .every((term) => haystack.includes(term));
 }
 
-export function HelpSearch({ role }: Props) {
+export function HelpSearch({ roles }: Props) {
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(
@@ -61,9 +63,11 @@ export function HelpSearch({ role }: Props) {
   );
 
   const forYou = useMemo(
-    () => filtered.filter((g) => isRelevantTo(g, role)),
-    [filtered, role],
+    () => filtered.filter((g) => isRelevantTo(g, roles)),
+    [filtered, roles],
   );
+
+  const primaryRole = roles[0] ?? null;
 
   return (
     <div className="space-y-6">
@@ -78,11 +82,12 @@ export function HelpSearch({ role }: Props) {
         />
       </div>
 
-      {role && forYou.length > 0 && !query ? (
+      {primaryRole && forYou.length > 0 && !query ? (
         <section className="space-y-3">
           <div className="flex items-baseline justify-between">
             <h2 className="text-lg font-semibold">
-              For your role · {ROLE_LABELS[role]}
+              For your role{roles.length > 1 ? "s" : ""} ·{" "}
+              {roles.map((r) => ROLE_LABELS[r]).join(" · ")}
             </h2>
             <span className="text-xs text-muted-foreground">
               {forYou.length} guide{forYou.length === 1 ? "" : "s"}

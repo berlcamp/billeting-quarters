@@ -82,7 +82,8 @@ export async function getRecentAuditLogs(
 ): Promise<ActionResult<AuditWithActor[]>> {
   const profile = await getCurrentProfile();
   if (!profile) return fail("Not authenticated.");
-  if (profile.role !== "super_admin" && profile.role !== "command_center") {
+  const allowed: ReadonlyArray<string> = ["super_admin", "command_center"];
+  if (!profile.roles.some((r) => allowed.includes(r))) {
     return fail("You don't have permission to view audit logs.");
   }
 

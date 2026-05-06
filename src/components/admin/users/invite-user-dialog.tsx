@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -25,23 +26,16 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { inviteUser } from "@/lib/actions/profiles";
 import { inviteUserSchema, type InviteUserInput } from "@/lib/schemas/profiles";
 import { ROLE_LABELS, USER_ROLES, type UserRole } from "@/lib/permissions";
 
 interface InviteUserDialogProps {
-  /** The current user's role — used to gate visibility of the super_admin role option. */
-  currentRole: UserRole | null;
+  /** The current user's roles — used to gate the super_admin option. */
+  currentRoles: readonly UserRole[];
 }
 
-export function InviteUserDialog({ currentRole }: InviteUserDialogProps) {
+export function InviteUserDialog({ currentRoles }: InviteUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
@@ -51,7 +45,7 @@ export function InviteUserDialog({ currentRole }: InviteUserDialogProps) {
     defaultValues: {
       email: "",
       full_name: "",
-      role: undefined,
+      roles: [],
       agency: "",
     },
   });
@@ -75,10 +69,10 @@ export function InviteUserDialog({ currentRole }: InviteUserDialogProps) {
   }
 
   // Hide super_admin from the role list unless current user is super_admin.
-  const availableRoles: readonly UserRole[] =
-    currentRole === "super_admin"
-      ? USER_ROLES
-      : USER_ROLES.filter((r) => r !== "super_admin");
+  const callerIsSuper = currentRoles.includes("super_admin");
+  const availableRoles: readonly UserRole[] = callerIsSuper
+    ? USER_ROLES
+    : USER_ROLES.filter((r) => r !== "super_admin");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -129,40 +123,39 @@ export function InviteUserDialog({ currentRole }: InviteUserDialogProps) {
             />
             <FormField
               control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <Select
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue>
-                          {(v: string | null) =>
-                            v && v in ROLE_LABELS ? (
-                              ROLE_LABELS[v as UserRole]
-                            ) : (
-                              <span className="text-muted-foreground">
-                                Select a role
-                              </span>
-                            )
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {availableRoles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {ROLE_LABELS[role]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+              name="roles"
+              render={({ field }) => {
+                const selected = (field.value ?? []) as UserRole[];
+                const toggle = (role: UserRole, checked: boolean) => {
+                  const next = checked
+                    ? Array.from(new Set([...selected, role]))
+                    : selected.filter((r) => r !== role);
+                  field.onChange(next);
+                };
+                return (
+                  <FormItem>
+                    <FormLabel>Roles</FormLabel>
+                    <div className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-2">
+                      {availableRoles.map((role) => {
+                        const checked = selected.includes(role);
+                        return (
+                          <label
+                            key={role}
+                            className="flex cursor-pointer items-center gap-2 text-sm"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => toggle(role, !!v)}
+                            />
+                            <span>{ROLE_LABELS[role]}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
             <FormField
               control={form.control}

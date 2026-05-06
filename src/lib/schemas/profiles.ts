@@ -21,10 +21,15 @@ export const profileStatusSchema = z.enum(["active", "suspended"]);
 
 const optionalNonEmpty = z.string().trim().max(200).optional();
 
+const userRolesSchema = z
+  .array(userRoleSchema)
+  .min(1, "Pick at least one role")
+  .transform((roles) => Array.from(new Set(roles)));
+
 export const inviteUserSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
   full_name: optionalNonEmpty,
-  role: userRoleSchema,
+  roles: userRolesSchema,
   agency: optionalNonEmpty,
 });
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
@@ -38,9 +43,9 @@ export const updateUserDetailsSchema = z.object({
 });
 export type UpdateUserDetailsInput = z.infer<typeof updateUserDetailsSchema>;
 
-export const updateUserRoleSchema = z.object({
+export const updateUserRolesSchema = z.object({
   user_id: z.string().uuid(),
-  role: userRoleSchema,
+  roles: userRolesSchema,
 });
 
 export const updateUserStatusSchema = z.object({

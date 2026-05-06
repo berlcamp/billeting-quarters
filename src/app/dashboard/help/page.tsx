@@ -10,7 +10,7 @@ export default async function HelpIndexPage() {
         title="User Guide"
         description="Module-by-module instructions for using Palaro Bayugan Command. Search any keyword or browse by category."
       />
-      <HelpSearch role={profile?.role ?? null} />
+      <HelpSearch roles={profile?.roles ?? []} />
     </div>
   );
 }
