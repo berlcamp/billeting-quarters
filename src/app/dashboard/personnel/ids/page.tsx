@@ -1,4 +1,3 @@
-import { PageHeader } from "@/components/layout/page-header";
 import { Forbidden } from "@/components/shared/forbidden";
 import { IdRoster } from "@/components/personnel/id-roster";
 import { getCurrentProfile } from "@/lib/auth/session";
@@ -27,10 +26,6 @@ export default async function IdGeneratorPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="ID Generator"
-        description="Personnel ID cards with QR codes for attendance scanning. Print or save as PDF from your browser."
-      />
       {result.error ? (
         <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           Failed to load personnel: {result.error}

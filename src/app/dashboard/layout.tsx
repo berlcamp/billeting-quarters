@@ -11,13 +11,13 @@ export default async function DashboardLayout({
   const profile = await requireActiveProfile();
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
       <aside className="hidden w-64 shrink-0 border-r border-sidebar-border bg-sidebar lg:flex lg:flex-col print:hidden">
         <SidebarNav role={profile.role} />
       </aside>
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 print:block print:h-auto">
         <Topbar profile={profile} />
-        <main className="flex-1 overflow-y-auto p-6 print:p-0 print:overflow-visible">
+        <main className="flex-1 overflow-y-auto p-6 print:p-0 print:overflow-visible print:h-auto">
           {children}
         </main>
         <Footer />

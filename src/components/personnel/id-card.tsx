@@ -67,7 +67,7 @@ export function IdCard({ personnel, side, photoUrl }: Props) {
   const subtitle = personnel.designation ?? personnel.committee;
 
   return (
-    <div className="break-inside-avoid">
+    <div className="id-card-wrap break-inside-avoid">
       <div
         className="@container relative overflow-hidden bg-white shadow-sm print:shadow-none"
         style={{

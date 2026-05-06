@@ -8,11 +8,15 @@ export async function GET(request: NextRequest) {
   const oauthError = url.searchParams.get("error");
   const oauthErrorDescription = url.searchParams.get("error_description");
 
-  // Provider returned an error (e.g., the DB trigger rejected the email).
+  // Provider error (user canceled, consent denied, transient OAuth failure).
+  // Send back to /auth so the user can retry — this is not an access-list
+  // problem, so /auth/not-authorized would be misleading.
   if (oauthError) {
-    const target = new URL("/auth/not-authorized", url.origin);
-    if (oauthErrorDescription)
-      target.searchParams.set("reason", oauthErrorDescription);
+    const target = new URL("/auth", url.origin);
+    target.searchParams.set(
+      "reason",
+      oauthErrorDescription || "Sign-in was interrupted. Please try again.",
+    );
     return NextResponse.redirect(target);
   }
 
@@ -25,9 +29,16 @@ export async function GET(request: NextRequest) {
     code,
   );
 
+  // Code-exchange failure is almost always transient (PKCE verifier cookie
+  // missing, code already consumed by a refresh, overlapping sign-in tabs).
+  // Route back to /auth so the user retries — not /auth/not-authorized.
   if (exchangeError) {
-    const target = new URL("/auth/not-authorized", url.origin);
-    target.searchParams.set("reason", exchangeError.message);
+    const target = new URL("/auth", url.origin);
+    target.searchParams.set(
+      "reason",
+      exchangeError.message ||
+        "Sign-in session expired. Please try again.",
+    );
     return NextResponse.redirect(target);
   }
 

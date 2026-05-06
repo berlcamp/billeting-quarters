@@ -51,6 +51,51 @@ export function IdRoster({ personnel, photoUrls }: Props) {
 
   return (
     <div className="space-y-4">
+      <style>{`
+        @media print {
+          @page { size: A4 portrait; margin: 10mm; }
+          html, body {
+            background: white !important;
+            margin: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          /* Strip viewport-locked containers (h-screen overflow-hidden) from
+             the dashboard shell so the printer paginates the full content
+             instead of clipping to one viewport height. */
+          body, body * {
+            overflow: visible !important;
+          }
+          /* CRITICAL: outer container must be block (not grid) on print —
+             page-break properties are ignored on grid items, which is why
+             pairs were piling up onto a single page. */
+          .id-pair-list {
+            display: block !important;
+          }
+          /* Pin pair width so two 90mm cards (front+back) sit side-by-side.
+             Cards: 90mm × ~127.6mm (1305:1850). Two rows ≈ 255mm — fits A4's
+             ~277mm printable height with margin to spare for printer headers. */
+          .id-pair {
+            width: 180mm;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          /* Explicit card sizing — don't rely on grid distribution alone. */
+          .id-card-wrap {
+            width: 90mm;
+            height: 127.6mm;
+            border: 1px dashed #9ca3af;
+            box-sizing: border-box;
+          }
+          /* Exactly 4 boxes per A4 page = 2 pairs (front+back × 2). */
+          .id-pair:nth-child(2n) {
+            break-after: page;
+            page-break-after: always;
+          }
+          /* Last pair must not force an extra blank page. */
+          .id-pair:last-child { break-after: auto; page-break-after: auto; }
+        }
+      `}</style>
       {/* Filter / print toolbar — hidden on print */}
       <div className="flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -106,13 +151,13 @@ export function IdRoster({ personnel, photoUrls }: Props) {
         // show 2 pairs per row (so 4 cards) at lg, 1 pair per row otherwise.
         // On print we force 1 pair per row so each printed page is one set of
         // back-to-back cards aligned for folding/duplex.
-        <div className="grid gap-4 lg:grid-cols-2 print:grid-cols-1 print:gap-3">
+        <div className="id-pair-list grid gap-4 lg:grid-cols-2 print:grid-cols-1 print:gap-0">
           {filtered.map((p) => {
             const photoUrl = p.photo_url ? photoUrls[p.photo_url] : undefined;
             return (
               <div
                 key={p.id}
-                className="grid grid-cols-2 gap-2 break-inside-avoid"
+                className="id-pair grid grid-cols-2 gap-2 break-inside-avoid print:gap-0"
               >
                 <IdCard personnel={p} side="front" photoUrl={photoUrl} />
                 <IdCard personnel={p} side="back" />
