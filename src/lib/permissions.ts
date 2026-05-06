@@ -18,6 +18,7 @@ export const USER_ROLES: readonly UserRole[] = [
   "transportation_dispatcher",
   "garbage_logger",
   "food_supplier_admin",
+  "incident_monitoring",
 ] as const;
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -35,6 +36,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   transportation_dispatcher: "Transportation Dispatcher",
   garbage_logger: "Garbage Logger",
   food_supplier_admin: "Food Supplier Admin",
+  incident_monitoring: "Incident Monitoring",
 };
 
 export const PROFILE_STATUS_LABELS: Record<ProfileStatus, string> = {
@@ -149,6 +151,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "garbage.log",
   ],
   food_supplier_admin: ["incident.view", "food.manage"],
+  // Read-only access to the Command Center dashboard and the Incidents module.
+  // Cannot create, update, resolve, or refer incidents.
+  incident_monitoring: ["incident.view"],
 };
 
 type ProfileLike =

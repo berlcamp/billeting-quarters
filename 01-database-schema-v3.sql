@@ -28,7 +28,8 @@ CREATE TYPE palaro.user_role AS ENUM (
   'delegation_head',
   'transportation_dispatcher',
   'garbage_logger',
-  'food_supplier_admin'
+  'food_supplier_admin',
+  'incident_monitoring'
 );
 
 CREATE TYPE palaro.incident_severity AS ENUM ('low', 'medium', 'high', 'critical');

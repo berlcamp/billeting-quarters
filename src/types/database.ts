@@ -1237,7 +1237,8 @@ export type Database = {
         | "delegation_head"
         | "transportation_dispatcher"
         | "garbage_logger"
-        | "food_supplier_admin";
+        | "food_supplier_admin"
+        | "incident_monitoring";
       profile_status: "pending" | "active" | "suspended";
       incident_category:
         | "medical"
