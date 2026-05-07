@@ -2,6 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+function humanizeOAuthError(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  if (/database error saving new user/i.test(raw)) {
+    return "Your Google account is not on the PPDMS access list, or your invited account is not yet active. Contact your administrator.";
+  }
+  return raw;
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
@@ -9,9 +17,19 @@ export async function GET(request: NextRequest) {
   const oauthErrorDescription = url.searchParams.get("error_description");
 
   // Provider error (user canceled, consent denied, transient OAuth failure).
-  // Send back to /auth so the user can retry — this is not an access-list
-  // problem, so /auth/not-authorized would be misleading.
+  // Usually send back to /auth — but GoTrue masks our invite trigger with
+  // "Database error saving new user", which reads like a retry-able glitch.
+  // Surface that case on /auth/not-authorized instead.
   if (oauthError) {
+    const rawDesc = oauthErrorDescription ?? "";
+    if (/database error saving new user/i.test(rawDesc)) {
+      const reason = humanizeOAuthError(rawDesc);
+      if (reason) {
+        const denied = new URL("/auth/not-authorized", url.origin);
+        denied.searchParams.set("reason", reason);
+        return NextResponse.redirect(denied);
+      }
+    }
     const target = new URL("/auth", url.origin);
     target.searchParams.set(
       "reason",
@@ -33,11 +51,19 @@ export async function GET(request: NextRequest) {
   // missing, code already consumed by a refresh, overlapping sign-in tabs).
   // Route back to /auth so the user retries — not /auth/not-authorized.
   if (exchangeError) {
+    const rawMsg = exchangeError.message ?? "";
+    if (/database error saving new user/i.test(rawMsg)) {
+      const reason = humanizeOAuthError(rawMsg);
+      if (reason) {
+        const denied = new URL("/auth/not-authorized", url.origin);
+        denied.searchParams.set("reason", reason);
+        return NextResponse.redirect(denied);
+      }
+    }
     const target = new URL("/auth", url.origin);
     target.searchParams.set(
       "reason",
-      exchangeError.message ||
-        "Sign-in session expired. Please try again.",
+      exchangeError.message || "Sign-in session expired. Please try again.",
     );
     return NextResponse.redirect(target);
   }

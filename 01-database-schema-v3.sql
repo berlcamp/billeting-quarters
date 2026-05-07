@@ -683,21 +683,40 @@ CREATE TRIGGER trg_patient_number BEFORE INSERT ON palaro.clinic_patients FOR EA
 -- Function lives in the `palaro` schema and the trigger is prefixed `palaro_` so they
 -- never collide with other apps that may share this Supabase instance and have their
 -- own `handle_new_auth_user` / `on_auth_user_created` objects.
+-- Email match is case-insensitive + whitespace-tolerant. Google normalizes
+-- auth.users.email to lowercase, but profile rows can drift to mixed case
+-- (admin paste / CSV import). Comparing with LOWER(TRIM(...)) on both sides
+-- prevents legitimate invitees from being rejected with the cryptic Supabase
+-- "Database error saving new user" message.
 CREATE OR REPLACE FUNCTION palaro.handle_new_auth_user()
 RETURNS TRIGGER AS $$
 DECLARE
-  existing_profile_id UUID;
+  matched_profile RECORD;
+  normalized_email TEXT := LOWER(TRIM(NEW.email));
 BEGIN
-  SELECT id INTO existing_profile_id
+  SELECT id, status, roles, auth_user_id
+  INTO matched_profile
   FROM palaro.profiles
-  WHERE email = NEW.email
-    AND auth_user_id IS NULL
-    AND status = 'active'
-    AND cardinality(roles) > 0
+  WHERE LOWER(TRIM(email)) = normalized_email
   LIMIT 1;
 
-  IF existing_profile_id IS NULL THEN
-    RAISE EXCEPTION 'Email % is not authorized for PPDMS. Contact your administrator to request access.', NEW.email
+  IF matched_profile.id IS NULL THEN
+    RAISE EXCEPTION 'Email % is not on the PPDMS access list. Contact your administrator to request an invitation.', NEW.email
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  IF matched_profile.auth_user_id IS NOT NULL THEN
+    RAISE EXCEPTION 'Email % is already linked to a different account. Contact your administrator.', NEW.email
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  IF matched_profile.status <> 'active' THEN
+    RAISE EXCEPTION 'Account for % is %. Contact your administrator.', NEW.email, matched_profile.status
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  IF matched_profile.roles IS NULL OR cardinality(matched_profile.roles) = 0 THEN
+    RAISE EXCEPTION 'Account for % has no role assigned. Contact your administrator.', NEW.email
       USING ERRCODE = 'insufficient_privilege';
   END IF;
 
@@ -706,7 +725,7 @@ BEGIN
       activated_at = NOW(),
       full_name = COALESCE(full_name, NEW.raw_user_meta_data->>'full_name'),
       avatar_url = COALESCE(avatar_url, NEW.raw_user_meta_data->>'avatar_url')
-  WHERE id = existing_profile_id;
+  WHERE id = matched_profile.id;
 
   RETURN NEW;
 END;
