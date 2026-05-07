@@ -72,22 +72,29 @@ export function IdRoster({ personnel, photoUrls }: Props) {
           .id-pair-list {
             display: block !important;
           }
-          /* Pin pair width so two 90mm cards (front+back) sit side-by-side.
-             Cards: 90mm × ~127.6mm (1305:1850). Two rows ≈ 255mm — fits A4's
-             ~277mm printable height with margin to spare for printer headers. */
+          /* Pin pair width: two 3.5in cards (front+back) sit side-by-side.
+             Two rows of 5in = 10in — fits A4's ~10.9in printable height. */
           .id-pair {
-            width: 180mm;
+            width: 7in;
             break-inside: avoid;
             page-break-inside: avoid;
           }
-          /* Explicit card sizing — don't rely on grid distribution alone. */
+          /* Explicit card sizing — 3.5in × 5in with a printed border. */
           .id-card-wrap {
-            width: 90mm;
-            height: 127.6mm;
-            border: 1px dashed #9ca3af;
+            width: 3.5in;
+            height: 5in;
+            border: 1px solid #000;
             box-sizing: border-box;
+            overflow: hidden;
           }
-          /* Exactly 4 boxes per A4 page = 2 pairs (front+back × 2). */
+          /* Stretch the artwork container to fill the bordered card box,
+             overriding the inline aspect-ratio used for on-screen layout. */
+          .id-card-wrap > div {
+            width: 100% !important;
+            height: 100% !important;
+            aspect-ratio: auto !important;
+          }
+          /* Exactly 4 cards per A4 page = 2 pairs (front+back × 2). */
           .id-pair:nth-child(2n) {
             break-after: page;
             page-break-after: always;
