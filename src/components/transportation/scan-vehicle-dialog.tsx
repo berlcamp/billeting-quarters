@@ -13,6 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -44,11 +45,13 @@ interface LastScan {
 export function ScanVehicleDialog({ sites }: Props) {
   const [open, setOpen] = useState(false);
   const [siteId, setSiteId] = useState<string | null>(null);
+  const [paxOverride, setPaxOverride] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [lastScan, setLastScan] = useState<LastScan | null>(null);
   const [scannerError, setScannerError] = useState<string | null>(null);
 
   const siteIdRef = useRef<string | null>(null);
+  const paxOverrideRef = useRef<string>("");
   const busyRef = useRef(false);
   const lastScannedAtRef = useRef(0);
   const lastScannedValueRef = useRef<string | null>(null);
@@ -57,6 +60,9 @@ export function ScanVehicleDialog({ sites }: Props) {
   useEffect(() => {
     siteIdRef.current = siteId;
   }, [siteId]);
+  useEffect(() => {
+    paxOverrideRef.current = paxOverride;
+  }, [paxOverride]);
   useEffect(() => {
     busyRef.current = busy;
   }, [busy]);
@@ -99,9 +105,13 @@ export function ScanVehicleDialog({ sites }: Props) {
             lastScannedValueRef.current = decodedText;
 
             setBusy(true);
+            const paxRaw = paxOverrideRef.current.trim();
+            const paxNum =
+              paxRaw === "" ? undefined : Number.parseInt(paxRaw, 10);
             const result = await scanVehicle({
               scanned_value: decodedText,
               site_id: siteIdRef.current,
+              passenger_count: Number.isFinite(paxNum) ? paxNum : undefined,
             });
             setBusy(false);
 
@@ -159,8 +169,10 @@ export function ScanVehicleDialog({ sites }: Props) {
         <DialogHeader>
           <DialogTitle>Scan vehicle QR</DialogTitle>
           <DialogDescription>
-            Pick the site, then scan the dashboard QR. Direction (in/out) is
-            chosen from the most recent log.
+            Pick the site, optionally enter pax, then scan the vehicle QR.
+            Direction (arrival / departure) flips automatically. Delegation,
+            sport, and route are pulled from the vehicle&apos;s active
+            dispatch.
           </DialogDescription>
         </DialogHeader>
 
@@ -188,6 +200,20 @@ export function ScanVehicleDialog({ sites }: Props) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="vehicle-scan-pax">
+              Pax counted at this stop (optional)
+            </Label>
+            <Input
+              id="vehicle-scan-pax"
+              type="number"
+              min={0}
+              placeholder="e.g. 9"
+              value={paxOverride}
+              onChange={(e) => setPaxOverride(e.target.value)}
+            />
           </div>
 
           <div className="aspect-square overflow-hidden rounded-md border bg-black">

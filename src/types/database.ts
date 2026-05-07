@@ -778,7 +778,7 @@ export type Database = {
       vehicle_routes: {
         Row: {
           id: string;
-          vehicle_id: string;
+          vehicle_id: string | null;
           route_name: string;
           origin_site_id: string | null;
           destination_site_id: string | null;
@@ -789,7 +789,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          vehicle_id: string;
+          vehicle_id?: string | null;
           route_name: string;
           origin_site_id?: string | null;
           destination_site_id?: string | null;
@@ -800,7 +800,7 @@ export type Database = {
         };
         Update: {
           id?: string;
-          vehicle_id?: string;
+          vehicle_id?: string | null;
           route_name?: string;
           origin_site_id?: string | null;
           destination_site_id?: string | null;
@@ -821,6 +821,12 @@ export type Database = {
           scanned_at: string;
           passenger_count: number | null;
           notes: string | null;
+          dispatch_id: string | null;
+          delegation_id: string | null;
+          sport: string | null;
+          team_count: number | null;
+          from_site_id: string | null;
+          to_site_id: string | null;
         };
         Insert: {
           id?: string;
@@ -831,6 +837,12 @@ export type Database = {
           scanned_at?: string;
           passenger_count?: number | null;
           notes?: string | null;
+          dispatch_id?: string | null;
+          delegation_id?: string | null;
+          sport?: string | null;
+          team_count?: number | null;
+          from_site_id?: string | null;
+          to_site_id?: string | null;
         };
         Update: {
           id?: string;
@@ -841,6 +853,141 @@ export type Database = {
           scanned_at?: string;
           passenger_count?: number | null;
           notes?: string | null;
+          dispatch_id?: string | null;
+          delegation_id?: string | null;
+          sport?: string | null;
+          team_count?: number | null;
+          from_site_id?: string | null;
+          to_site_id?: string | null;
+        };
+        Relationships: [];
+      };
+      vehicle_route_stops: {
+        Row: {
+          id: string;
+          route_id: string;
+          stop_order: number;
+          site_id: string | null;
+          label: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          route_id: string;
+          stop_order: number;
+          site_id?: string | null;
+          label?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          route_id?: string;
+          stop_order?: number;
+          site_id?: string | null;
+          label?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      vehicle_dispatches: {
+        Row: {
+          id: string;
+          vehicle_id: string;
+          route_id: string | null;
+          delegation_id: string | null;
+          sport: string | null;
+          team_count: number | null;
+          expected_pax: number | null;
+          origin_site_id: string | null;
+          destination_site_id: string | null;
+          scheduled_at: string | null;
+          dispatched_at: string;
+          dispatched_by: string | null;
+          status: Database["palaro"]["Enums"]["dispatch_status"];
+          notes: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          vehicle_id: string;
+          route_id?: string | null;
+          delegation_id?: string | null;
+          sport?: string | null;
+          team_count?: number | null;
+          expected_pax?: number | null;
+          origin_site_id?: string | null;
+          destination_site_id?: string | null;
+          scheduled_at?: string | null;
+          dispatched_at?: string;
+          dispatched_by?: string | null;
+          status?: Database["palaro"]["Enums"]["dispatch_status"];
+          notes?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          vehicle_id?: string;
+          route_id?: string | null;
+          delegation_id?: string | null;
+          sport?: string | null;
+          team_count?: number | null;
+          expected_pax?: number | null;
+          origin_site_id?: string | null;
+          destination_site_id?: string | null;
+          scheduled_at?: string | null;
+          dispatched_at?: string;
+          dispatched_by?: string | null;
+          status?: Database["palaro"]["Enums"]["dispatch_status"];
+          notes?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      vehicle_fuel_logs: {
+        Row: {
+          id: string;
+          vehicle_id: string;
+          refilled_at: string;
+          liters: number;
+          cost_php: number | null;
+          odometer_km: number | null;
+          station: string | null;
+          logged_by: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          vehicle_id: string;
+          refilled_at?: string;
+          liters: number;
+          cost_php?: number | null;
+          odometer_km?: number | null;
+          station?: string | null;
+          logged_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          vehicle_id?: string;
+          refilled_at?: string;
+          liters?: number;
+          cost_php?: number | null;
+          odometer_km?: number | null;
+          station?: string | null;
+          logged_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -1235,7 +1382,9 @@ export type Database = {
         | "personnel_admin"
         | "venue_manager"
         | "delegation_head"
+        | "transportation_head"
         | "transportation_dispatcher"
+        | "transportation_driver"
         | "garbage_logger"
         | "food_supplier_admin"
         | "incident_monitoring";
@@ -1287,6 +1436,11 @@ export type Database = {
         | "ambulance"
         | "service_vehicle";
       vehicle_log_direction: "in" | "out";
+      dispatch_status:
+        | "scheduled"
+        | "in_transit"
+        | "completed"
+        | "cancelled";
       schedule_status:
         | "booked"
         | "special_request"

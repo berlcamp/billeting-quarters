@@ -2,15 +2,15 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { ChevronRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import { deleteRoute } from "@/lib/actions/vehicles";
+import type { VehicleRouteWithStops } from "@/lib/actions/vehicles";
 import { formatManila } from "@/lib/timezone";
 import type { Database } from "@/types/database";
 
-type Route = Database["palaro"]["Tables"]["vehicle_routes"]["Row"];
 type Vehicle = Pick<
   Database["palaro"]["Tables"]["vehicles"]["Row"],
   "id" | "vehicle_code"
@@ -25,7 +25,7 @@ type Delegation = Pick<
 >;
 
 interface Props {
-  routes: Route[];
+  routes: VehicleRouteWithStops[];
   vehicles: Vehicle[];
   sites: Site[];
   delegations: Delegation[];
@@ -67,40 +67,45 @@ export function RouteTable({
     router.refresh();
   }
 
-  const baseColumns: DataTableColumn<Route>[] = [
+  const baseColumns: DataTableColumn<VehicleRouteWithStops>[] = [
     {
       id: "name",
       header: "Route",
-      cell: (r) => <span className="font-medium">{r.route_name}</span>,
-    },
-    {
-      id: "vehicle",
-      header: "Vehicle",
       cell: (r) => (
-        <span className="font-mono text-sm">
-          {vehicleMap.get(r.vehicle_id) ?? "—"}
-        </span>
+        <div className="flex flex-col">
+          <span className="font-medium">{r.route_name}</span>
+          {r.vehicle_id ? (
+            <span className="font-mono text-xs text-muted-foreground">
+              {vehicleMap.get(r.vehicle_id) ?? "—"}
+            </span>
+          ) : null}
+        </div>
       ),
     },
     {
-      id: "from",
-      header: "From",
-      cell: (r) =>
-        r.origin_site_id ? (
-          (siteMap.get(r.origin_site_id) ?? "—")
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        ),
-    },
-    {
-      id: "to",
-      header: "To",
-      cell: (r) =>
-        r.destination_site_id ? (
-          (siteMap.get(r.destination_site_id) ?? "—")
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        ),
+      id: "stops",
+      header: "Stops",
+      cell: (r) => {
+        if (r.stops.length === 0) {
+          return <span className="text-muted-foreground">—</span>;
+        }
+        return (
+          <div className="flex flex-wrap items-center gap-1 text-sm">
+            {r.stops.map((s, idx) => (
+              <span key={s.id} className="flex items-center gap-1">
+                <span>
+                  {s.site_id
+                    ? siteMap.get(s.site_id) ?? s.label ?? "—"
+                    : s.label ?? "—"}
+                </span>
+                {idx < r.stops.length - 1 ? (
+                  <ChevronRight className="size-3 text-muted-foreground" />
+                ) : null}
+              </span>
+            ))}
+          </div>
+        );
+      },
     },
     {
       id: "time",
@@ -126,7 +131,7 @@ export function RouteTable({
     },
   ];
 
-  const columns: DataTableColumn<Route>[] = canManage
+  const columns: DataTableColumn<VehicleRouteWithStops>[] = canManage
     ? [
         ...baseColumns,
         {

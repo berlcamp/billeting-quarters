@@ -118,7 +118,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Transportation",
         href: "/dashboard/transportation",
         icon: Truck,
-        roles: ["logistics_officer", "transportation_dispatcher"],
+        roles: [
+          "logistics_officer",
+          "transportation_head",
+          "transportation_dispatcher",
+          "transportation_driver",
+        ],
       },
       {
         label: "Venues",

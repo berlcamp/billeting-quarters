@@ -185,8 +185,8 @@ export type VehicleLogDirection =
 
 export const VEHICLE_LOG_DIRECTION_LABELS: Record<VehicleLogDirection, string> =
   {
-    in: "Check-in",
-    out: "Check-out",
+    in: "Arrival",
+    out: "Departure",
   };
 
 export const VEHICLE_LOG_DIRECTION_BADGE: Record<VehicleLogDirection, string> =
@@ -194,6 +194,29 @@ export const VEHICLE_LOG_DIRECTION_BADGE: Record<VehicleLogDirection, string> =
     in: "bg-green-100 text-green-800",
     out: "bg-blue-100 text-blue-800",
   };
+
+export type DispatchStatus = Database["palaro"]["Enums"]["dispatch_status"];
+
+export const DISPATCH_STATUSES: readonly DispatchStatus[] = [
+  "scheduled",
+  "in_transit",
+  "completed",
+  "cancelled",
+] as const;
+
+export const DISPATCH_STATUS_LABELS: Record<DispatchStatus, string> = {
+  scheduled: "Scheduled",
+  in_transit: "In transit",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const DISPATCH_STATUS_BADGE: Record<DispatchStatus, string> = {
+  scheduled: "bg-yellow-100 text-yellow-800",
+  in_transit: "bg-blue-100 text-blue-800",
+  completed: "bg-green-100 text-green-800",
+  cancelled: "bg-gray-100 text-gray-800",
+};
 
 export type ScheduleStatus = Database["palaro"]["Enums"]["schedule_status"];
 

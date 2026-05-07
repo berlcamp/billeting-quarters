@@ -15,7 +15,9 @@ export const USER_ROLES: readonly UserRole[] = [
   "personnel_admin",
   "venue_manager",
   "delegation_head",
+  "transportation_head",
   "transportation_dispatcher",
+  "transportation_driver",
   "garbage_logger",
   "food_supplier_admin",
   "incident_monitoring",
@@ -33,7 +35,9 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   personnel_admin: "Personnel Admin",
   venue_manager: "Venue Manager",
   delegation_head: "Delegation Head",
+  transportation_head: "Transportation Head",
   transportation_dispatcher: "Transportation Dispatcher",
+  transportation_driver: "Transportation Driver",
   garbage_logger: "Garbage Logger",
   food_supplier_admin: "Food Supplier Admin",
   incident_monitoring: "Incident Monitoring",
@@ -64,6 +68,9 @@ export const PERMISSIONS = [
   "venue.approve_special",
   "vehicle.manage",
   "vehicle.scan",
+  "vehicle.dispatch",
+  "vehicle.fuel",
+  "vehicle.drive",
   "personnel.manage",
   "attendance.record",
   "user.invite",
@@ -135,6 +142,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "incident.create",
     "incident.view",
     "vehicle.manage",
+    "vehicle.dispatch",
+    "vehicle.fuel",
     "garbage.manage",
     "food.manage",
   ],
@@ -148,7 +157,27 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "food.request",
   ],
   delegation_head: ["incident.create", "incident.view", "food.request"],
-  transportation_dispatcher: ["vehicle.manage", "vehicle.scan"],
+  // Transportation Head — Committee leadership. Manages vehicles/routes,
+  // creates dispatches, scans, logs fuel, and views reports. (~3 users)
+  transportation_head: [
+    "incident.create",
+    "incident.view",
+    "vehicle.manage",
+    "vehicle.scan",
+    "vehicle.dispatch",
+    "vehicle.fuel",
+    "reports.view",
+  ],
+  // Dispatcher — at the venue with the app, creates dispatches and scans
+  // vehicles on arrival/departure. (~32 users)
+  transportation_dispatcher: [
+    "vehicle.scan",
+    "vehicle.dispatch",
+  ],
+  // Driver — read-only awareness of their assigned routes/dispatches.
+  // (Drivers in the field; scanning happens via venue dispatchers per the
+  // chosen scan flow, so no scan permission here.)
+  transportation_driver: ["vehicle.drive"],
   garbage_logger: [
     "incident.create",
     "incident.view",

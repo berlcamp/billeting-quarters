@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import type { Database } from "@/types/database";
+import QRCode from "qrcode";
+import { useEffect, useState } from "react";
 
 type Personnel = Database["palaro"]["Tables"]["personnel"]["Row"];
 
@@ -32,7 +32,7 @@ const COORDS = {
   // Name strip — large bold caps. Sits over "INSERT NAME" in the template.
   name: { top: "60.5%", left: "4%", right: "4%", height: "11%" },
   // Smaller italic role/committee strip — sits over "COMMITTEE".
-  committee: { top: "69.5%", left: "12%", right: "12%", height: "6.5%" },
+  committee: { top: "70.7%", left: "12%", right: "12%", height: "6.5%" },
 } as const;
 
 // Match the navy in the template so our text-strip backgrounds masquerade as

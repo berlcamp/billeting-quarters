@@ -592,12 +592,17 @@ export const MODULE_GUIDES: ModuleGuide[] = [
   {
     slug: "transportation",
     title: "Transportation",
-    createPermissions: ["vehicle.manage"],
+    createPermissions: ["vehicle.manage", "vehicle.dispatch"],
     summary:
-      "Vehicle catalogue, QR-based in/out scanning, and route management for shuttles, ambulances, and service vehicles.",
+      "Vehicle catalogue, multi-stop routes, dispatches, QR-based arrival/departure scanning, fuel inventory, and reports.",
     icon: Truck,
     category: "Logistics",
-    audience: ["logistics_officer", "transportation_dispatcher"],
+    audience: [
+      "logistics_officer",
+      "transportation_head",
+      "transportation_dispatcher",
+      "transportation_driver",
+    ],
     sections: [
       {
         heading: "Register a vehicle",
