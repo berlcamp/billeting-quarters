@@ -400,6 +400,8 @@ export type Database = {
           delegation_id: string | null;
           contact_number: string | null;
           notes: string | null;
+          protocol_officer_id: string | null;
+          created_by: string | null;
           is_active: boolean;
           created_at: string;
         };
@@ -411,6 +413,8 @@ export type Database = {
           delegation_id?: string | null;
           contact_number?: string | null;
           notes?: string | null;
+          protocol_officer_id?: string | null;
+          created_by?: string | null;
           is_active?: boolean;
           created_at?: string;
         };
@@ -422,8 +426,58 @@ export type Database = {
           delegation_id?: string | null;
           contact_number?: string | null;
           notes?: string | null;
+          protocol_officer_id?: string | null;
+          created_by?: string | null;
           is_active?: boolean;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      vip_logs: {
+        Row: {
+          id: string;
+          vip_id: string;
+          protocol_officer_id: string | null;
+          from_location: string | null;
+          to_location: string | null;
+          logged_at: string;
+          request: string | null;
+          request_status: Database["palaro"]["Enums"]["vip_log_request_status"];
+          remarks: string | null;
+          status_updated_by: string | null;
+          status_updated_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          vip_id: string;
+          protocol_officer_id?: string | null;
+          from_location?: string | null;
+          to_location?: string | null;
+          logged_at?: string;
+          request?: string | null;
+          request_status?: Database["palaro"]["Enums"]["vip_log_request_status"];
+          remarks?: string | null;
+          status_updated_by?: string | null;
+          status_updated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          vip_id?: string;
+          protocol_officer_id?: string | null;
+          from_location?: string | null;
+          to_location?: string | null;
+          logged_at?: string;
+          request?: string | null;
+          request_status?: Database["palaro"]["Enums"]["vip_log_request_status"];
+          remarks?: string | null;
+          status_updated_by?: string | null;
+          status_updated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -442,6 +496,7 @@ export type Database = {
           vehicle_info: string | null;
           escort_count: number | null;
           notes: string | null;
+          created_by: string | null;
           updated_by: string | null;
           created_at: string;
           updated_at: string;
@@ -460,6 +515,7 @@ export type Database = {
           vehicle_info?: string | null;
           escort_count?: number | null;
           notes?: string | null;
+          created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -478,6 +534,7 @@ export type Database = {
           vehicle_info?: string | null;
           escort_count?: number | null;
           notes?: string | null;
+          created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -1427,6 +1484,11 @@ export type Database = {
         | "etd_logged"
         | "departed"
         | "cancelled";
+      vip_log_request_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "denied";
       attendance_type: "time_in" | "time_out";
       vehicle_type:
         | "bus"

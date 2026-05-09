@@ -138,6 +138,36 @@ export const ACTIVE_VIP_STATUSES: readonly VipMovementStatus[] = [
   "etd_logged",
 ] as const;
 
+export type VipLogRequestStatus =
+  Database["palaro"]["Enums"]["vip_log_request_status"];
+
+export const VIP_LOG_REQUEST_STATUSES: readonly VipLogRequestStatus[] = [
+  "pending",
+  "in_progress",
+  "completed",
+  "denied",
+] as const;
+
+export const VIP_LOG_REQUEST_STATUS_LABELS: Record<
+  VipLogRequestStatus,
+  string
+> = {
+  pending: "Pending",
+  in_progress: "In progress",
+  completed: "Completed",
+  denied: "Denied",
+};
+
+export const VIP_LOG_REQUEST_STATUS_BADGE: Record<
+  VipLogRequestStatus,
+  string
+> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  in_progress: "bg-blue-100 text-blue-800",
+  completed: "bg-green-100 text-green-800",
+  denied: "bg-red-100 text-red-800",
+};
+
 export type AttendanceType = Database["palaro"]["Enums"]["attendance_type"];
 
 export const ATTENDANCE_TYPE_LABELS: Record<AttendanceType, string> = {

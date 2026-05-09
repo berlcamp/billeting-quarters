@@ -40,12 +40,19 @@ interface CommandCenterOverviewProps {
   initialIncidents: Incident[];
   initialReferrals: Referral[];
   sites: Site[];
+  // When false, the corresponding feed renders rows as plain (non-clickable)
+  // items so users without the permission can still see the data but cannot
+  // navigate into a detail view they wouldn't be allowed to load.
+  canOpenIncidents: boolean;
+  canOpenReferrals: boolean;
 }
 
 export function CommandCenterOverview({
   initialIncidents,
   initialReferrals,
   sites,
+  canOpenIncidents,
+  canOpenReferrals,
 }: CommandCenterOverviewProps) {
   const [mapOpen, setMapOpen] = useState(true);
   useRealtimeIncidents({
@@ -67,12 +74,17 @@ export function CommandCenterOverview({
       <PipelineView incidents={incidents} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <LiveIncidentFeed incidents={incidents} siteLookup={siteLookup} />
+          <LiveIncidentFeed
+            incidents={incidents}
+            siteLookup={siteLookup}
+            canOpen={canOpenIncidents}
+          />
         </div>
         <div>
           <ActiveReferralsTracker
             referrals={referrals}
             siteLookup={siteLookup}
+            canOpen={canOpenReferrals}
           />
         </div>
       </div>

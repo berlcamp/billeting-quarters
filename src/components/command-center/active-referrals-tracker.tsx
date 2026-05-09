@@ -17,6 +17,9 @@ type Referral = Database["palaro"]["Tables"]["referrals"]["Row"];
 interface ActiveReferralsTrackerProps {
   referrals: Referral[];
   siteLookup: Map<string, string>;
+  // When false, rows render as static cards instead of links — keeps the
+  // tracker visible to everyone while gating navigation by permission.
+  canOpen?: boolean;
 }
 
 const STAGE_LABEL: Record<Referral["level"], string> = {
@@ -34,6 +37,7 @@ const DETAIL_PATH: Record<Referral["level"], string> = {
 export function ActiveReferralsTracker({
   referrals,
   siteLookup,
+  canOpen = true,
 }: ActiveReferralsTrackerProps) {
   const active = referrals
     .filter((r) =>
@@ -55,12 +59,9 @@ export function ActiveReferralsTracker({
           </div>
         ) : (
           <ul className="divide-y max-h-[480px] overflow-y-auto">
-            {active.map((r) => (
-              <li key={r.id}>
-                <Link
-                  href={`${DETAIL_PATH[r.level]}/${r.id}`}
-                  className="flex flex-col gap-1 px-4 py-3 hover:bg-accent/40 transition-colors"
-                >
+            {active.map((r) => {
+              const body = (
+                <>
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-sm font-medium truncate">
                       {r.patient_name}
@@ -87,9 +88,25 @@ export function ActiveReferralsTracker({
                       addSuffix: true,
                     })}
                   </div>
-                </Link>
-              </li>
-            ))}
+                </>
+              );
+              return (
+                <li key={r.id}>
+                  {canOpen ? (
+                    <Link
+                      href={`${DETAIL_PATH[r.level]}/${r.id}`}
+                      className="flex flex-col gap-1 px-4 py-3 hover:bg-accent/40 transition-colors"
+                    >
+                      {body}
+                    </Link>
+                  ) : (
+                    <div className="flex flex-col gap-1 px-4 py-3">
+                      {body}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </CardContent>

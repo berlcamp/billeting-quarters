@@ -23,6 +23,9 @@ interface LiveIncidentFeedProps {
   incidents: Incident[];
   siteLookup: Map<string, string>;
   limit?: number;
+  // When false, rows render as static cards instead of links — keeps the
+  // feed visible to everyone while gating navigation by permission.
+  canOpen?: boolean;
 }
 
 const STRIPE: Record<IncidentSeverity, string> = {
@@ -36,6 +39,7 @@ export function LiveIncidentFeed({
   incidents,
   siteLookup,
   limit = 20,
+  canOpen = true,
 }: LiveIncidentFeedProps) {
   const visible = [...incidents]
     .sort((a, b) => b.reported_at.localeCompare(a.reported_at))
@@ -54,14 +58,14 @@ export function LiveIncidentFeed({
           </div>
         ) : (
           <ul className="divide-y max-h-[480px] overflow-y-auto">
-            {visible.map((i) => (
-              <li key={i.id}>
-                <Link
-                  href={`/dashboard/incidents/${i.id}`}
-                  className="flex gap-3 px-4 py-3 hover:bg-accent/40 transition-colors"
-                >
+            {visible.map((i) => {
+              const body = (
+                <>
                   <span
-                    className={cn("w-1 self-stretch rounded-full", STRIPE[i.severity])}
+                    className={cn(
+                      "w-1 self-stretch rounded-full",
+                      STRIPE[i.severity],
+                    )}
                     aria-hidden
                   />
                   <div className="flex-1 min-w-0 space-y-1">
@@ -95,9 +99,23 @@ export function LiveIncidentFeed({
                       <StatusBadge variant="incident" status={i.status} />
                     </div>
                   </div>
-                </Link>
-              </li>
-            ))}
+                </>
+              );
+              return (
+                <li key={i.id}>
+                  {canOpen ? (
+                    <Link
+                      href={`/dashboard/incidents/${i.id}`}
+                      className="flex gap-3 px-4 py-3 hover:bg-accent/40 transition-colors"
+                    >
+                      {body}
+                    </Link>
+                  ) : (
+                    <div className="flex gap-3 px-4 py-3">{body}</div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </CardContent>

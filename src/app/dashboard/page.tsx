@@ -3,23 +3,28 @@ import { PageHeader } from "@/components/layout/page-header";
 import { CommandCenterOverview } from "@/components/command-center/command-center-overview";
 import { FullscreenButton } from "@/components/command-center/fullscreen-button";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { hasAnyPermission } from "@/lib/permissions";
+import { hasAnyPermission, hasPermission } from "@/lib/permissions";
 import { getIncidents } from "@/lib/actions/incidents";
 import { getAllReferrals } from "@/lib/actions/referrals";
 import { getSites } from "@/lib/actions/sites";
 
 export default async function CommandCenterPage() {
   const profile = await getCurrentProfile();
-  // Open to anyone with broad operational visibility; super_admin is included
-  // because it has all perms.
-  if (
-    !profile ||
-    !hasAnyPermission(profile, ["incident.view", "admin.manage"])
-  ) {
-    return (
-      <Forbidden message="Command center access requires operational permissions." />
-    );
+  // The Command Center dashboard itself is open to every signed-in user.
+  // Specific items (incidents, referrals) link out only when the viewer
+  // holds the corresponding permission.
+  if (!profile) {
+    return <Forbidden message="Sign in to access the Command Center." />;
   }
+
+  const canOpenIncidents = hasPermission(profile, "incident.view");
+  const canOpenReferrals = hasAnyPermission(profile, [
+    "referral.accept",
+    "referral.assess",
+    "referral.discharge",
+    "referral.create_field_to_ucf",
+    "referral.create_ucf_to_hospital",
+  ]);
 
   const [incidentsResult, referralsResult, sitesResult] = await Promise.all([
     getIncidents(),
@@ -41,6 +46,8 @@ export default async function CommandCenterPage() {
         initialIncidents={incidents}
         initialReferrals={referrals}
         sites={sites}
+        canOpenIncidents={canOpenIncidents}
+        canOpenReferrals={canOpenReferrals}
       />
     </div>
   );

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRealtimePostgresChanges } from "@/lib/hooks/use-realtime";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
-import { MovementActions } from "./movement-actions";
+import { MovementDetailsDialog } from "./movement-details-dialog";
 import { cn } from "@/lib/utils";
 import {
   ACTIVE_VIP_STATUSES,
@@ -21,18 +21,36 @@ type Vip = Pick<
   "id" | "full_name" | "title" | "organization"
 >;
 type Site = Pick<Database["palaro"]["Tables"]["sites"]["Row"], "id" | "name">;
+type ProfileLite = {
+  id: string;
+  full_name: string | null;
+  email: string;
+};
 
 interface Props {
   initialMovements: Movement[];
   vips: Vip[];
   sites: Site[];
+  profiles: ProfileLite[];
+  // The signed-in profile id. Used to gate which rows expose action buttons.
+  currentProfileId: string;
+  // True if the viewer is super_admin — bypasses creator gate.
+  isSuperAdmin: boolean;
 }
 
 const ACTIVE = new Set<VipMovementStatus>(ACTIVE_VIP_STATUSES);
 
-export function MovementsTable({ initialMovements, vips, sites }: Props) {
+export function MovementsTable({
+  initialMovements,
+  vips,
+  sites,
+  profiles,
+  currentProfileId,
+  isSuperAdmin,
+}: Props) {
   const router = useRouter();
   const [showClosed, setShowClosed] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const vipMap = useMemo(() => {
     const m = new Map<string, Vip>();
@@ -44,6 +62,20 @@ export function MovementsTable({ initialMovements, vips, sites }: Props) {
     for (const s of sites) m.set(s.id, s.name);
     return m;
   }, [sites]);
+  const profileMap = useMemo(() => {
+    const m = new Map<string, ProfileLite>();
+    for (const p of profiles) m.set(p.id, p);
+    return m;
+  }, [profiles]);
+
+  function creatorIdOf(m: Movement): string | null {
+    return m.created_by ?? m.protocol_officer_id ?? null;
+  }
+  function isOwnerOf(m: Movement): boolean {
+    if (isSuperAdmin) return true;
+    const cid = creatorIdOf(m);
+    return cid != null && cid === currentProfileId;
+  }
 
   // Realtime: any change → re-fetch the server-rendered page. Don't keep a
   // local copy of `initialMovements` in useState — the prop won't sync after
@@ -162,11 +194,41 @@ export function MovementsTable({ initialMovements, vips, sites }: Props) {
       ),
     },
     {
-      id: "actions",
-      header: "Actions",
-      cell: (m) => <MovementActions movement={m} />,
+      id: "officer",
+      header: "Protocol Officer",
+      cell: (m) => {
+        const cid = creatorIdOf(m);
+        const officer = cid ? profileMap.get(cid) : null;
+        return officer ? (
+          <span className="text-sm">
+            {officer.full_name ?? officer.email}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">Unassigned</span>
+        );
+      },
+    },
+    {
+      id: "notes",
+      header: "Notes",
+      className: "max-w-[18rem]",
+      cell: (m) =>
+        m.notes ? (
+          <span
+            className="line-clamp-2 whitespace-pre-line text-xs text-muted-foreground"
+            title={m.notes}
+          >
+            {m.notes}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
     },
   ];
+
+  const openMovement = openId
+    ? visible.find((m) => m.id === openId) ?? null
+    : null;
 
   const filters = (
     <button
@@ -179,18 +241,50 @@ export function MovementsTable({ initialMovements, vips, sites }: Props) {
   );
 
   return (
-    <DataTable
-      data={visible}
-      columns={columns}
-      rowKey={(m) => m.id}
-      filters={filters}
-      pageSize={20}
-      empty={{
-        title: showClosed ? "No movements" : "No active movements",
-        description: showClosed
-          ? "Log the first movement to start tracking."
-          : "All current VIP movements are closed.",
-      }}
-    />
+    <>
+      <DataTable
+        data={visible}
+        columns={columns}
+        rowKey={(m) => m.id}
+        filters={filters}
+        pageSize={20}
+        onRowClick={(m) => setOpenId(m.id)}
+        empty={{
+          title: showClosed ? "No movements" : "No active movements",
+          description: showClosed
+            ? "Log the first movement to start tracking."
+            : "All current VIP movements are closed.",
+        }}
+      />
+      <MovementDetailsDialog
+        open={openMovement !== null}
+        onOpenChange={(o) => {
+          if (!o) setOpenId(null);
+        }}
+        movement={openMovement}
+        vipName={
+          openMovement ? vipMap.get(openMovement.vip_id)?.full_name ?? null : null
+        }
+        vipTitle={
+          openMovement ? vipMap.get(openMovement.vip_id)?.title ?? null : null
+        }
+        vipOrganization={
+          openMovement
+            ? vipMap.get(openMovement.vip_id)?.organization ?? null
+            : null
+        }
+        destinationName={
+          openMovement && openMovement.destination_site_id
+            ? siteMap.get(openMovement.destination_site_id) ?? null
+            : null
+        }
+        creator={(() => {
+          if (!openMovement) return null;
+          const cid = creatorIdOf(openMovement);
+          return cid ? profileMap.get(cid) ?? null : null;
+        })()}
+        canAct={openMovement ? isOwnerOf(openMovement) : false}
+      />
+    </>
   );
 }

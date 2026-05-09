@@ -25,13 +25,17 @@ import {
   Users,
   FileText,
 } from "lucide-react";
-import type { UserRole } from "@/lib/permissions";
+import { ROLE_PERMISSIONS, type Permission, type UserRole } from "@/lib/permissions";
 
 export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
-  roles?: UserRole[]; // omit = visible to all signed-in users
+  // Either of these may gate the item; both omitted = visible to every
+  // signed-in user. If `permission` is set, the user must hold a role that
+  // grants it (super_admin always passes). If `roles` is set, ANY match wins.
+  roles?: UserRole[];
+  permission?: Permission;
 };
 
 export type NavSection = {
@@ -56,6 +60,7 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Incidents",
         href: "/dashboard/incidents",
         icon: AlertTriangle,
+        permission: "incident.create",
       },
       {
         label: "VIP Tracking",
@@ -233,15 +238,24 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-// Super admin sees every item. Otherwise the item's `roles` list controls visibility
-// (omit = visible to all signed-in users). A user with multiple roles passes if
-// ANY of their roles is allowed by the item.
+// Super admin sees every item. Otherwise the item is visible iff the user
+// satisfies whichever of `roles` / `permission` is set on it. With neither
+// set, the item is visible to every signed-in user.
 export function canSeeNavItem(
   roles: readonly UserRole[] | null | undefined,
   item: NavItem,
 ): boolean {
   if (!roles || roles.length === 0) return false;
   if (roles.includes("super_admin")) return true;
-  if (!item.roles) return true;
-  return roles.some((r) => item.roles!.includes(r));
+
+  if (item.roles && !roles.some((r) => item.roles!.includes(r))) {
+    return false;
+  }
+  if (item.permission) {
+    const allowed = roles.some((r) =>
+      ROLE_PERMISSIONS[r].includes(item.permission!),
+    );
+    if (!allowed) return false;
+  }
+  return true;
 }

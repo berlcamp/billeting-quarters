@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, UserPlus } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import { Button } from "@/components/ui/button";
 import { VipFormDialog } from "./vip-form-dialog";
+import { AssignProtocolOfficerDialog } from "./assign-protocol-officer-dialog";
 import type { Database } from "@/types/database";
 
 type Vip = Database["palaro"]["Tables"]["vip_persons"]["Row"];
@@ -12,18 +13,47 @@ type Delegation = Pick<
   Database["palaro"]["Tables"]["delegations"]["Row"],
   "id" | "region_code" | "region_name"
 >;
+type ProfileLite = {
+  id: string;
+  full_name: string | null;
+  email: string;
+};
 
 interface Props {
   vips: Vip[];
   delegations: Delegation[];
+  // All currently-assigned protocol officer profiles, used to render the
+  // assignment column without an extra request.
+  protocolOfficers: ProfileLite[];
+  canAssign: boolean;
+  // The signed-in profile id. Edit (pencil) only renders for VIPs the
+  // viewer created, mirroring the server-side ownership gate.
+  currentProfileId: string;
 }
 
-export function VipsTable({ vips, delegations }: Props) {
+export function VipsTable({
+  vips,
+  delegations,
+  protocolOfficers,
+  canAssign,
+  currentProfileId,
+}: Props) {
   const delegationMap = useMemo(() => {
     const m = new Map<string, string>();
     for (const d of delegations) m.set(d.id, d.region_code);
     return m;
   }, [delegations]);
+  const officerMap = useMemo(() => {
+    const m = new Map<string, ProfileLite>();
+    for (const p of protocolOfficers) m.set(p.id, p);
+    return m;
+  }, [protocolOfficers]);
+
+  // The "Protocol Officer" column reflects the VIP's creator (with the
+  // legacy assignment field as a fallback for migrated rows).
+  function ownerIdOf(v: Vip): string | null {
+    return v.created_by ?? v.protocol_officer_id ?? null;
+  }
 
   const columns: DataTableColumn<Vip>[] = [
     {
@@ -61,20 +91,64 @@ export function VipsTable({ vips, delegations }: Props) {
         ),
     },
     {
+      id: "officer",
+      header: "Protocol Officer",
+      cell: (v) => {
+        const oid = ownerIdOf(v);
+        const officer = oid ? officerMap.get(oid) : null;
+        return officer ? (
+          <span className="text-sm">
+            {officer.full_name ?? officer.email}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">Unassigned</span>
+        );
+      },
+    },
+    {
       id: "actions",
       header: "",
-      className: "w-12",
-      cell: (v) => (
-        <VipFormDialog
-          delegations={delegations}
-          vip={v}
-          trigger={
-            <Button size="icon-sm" variant="ghost" aria-label="Edit VIP">
-              <Pencil className="size-3.5" />
-            </Button>
-          }
-        />
-      ),
+      className: "w-24",
+      cell: (v) => {
+        const isOwner = v.created_by === currentProfileId;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            {canAssign ? (
+              <AssignProtocolOfficerDialog
+                vip={{
+                  id: v.id,
+                  full_name: v.full_name,
+                  protocol_officer_id: v.protocol_officer_id,
+                }}
+                trigger={
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label="Assign protocol officer"
+                  >
+                    <UserPlus className="size-3.5" />
+                  </Button>
+                }
+              />
+            ) : null}
+            {isOwner ? (
+              <VipFormDialog
+                delegations={delegations}
+                vip={v}
+                trigger={
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label="Edit VIP"
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                }
+              />
+            ) : null}
+          </div>
+        );
+      },
     },
   ];
 

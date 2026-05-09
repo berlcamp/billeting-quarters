@@ -12,10 +12,17 @@ import {
 import { LogMovementDialog } from "@/components/vip/log-movement-dialog";
 import { MovementsTable } from "@/components/vip/movements-table";
 import { VipFormDialog } from "@/components/vip/vip-form-dialog";
+import { VipLogsPanel } from "@/components/vip/vip-logs-panel";
 import { VipsTable } from "@/components/vip/vips-table";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
-import { getMovements, getVips } from "@/lib/actions/vip";
+import {
+  getMovements,
+  getProfilesByIds,
+  getProtocolOfficerCandidates,
+  getVipLogs,
+  getVips,
+} from "@/lib/actions/vip";
 import { getDelegations } from "@/lib/actions/delegations";
 import { getSites } from "@/lib/actions/sites";
 
@@ -27,36 +34,86 @@ export default async function VipPage() {
     );
   }
 
-  const [vipsRes, movementsRes, sitesRes, delegationsRes] = await Promise.all([
-    getVips(false),
-    getMovements(200),
-    getSites(false),
-    getDelegations(false),
-  ]);
+  const isProtocolOfficer = profile.roles.includes("protocol_officer");
+  const isBroadViewer = profile.roles.some(
+    (r) => r === "command_center" || r === "super_admin",
+  );
+
+  const [vipsRes, movementsRes, sitesRes, delegationsRes, officersRes] =
+    await Promise.all([
+      getVips(false),
+      getMovements(200),
+      getSites(false),
+      getDelegations(false),
+      getProtocolOfficerCandidates(),
+    ]);
 
   const vips = vipsRes.error ? [] : (vipsRes.data ?? []);
   const movements = movementsRes.error ? [] : (movementsRes.data ?? []);
   const sites = sitesRes.error ? [] : (sitesRes.data ?? []);
   const delegations = delegationsRes.error ? [] : (delegationsRes.data ?? []);
+  const officers =
+    officersRes.error || !officersRes.data ? [] : officersRes.data;
+
+  // Resolve creator/protocol-officer profile names referenced by movements.
+  // Combines created_by (new) and protocol_officer_id (legacy fallback).
+  const creatorIds = Array.from(
+    new Set(
+      movements.flatMap((m) =>
+        [m.created_by, m.protocol_officer_id].filter(
+          (v): v is string => Boolean(v),
+        ),
+      ),
+    ),
+  );
+  const movementProfilesRes =
+    creatorIds.length > 0 ? await getProfilesByIds(creatorIds) : { data: [] };
+  const movementProfiles =
+    "data" in movementProfilesRes && movementProfilesRes.data
+      ? movementProfilesRes.data
+      : [];
+
+  // Default the Logs panel to the first visible VIP.
+  const initialLogsVipId = vips[0]?.id ?? null;
+  const initialLogsRes = initialLogsVipId
+    ? await getVipLogs(initialLogsVipId)
+    : { data: [] };
+  const initialLogs =
+    "data" in initialLogsRes && initialLogsRes.data ? initialLogsRes.data : [];
+
+  const lightVips = vips.map((v) => ({
+    id: v.id,
+    full_name: v.full_name,
+    protocol_officer_id: v.protocol_officer_id,
+  }));
+
+  // Only Protocol Officers can create VIPs and movements.
+  const canCreate = isProtocolOfficer;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="VIP Tracking"
-        description="Estimated and actual arrivals/departures for protocol officers and command center."
+        description={
+          canCreate
+            ? "Estimated and actual arrivals/departures. You only see and edit records you created."
+            : "Estimated and actual arrivals/departures across all Protocol Officers (view only)."
+        }
         actions={
-          <div className="flex items-center gap-2">
-            <VipFormDialog
-              delegations={delegations}
-              trigger={
-                <Button variant="outline">
-                  <UserCog className="size-4" />
-                  Add VIP
-                </Button>
-              }
-            />
-            <LogMovementDialog vips={vips} sites={sites} />
-          </div>
+          canCreate ? (
+            <div className="flex items-center gap-2">
+              <VipFormDialog
+                delegations={delegations}
+                trigger={
+                  <Button variant="outline">
+                    <UserCog className="size-4" />
+                    Add VIP
+                  </Button>
+                }
+              />
+              <LogMovementDialog vips={vips} sites={sites} />
+            </div>
+          ) : null
         }
       />
 
@@ -64,6 +121,7 @@ export default async function VipPage() {
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="movements">Movements</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="vips">VIPs ({vips.length})</TabsTrigger>
           </TabsList>
           <LiveBadge label="Live" />
@@ -74,22 +132,43 @@ export default async function VipPage() {
             initialMovements={movements}
             vips={vips}
             sites={sites}
+            profiles={movementProfiles}
+            currentProfileId={profile.id}
+            isSuperAdmin={false}
+          />
+        </TabsContent>
+
+        <TabsContent value="logs" className="mt-4">
+          <VipLogsPanel
+            vips={lightVips}
+            initialVipId={initialLogsVipId}
+            initialLogs={initialLogs}
+            canUpdateStatus={isBroadViewer}
+            lockedToVip={false}
           />
         </TabsContent>
 
         <TabsContent value="vips" className="mt-4">
-          <div className="mb-3 flex items-center justify-end">
-            <VipFormDialog
-              delegations={delegations}
-              trigger={
-                <Button size="sm" variant="outline">
-                  <Plus className="size-4" />
-                  Add VIP
-                </Button>
-              }
-            />
-          </div>
-          <VipsTable vips={vips} delegations={delegations} />
+          {canCreate ? (
+            <div className="mb-3 flex items-center justify-end">
+              <VipFormDialog
+                delegations={delegations}
+                trigger={
+                  <Button size="sm" variant="outline">
+                    <Plus className="size-4" />
+                    Add VIP
+                  </Button>
+                }
+              />
+            </div>
+          ) : null}
+          <VipsTable
+            vips={vips}
+            delegations={delegations}
+            protocolOfficers={officers}
+            canAssign={false}
+            currentProfileId={profile.id}
+          />
         </TabsContent>
       </Tabs>
     </div>

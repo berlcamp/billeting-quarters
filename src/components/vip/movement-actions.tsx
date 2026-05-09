@@ -72,7 +72,7 @@ export function MovementActions({ movement }: Props) {
         variant="ghost"
         onClick={() => setActive("cancel")}
       >
-        Cancel
+        Cancel Movement
       </Button>
 
       {active === "arrived" ? (
