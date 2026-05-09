@@ -87,23 +87,26 @@ export default async function VipPage() {
     protocol_officer_id: v.protocol_officer_id,
   }));
 
-  // Only Protocol Officers can create VIPs and movements.
-  const canCreate = isProtocolOfficer;
+  // Command Center / Super Admin create and assign VIPs. Protocol Officers
+  // log movements for the VIPs assigned to them.
+  const canCreateVip = isBroadViewer;
+  const canLogMovement = isProtocolOfficer && vips.length > 0;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="VIP Tracking"
         description={
-          canCreate
-            ? "Estimated and actual arrivals/departures. You only see and edit records you created."
-            : "Estimated and actual arrivals/departures across all Protocol Officers (view only)."
+          isBroadViewer
+            ? "Create and assign VIPs to Protocol Officers; monitor every movement across the event."
+            : "VIPs assigned to you. Log movements as they arrive and depart."
         }
         actions={
-          canCreate ? (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {canCreateVip ? (
               <VipFormDialog
                 delegations={delegations}
+                protocolOfficers={officers}
                 trigger={
                   <Button variant="outline">
                     <UserCog className="size-4" />
@@ -111,9 +114,11 @@ export default async function VipPage() {
                   </Button>
                 }
               />
+            ) : null}
+            {canLogMovement ? (
               <LogMovementDialog vips={vips} sites={sites} />
-            </div>
-          ) : null
+            ) : null}
+          </div>
         }
       />
 
@@ -149,10 +154,11 @@ export default async function VipPage() {
         </TabsContent>
 
         <TabsContent value="vips" className="mt-4">
-          {canCreate ? (
+          {canCreateVip ? (
             <div className="mb-3 flex items-center justify-end">
               <VipFormDialog
                 delegations={delegations}
+                protocolOfficers={officers}
                 trigger={
                   <Button size="sm" variant="outline">
                     <Plus className="size-4" />
@@ -166,8 +172,8 @@ export default async function VipPage() {
             vips={vips}
             delegations={delegations}
             protocolOfficers={officers}
-            canAssign={false}
-            currentProfileId={profile.id}
+            canAssign={canCreateVip}
+            canEdit={canCreateVip}
           />
         </TabsContent>
       </Tabs>

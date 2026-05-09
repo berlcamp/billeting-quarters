@@ -47,25 +47,25 @@ async function requireVipManager() {
   return { ok: true as const, profile };
 }
 
-// Creation gate: only profiles with the protocol_officer role can create VIPs
-// or VIP movements. Command Center / super_admin are read-only.
-async function requireProtocolOfficer() {
+// Creation gate: only Command Center / super_admin can create VIPs. Each VIP
+// is assigned at creation to a specific Protocol Officer.
+async function requireVipCreator() {
   const profile = await getCurrentProfile();
   if (!profile) return { ok: false as const, error: "Not authenticated." };
-  if (!profile.roles.includes("protocol_officer")) {
+  if (!isBroadViewer(profile)) {
     return {
       ok: false as const,
-      error: "Only Protocol Officers can create VIPs and movements.",
+      error: "Only Command Center or Super Admin can create VIPs.",
     };
   }
   return { ok: true as const, profile };
 }
 
 // Helpers — viewers are split into two cohorts:
-//   * "broad" viewers (super_admin / command_center): see every VIP and
-//     movement, but cannot edit anything.
-//   * Protocol Officers (without the broad roles): see only the records they
-//     created, and only they can edit those records.
+//   * "broad" viewers (super_admin / command_center): create / assign / edit
+//     every VIP and see every movement (read-only on movements).
+//   * Protocol Officers: see the VIPs assigned to them and the movements
+//     they created for those VIPs.
 function isBroadViewer(profile: {
   roles: readonly string[] | string[];
 }): boolean {
@@ -74,8 +74,8 @@ function isBroadViewer(profile: {
   );
 }
 
-// Creator-only ownership gate (no super_admin override per the access spec).
-// Falls back to protocol_officer_id for legacy rows that pre-date created_by.
+// Creator-only ownership gate for movement actions. Falls back to
+// protocol_officer_id for legacy rows that pre-date created_by.
 function isMovementOwner(
   profile: { id: string; roles: readonly string[] | string[] },
   movement: { created_by: string | null; protocol_officer_id: string | null },
@@ -101,10 +101,11 @@ export async function getVips(
     .select("*")
     .order("full_name");
   if (!includeInactive) q = q.eq("is_active", true);
-  // Visibility: protocol officers only see their own VIPs. Broad viewers
-  // (super_admin / command_center) see everything.
+  // Visibility: Protocol Officers see VIPs assigned to them via
+  // protocol_officer_id. Broad viewers (super_admin / command_center) see
+  // every VIP.
   if (!isBroadViewer(profile)) {
-    q = q.eq("created_by", profile.id);
+    q = q.eq("protocol_officer_id", profile.id);
   }
 
   const { data, error } = await q;
@@ -115,7 +116,7 @@ export async function getVips(
 export async function createVip(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
-  const auth = await requireProtocolOfficer();
+  const auth = await requireVipCreator();
   if (!auth.ok) return fail(auth.error);
 
   const parsed = createVipSchema.safeParse(input);
@@ -125,6 +126,22 @@ export async function createVip(
   const data = parsed.data;
 
   const admin = createAdminClient();
+
+  // Validate the assigned Protocol Officer holds the role and is active.
+  const { data: officer } = await admin
+    .schema("palaro")
+    .from("profiles")
+    .select("id, roles, is_active")
+    .eq("id", data.protocol_officer_id)
+    .single();
+  if (!officer) return fail("Selected Protocol Officer not found.");
+  if (!officer.is_active) {
+    return fail("Selected Protocol Officer is not active.");
+  }
+  if (!officer.roles.includes("protocol_officer")) {
+    return fail("Selected profile does not hold the Protocol Officer role.");
+  }
+
   const { data: inserted, error } = await admin
     .schema("palaro")
     .from("vip_persons")
@@ -135,6 +152,7 @@ export async function createVip(
       delegation_id: data.delegation_id || null,
       contact_number: data.contact_number || null,
       notes: data.notes || null,
+      protocol_officer_id: data.protocol_officer_id,
       created_by: auth.profile.id,
     })
     .select("id")
@@ -149,6 +167,7 @@ export async function createVip(
       full_name: data.full_name,
       title: data.title ?? null,
       organization: data.organization ?? null,
+      protocol_officer_id: data.protocol_officer_id,
     },
     user_id: auth.profile.id,
   });
@@ -158,7 +177,9 @@ export async function createVip(
 }
 
 export async function updateVip(input: unknown): Promise<ActionResult<void>> {
-  const auth = await requireVipManager();
+  // Editing a VIP — including reassigning their Protocol Officer — is a
+  // Command Center / Super Admin task, mirroring creation.
+  const auth = await requireVipCreator();
   if (!auth.ok) return fail(auth.error);
 
   const parsed = updateVipSchema.safeParse(input);
@@ -169,16 +190,27 @@ export async function updateVip(input: unknown): Promise<ActionResult<void>> {
 
   const admin = createAdminClient();
 
-  // Creator-only edit: super_admin / command_center are view-only.
   const { data: existingVip } = await admin
     .schema("palaro")
     .from("vip_persons")
-    .select("id, created_by")
+    .select("id")
     .eq("id", id)
     .single();
   if (!existingVip) return fail("VIP not found.");
-  if (existingVip.created_by !== auth.profile.id) {
-    return fail("Only the VIP's creator can edit it.");
+
+  // Validate the (possibly changed) Protocol Officer assignment.
+  const { data: officer } = await admin
+    .schema("palaro")
+    .from("profiles")
+    .select("id, roles, is_active")
+    .eq("id", data.protocol_officer_id)
+    .single();
+  if (!officer) return fail("Selected Protocol Officer not found.");
+  if (!officer.is_active) {
+    return fail("Selected Protocol Officer is not active.");
+  }
+  if (!officer.roles.includes("protocol_officer")) {
+    return fail("Selected profile does not hold the Protocol Officer role.");
   }
 
   const { error } = await admin
@@ -191,6 +223,7 @@ export async function updateVip(input: unknown): Promise<ActionResult<void>> {
       delegation_id: data.delegation_id || null,
       contact_number: data.contact_number || null,
       notes: data.notes || null,
+      protocol_officer_id: data.protocol_officer_id,
     })
     .eq("id", id);
   if (error) return fail(error.message);
@@ -199,7 +232,10 @@ export async function updateVip(input: unknown): Promise<ActionResult<void>> {
     action: "update",
     entity_type: "vip_person",
     entity_id: id,
-    changes: { full_name: data.full_name },
+    changes: {
+      full_name: data.full_name,
+      protocol_officer_id: data.protocol_officer_id,
+    },
     user_id: auth.profile.id,
   });
 
@@ -251,9 +287,18 @@ export async function getMovements(
     .select("*")
     .order("updated_at", { ascending: false })
     .limit(limit);
-  // Visibility: protocol officers only see movements they created.
+  // Visibility: Protocol Officers only see movements for VIPs assigned to
+  // them. We resolve their assigned VIP ids first, then scope movements to
+  // that set.
   if (!isBroadViewer(profile)) {
-    q = q.eq("created_by", profile.id);
+    const { data: assignedVips } = await admin
+      .schema("palaro")
+      .from("vip_persons")
+      .select("id")
+      .eq("protocol_officer_id", profile.id);
+    const ids = (assignedVips ?? []).map((v) => v.id);
+    if (ids.length === 0) return ok([]);
+    q = q.in("vip_id", ids);
   }
 
   const { data, error } = await q;
@@ -304,8 +349,11 @@ async function notifyMovementChange(
 export async function createMovement(
   input: unknown,
 ): Promise<ActionResult<{ id: string }>> {
-  const auth = await requireProtocolOfficer();
-  if (!auth.ok) return fail(auth.error);
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (!profile.roles.includes("protocol_officer")) {
+    return fail("Only Protocol Officers can log VIP movements.");
+  }
 
   const parsed = createMovementSchema.safeParse(input);
   if (!parsed.success) {
@@ -315,17 +363,16 @@ export async function createMovement(
 
   const admin = createAdminClient();
 
-  // The Protocol Officer can only log movements for VIPs they themselves
-  // created — no cross-officer access.
+  // A Protocol Officer can only log movements for VIPs assigned to them.
   const { data: vip } = await admin
     .schema("palaro")
     .from("vip_persons")
-    .select("id, full_name, created_by")
+    .select("id, full_name, protocol_officer_id")
     .eq("id", data.vip_id)
     .single();
   if (!vip) return fail("VIP not found.");
-  if (vip.created_by !== auth.profile.id) {
-    return fail("You can only log movements for VIPs you created.");
+  if (vip.protocol_officer_id !== profile.id) {
+    return fail("You can only log movements for VIPs assigned to you.");
   }
 
   let destinationName: string | null = null;
@@ -351,11 +398,9 @@ export async function createMovement(
       vehicle_info: data.vehicle_info || null,
       escort_count: data.escort_count ?? null,
       notes: data.notes || null,
-      protocol_officer_id: auth.profile.roles.includes("protocol_officer")
-        ? auth.profile.id
-        : null,
-      created_by: auth.profile.id,
-      updated_by: auth.profile.id,
+      protocol_officer_id: profile.id,
+      created_by: profile.id,
+      updated_by: profile.id,
     })
     .select("id, vip_id, destination_site_id")
     .single();
@@ -371,7 +416,7 @@ export async function createMovement(
       estimated_arrival: data.estimated_arrival,
       status: "eta_logged",
     },
-    user_id: auth.profile.id,
+    user_id: profile.id,
   });
 
   await notifyMovementChange(
@@ -651,12 +696,13 @@ export async function cancelMovement(
 }
 
 // =============================================================================
-// PROTOCOL OFFICER ASSIGNMENT (1 VIP : 1 Protocol Officer)
+// PROTOCOL OFFICER ASSIGNMENT
 // =============================================================================
+// VIPs are assigned to a Protocol Officer at creation. Command Center / Super
+// Admin can also reassign later (e.g. when a PO is reassigned mid-event).
 
 // Returns active profiles holding the protocol_officer role. Used by the
-// assignment dialog. The result includes any profile already assigned (so the
-// current assignee always shows up in the picker).
+// assignment dialog and the VIP form's officer picker.
 export async function getProtocolOfficerCandidates(): Promise<
   ActionResult<ProfileLite[]>
 > {
@@ -681,20 +727,10 @@ export async function getProtocolOfficerCandidates(): Promise<
 export async function assignProtocolOfficer(
   input: unknown,
 ): Promise<ActionResult<void>> {
-  const profile = await getCurrentProfile();
-  if (!profile) return fail("Not authenticated.");
-  // Only command_center / super_admin (anything with vip.manage that is *not*
-  // just the protocol officer themselves) should reassign — but per the spec
-  // the assignment is owned by command center. We gate on vip.manage and
-  // additionally require the caller to NOT be only a protocol officer.
-  if (!hasPermission(profile, "vip.manage")) {
-    return fail("You don't have permission to manage VIP tracking.");
-  }
-  const callerOnlyProtocol =
-    profile.roles.length === 1 && profile.roles[0] === "protocol_officer";
-  if (callerOnlyProtocol) {
-    return fail("Only Command Center can assign protocol officers.");
-  }
+  // Only Command Center / Super Admin can (re)assign Protocol Officers.
+  const auth = await requireVipCreator();
+  if (!auth.ok) return fail(auth.error);
+  const { profile } = auth;
 
   const parsed = assignProtocolOfficerSchema.safeParse(input);
   if (!parsed.success) {
@@ -717,14 +753,8 @@ export async function assignProtocolOfficer(
     if (!target.roles.includes("protocol_officer")) {
       return fail("Target profile does not hold the Protocol Officer role.");
     }
-
-    // 1 VIP : 1 PO — clear any other VIP currently held by this officer.
-    await admin
-      .schema("palaro")
-      .from("vip_persons")
-      .update({ protocol_officer_id: null })
-      .eq("protocol_officer_id", protocol_officer_id)
-      .neq("id", vip_id);
+    // One Protocol Officer may now hold multiple VIPs, so no longer clear
+    // their other assignments.
   }
 
   const { error } = await admin
@@ -747,30 +777,9 @@ export async function assignProtocolOfficer(
 }
 
 // =============================================================================
-// VIP LOGS — auto-detect the signed-in officer's VIP, capture entries,
-// and let Command Center update request status.
+// VIP LOGS — Protocol Officers capture entries for their assigned VIPs;
+// Command Center triages requests via status updates.
 // =============================================================================
-
-// Auto-detect: returns the VIP currently assigned to the calling protocol
-// officer. Returns ok(null) if the caller has no assignment yet.
-export async function getMyAssignedVip(): Promise<ActionResult<Vip | null>> {
-  const profile = await getCurrentProfile();
-  if (!profile) return fail("Not authenticated.");
-  if (!profile.roles.includes("protocol_officer")) {
-    return ok(null);
-  }
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .schema("palaro")
-    .from("vip_persons")
-    .select("*")
-    .eq("protocol_officer_id", profile.id)
-    .eq("is_active", true)
-    .maybeSingle();
-  if (error) return fail(error.message);
-  return ok(data ?? null);
-}
 
 export async function getVipLogs(
   vipId: string,
@@ -784,16 +793,16 @@ export async function getVipLogs(
 
   const admin = createAdminClient();
 
-  // Visibility: protocol officers can only read logs for VIPs they created.
+  // Visibility: Protocol Officers see logs only for VIPs assigned to them.
   // Broad viewers (super_admin / command_center) see all logs.
   if (!isBroadViewer(profile)) {
     const { data: vip } = await admin
       .schema("palaro")
       .from("vip_persons")
-      .select("id, created_by")
+      .select("id, protocol_officer_id")
       .eq("id", vipId)
       .single();
-    if (!vip || vip.created_by !== profile.id) {
+    if (!vip || vip.protocol_officer_id !== profile.id) {
       return fail("This VIP is not visible to you.");
     }
   }
@@ -814,7 +823,7 @@ export async function createVipLog(
 ): Promise<ActionResult<{ id: string }>> {
   const profile = await getCurrentProfile();
   if (!profile) return fail("Not authenticated.");
-  // Only the VIP's own Protocol Officer (creator) may add log entries.
+  // Only the VIP's assigned Protocol Officer may add log entries.
   if (!profile.roles.includes("protocol_officer")) {
     return fail("Only Protocol Officers can log VIP activity.");
   }
@@ -827,16 +836,16 @@ export async function createVipLog(
 
   const admin = createAdminClient();
 
-  // The caller must be the VIP's creator.
+  // The caller must be the VIP's assigned Protocol Officer.
   const { data: vip } = await admin
     .schema("palaro")
     .from("vip_persons")
-    .select("id, full_name, created_by")
+    .select("id, full_name, protocol_officer_id")
     .eq("id", data.vip_id)
     .single();
   if (!vip) return fail("VIP not found.");
-  if (vip.created_by !== profile.id) {
-    return fail("You can only log entries for VIPs you created.");
+  if (vip.protocol_officer_id !== profile.id) {
+    return fail("You can only log entries for VIPs assigned to you.");
   }
 
   const { data: inserted, error } = await admin

@@ -25,10 +25,11 @@ interface Props {
   // All currently-assigned protocol officer profiles, used to render the
   // assignment column without an extra request.
   protocolOfficers: ProfileLite[];
+  // Command Center / Super Admin: can re-assign Protocol Officers via the
+  // dedicated dialog.
   canAssign: boolean;
-  // The signed-in profile id. Edit (pencil) only renders for VIPs the
-  // viewer created, mirroring the server-side ownership gate.
-  currentProfileId: string;
+  // Command Center / Super Admin: can edit the VIP record itself.
+  canEdit: boolean;
 }
 
 export function VipsTable({
@@ -36,7 +37,7 @@ export function VipsTable({
   delegations,
   protocolOfficers,
   canAssign,
-  currentProfileId,
+  canEdit,
 }: Props) {
   const delegationMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -49,10 +50,10 @@ export function VipsTable({
     return m;
   }, [protocolOfficers]);
 
-  // The "Protocol Officer" column reflects the VIP's creator (with the
-  // legacy assignment field as a fallback for migrated rows).
+  // The "Protocol Officer" column reflects the assignment field. Older rows
+  // that pre-date assignment fall back to the creator.
   function ownerIdOf(v: Vip): string | null {
-    return v.created_by ?? v.protocol_officer_id ?? null;
+    return v.protocol_officer_id ?? v.created_by ?? null;
   }
 
   const columns: DataTableColumn<Vip>[] = [
@@ -109,46 +110,44 @@ export function VipsTable({
       id: "actions",
       header: "",
       className: "w-24",
-      cell: (v) => {
-        const isOwner = v.created_by === currentProfileId;
-        return (
-          <div className="flex items-center justify-end gap-1">
-            {canAssign ? (
-              <AssignProtocolOfficerDialog
-                vip={{
-                  id: v.id,
-                  full_name: v.full_name,
-                  protocol_officer_id: v.protocol_officer_id,
-                }}
-                trigger={
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label="Assign protocol officer"
-                  >
-                    <UserPlus className="size-3.5" />
-                  </Button>
-                }
-              />
-            ) : null}
-            {isOwner ? (
-              <VipFormDialog
-                delegations={delegations}
-                vip={v}
-                trigger={
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label="Edit VIP"
-                  >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                }
-              />
-            ) : null}
-          </div>
-        );
-      },
+      cell: (v) => (
+        <div className="flex items-center justify-end gap-1">
+          {canAssign ? (
+            <AssignProtocolOfficerDialog
+              vip={{
+                id: v.id,
+                full_name: v.full_name,
+                protocol_officer_id: v.protocol_officer_id,
+              }}
+              trigger={
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Assign protocol officer"
+                >
+                  <UserPlus className="size-3.5" />
+                </Button>
+              }
+            />
+          ) : null}
+          {canEdit ? (
+            <VipFormDialog
+              delegations={delegations}
+              protocolOfficers={protocolOfficers}
+              vip={v}
+              trigger={
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Edit VIP"
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
+              }
+            />
+          ) : null}
+        </div>
+      ),
     },
   ];
 

@@ -45,16 +45,29 @@ type Delegation = Pick<
   Database["palaro"]["Tables"]["delegations"]["Row"],
   "id" | "region_code" | "region_name"
 >;
+type ProtocolOfficer = {
+  id: string;
+  full_name: string | null;
+  email: string;
+};
 
 const NO_DELEGATION = "__none__";
 
 interface Props {
   trigger: ReactNode;
   delegations: Delegation[];
+  // Active profiles holding the protocol_officer role. The picker is required
+  // — every VIP must be assigned to a Protocol Officer at creation.
+  protocolOfficers: ProtocolOfficer[];
   vip?: Vip;
 }
 
-export function VipFormDialog({ trigger, delegations, vip }: Props) {
+export function VipFormDialog({
+  trigger,
+  delegations,
+  protocolOfficers,
+  vip,
+}: Props) {
   const isEdit = !!vip;
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -69,6 +82,7 @@ export function VipFormDialog({ trigger, delegations, vip }: Props) {
       delegation_id: vip?.delegation_id ?? null,
       contact_number: vip?.contact_number ?? undefined,
       notes: vip?.notes ?? undefined,
+      protocol_officer_id: vip?.protocol_officer_id ?? "",
     },
   });
 
@@ -82,6 +96,7 @@ export function VipFormDialog({ trigger, delegations, vip }: Props) {
         delegation_id: vip?.delegation_id ?? null,
         contact_number: vip?.contact_number ?? undefined,
         notes: vip?.notes ?? undefined,
+        protocol_officer_id: vip?.protocol_officer_id ?? "",
       });
     }
   }, [open, vip, form]);
@@ -216,6 +231,56 @@ export function VipFormDialog({ trigger, delegations, vip }: Props) {
                       value={field.value ?? ""}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="protocol_officer_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Protocol Officer</FormLabel>
+                  <Select
+                    value={field.value}
+                    onValueChange={(v) => field.onChange(v ?? "")}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue>
+                          {(v: string | null) => {
+                            if (!v) {
+                              return (
+                                <span className="text-muted-foreground">
+                                  Select a Protocol Officer
+                                </span>
+                              );
+                            }
+                            const po = protocolOfficers.find(
+                              (x) => x.id === v,
+                            );
+                            return po
+                              ? po.full_name ?? po.email
+                              : "Select a Protocol Officer";
+                          }}
+                        </SelectValue>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {protocolOfficers.length === 0 ? (
+                        <div className="p-2 text-xs text-muted-foreground">
+                          No active profiles hold the Protocol Officer role
+                          yet.
+                        </div>
+                      ) : (
+                        protocolOfficers.map((po) => (
+                          <SelectItem key={po.id} value={po.id}>
+                            {po.full_name ?? po.email}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

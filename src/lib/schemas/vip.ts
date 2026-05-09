@@ -10,6 +10,12 @@ export const createVipSchema = z.object({
   delegation_id: z.string().uuid().nullable().optional(),
   contact_number: optionalShortText,
   notes: optionalText,
+  // Each VIP must be assigned to a Protocol Officer at creation. The picker
+  // is shown only to Command Center / Super Admin (the only roles allowed to
+  // create VIPs); Protocol Officers receive the VIPs assigned to them.
+  protocol_officer_id: z
+    .string()
+    .uuid("Select a Protocol Officer"),
 });
 export type CreateVipInput = z.infer<typeof createVipSchema>;
 
