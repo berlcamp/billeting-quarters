@@ -12,7 +12,6 @@ import {
 import { LogMovementDialog } from "@/components/vip/log-movement-dialog";
 import { MovementsTable } from "@/components/vip/movements-table";
 import { VipFormDialog } from "@/components/vip/vip-form-dialog";
-import { VipLogsPanel } from "@/components/vip/vip-logs-panel";
 import { VipsTable } from "@/components/vip/vips-table";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
@@ -20,7 +19,6 @@ import {
   getMovements,
   getProfilesByIds,
   getProtocolOfficerCandidates,
-  getVipLogs,
   getVips,
 } from "@/lib/actions/vip";
 import { getDelegations } from "@/lib/actions/delegations";
@@ -73,20 +71,6 @@ export default async function VipPage() {
       ? movementProfilesRes.data
       : [];
 
-  // Default the Logs panel to the first visible VIP.
-  const initialLogsVipId = vips[0]?.id ?? null;
-  const initialLogsRes = initialLogsVipId
-    ? await getVipLogs(initialLogsVipId)
-    : { data: [] };
-  const initialLogs =
-    "data" in initialLogsRes && initialLogsRes.data ? initialLogsRes.data : [];
-
-  const lightVips = vips.map((v) => ({
-    id: v.id,
-    full_name: v.full_name,
-    protocol_officer_id: v.protocol_officer_id,
-  }));
-
   // Command Center / Super Admin create and assign VIPs. Protocol Officers
   // log movements for the VIPs assigned to them.
   const canCreateVip = isBroadViewer;
@@ -126,7 +110,6 @@ export default async function VipPage() {
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="movements">Movements</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
             <TabsTrigger value="vips">VIPs ({vips.length})</TabsTrigger>
           </TabsList>
           <LiveBadge label="Live" />
@@ -140,16 +123,6 @@ export default async function VipPage() {
             profiles={movementProfiles}
             currentProfileId={profile.id}
             isSuperAdmin={false}
-          />
-        </TabsContent>
-
-        <TabsContent value="logs" className="mt-4">
-          <VipLogsPanel
-            vips={lightVips}
-            initialVipId={initialLogsVipId}
-            initialLogs={initialLogs}
-            canUpdateStatus={isBroadViewer}
-            lockedToVip={false}
           />
         </TabsContent>
 

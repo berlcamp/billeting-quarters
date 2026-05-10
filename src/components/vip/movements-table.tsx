@@ -209,16 +209,16 @@ export function MovementsTable({
       },
     },
     {
-      id: "notes",
-      header: "Notes",
-      className: "max-w-[18rem]",
+      id: "request",
+      header: "Request / concern",
+      className: "max-w-[20rem]",
       cell: (m) =>
-        m.notes ? (
+        m.request ? (
           <span
-            className="line-clamp-2 whitespace-pre-line text-xs text-muted-foreground"
-            title={m.notes}
+            className="line-clamp-2 whitespace-pre-line text-sm"
+            title={m.request}
           >
-            {m.notes}
+            {m.request}
           </span>
         ) : (
           <span className="text-muted-foreground">—</span>

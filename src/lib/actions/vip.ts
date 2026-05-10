@@ -8,12 +8,10 @@ import {
   assignProtocolOfficerSchema,
   cancelMovementSchema,
   createMovementSchema,
-  createVipLogSchema,
   createVipSchema,
   logArrivalSchema,
   logDepartureSchema,
   setEtdSchema,
-  updateVipLogRequestStatusSchema,
   updateVipSchema,
 } from "@/lib/schemas/vip";
 import { recordAudit } from "./audit";
@@ -22,7 +20,6 @@ import type { Database } from "@/types/database";
 
 type Vip = Database["palaro"]["Tables"]["vip_persons"]["Row"];
 type Movement = Database["palaro"]["Tables"]["vip_movements"]["Row"];
-type VipLog = Database["palaro"]["Tables"]["vip_logs"]["Row"];
 type ProfileLite = {
   id: string;
   full_name: string | null;
@@ -397,7 +394,10 @@ export async function createMovement(
       purpose: data.purpose || null,
       vehicle_info: data.vehicle_info || null,
       escort_count: data.escort_count ?? null,
-      notes: data.notes || null,
+      from_location: data.from_location || null,
+      to_location: data.to_location || null,
+      request: data.request || null,
+      remarks: data.remarks || null,
       protocol_officer_id: profile.id,
       created_by: profile.id,
       updated_by: profile.id,
@@ -415,9 +415,25 @@ export async function createMovement(
       destination_site_id: data.destination_site_id ?? null,
       estimated_arrival: data.estimated_arrival,
       status: "eta_logged",
+      request: data.request ?? null,
     },
     user_id: profile.id,
   });
+
+  if (data.request?.trim()) {
+    const notification: NotificationInsert = {
+      recipient_id: null,
+      recipient_role: "command_center",
+      title: `VIP request: ${vip.full_name}`,
+      body: data.request.trim().slice(0, 240),
+      category: "vip",
+      severity: "info",
+      reference_type: "vip_movement",
+      reference_id: inserted.id,
+      link_url: VIP_PATH,
+    };
+    await admin.schema("palaro").from("notifications").insert([notification]);
+  }
 
   await notifyMovementChange(
     inserted,
@@ -443,14 +459,14 @@ export async function logArrival(
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
-  const { movement_id, actual_arrival, notes } = parsed.data;
+  const { movement_id, actual_arrival, remarks } = parsed.data;
 
   const admin = createAdminClient();
   const { data: existing } = await admin
     .schema("palaro")
     .from("vip_movements")
     .select(
-      "id, vip_id, destination_site_id, status, notes, created_by, protocol_officer_id",
+      "id, vip_id, destination_site_id, status, remarks, created_by, protocol_officer_id",
     )
     .eq("id", movement_id)
     .single();
@@ -462,14 +478,14 @@ export async function logArrival(
     return fail("Cannot log arrival on a closed movement.");
   }
 
-  const composedNotes = [existing.notes, notes].filter(Boolean).join("\n");
+  const composedRemarks = [existing.remarks, remarks].filter(Boolean).join("\n");
   const { error } = await admin
     .schema("palaro")
     .from("vip_movements")
     .update({
       status: "arrived",
       actual_arrival: actual_arrival ?? new Date().toISOString(),
-      notes: composedNotes || null,
+      remarks: composedRemarks || null,
       updated_by: auth.profile.id,
     })
     .eq("id", movement_id);
@@ -524,13 +540,13 @@ export async function setEstimatedDeparture(
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
-  const { movement_id, estimated_departure, notes } = parsed.data;
+  const { movement_id, estimated_departure, remarks } = parsed.data;
 
   const admin = createAdminClient();
   const { data: existing } = await admin
     .schema("palaro")
     .from("vip_movements")
-    .select("id, status, notes, created_by, protocol_officer_id")
+    .select("id, status, remarks, created_by, protocol_officer_id")
     .eq("id", movement_id)
     .single();
   if (!existing) return fail("Movement not found.");
@@ -541,14 +557,14 @@ export async function setEstimatedDeparture(
     return fail("Estimated departure can only be set after arrival.");
   }
 
-  const composedNotes = [existing.notes, notes].filter(Boolean).join("\n");
+  const composedRemarks = [existing.remarks, remarks].filter(Boolean).join("\n");
   const { error } = await admin
     .schema("palaro")
     .from("vip_movements")
     .update({
       status: "etd_logged",
       estimated_departure,
-      notes: composedNotes || null,
+      remarks: composedRemarks || null,
       updated_by: auth.profile.id,
     })
     .eq("id", movement_id);
@@ -576,14 +592,14 @@ export async function logDeparture(
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
-  const { movement_id, actual_departure, notes } = parsed.data;
+  const { movement_id, actual_departure, remarks } = parsed.data;
 
   const admin = createAdminClient();
   const { data: existing } = await admin
     .schema("palaro")
     .from("vip_movements")
     .select(
-      "id, vip_id, destination_site_id, status, notes, created_by, protocol_officer_id",
+      "id, vip_id, destination_site_id, status, remarks, created_by, protocol_officer_id",
     )
     .eq("id", movement_id)
     .single();
@@ -598,14 +614,14 @@ export async function logDeparture(
     return fail("Cannot log departure before arrival.");
   }
 
-  const composedNotes = [existing.notes, notes].filter(Boolean).join("\n");
+  const composedRemarks = [existing.remarks, remarks].filter(Boolean).join("\n");
   const { error } = await admin
     .schema("palaro")
     .from("vip_movements")
     .update({
       status: "departed",
       actual_departure: actual_departure ?? new Date().toISOString(),
-      notes: composedNotes || null,
+      remarks: composedRemarks || null,
       updated_by: auth.profile.id,
     })
     .eq("id", movement_id);
@@ -654,7 +670,7 @@ export async function cancelMovement(
   const { data: existing } = await admin
     .schema("palaro")
     .from("vip_movements")
-    .select("id, status, notes, created_by, protocol_officer_id")
+    .select("id, status, remarks, created_by, protocol_officer_id")
     .eq("id", movement_id)
     .single();
   if (!existing) return fail("Movement not found.");
@@ -668,7 +684,7 @@ export async function cancelMovement(
   const cancelLine = `[CANCELLED ${new Date().toISOString()}] ${
     auth.profile.full_name ?? auth.profile.email
   }: ${reason}`;
-  const composedNotes = [existing.notes, cancelLine]
+  const composedRemarks = [existing.remarks, cancelLine]
     .filter(Boolean)
     .join("\n");
 
@@ -677,7 +693,7 @@ export async function cancelMovement(
     .from("vip_movements")
     .update({
       status: "cancelled",
-      notes: composedNotes,
+      remarks: composedRemarks,
       updated_by: auth.profile.id,
     })
     .eq("id", movement_id);
@@ -776,201 +792,3 @@ export async function assignProtocolOfficer(
   return ok();
 }
 
-// =============================================================================
-// VIP LOGS — Protocol Officers capture entries for their assigned VIPs;
-// Command Center triages requests via status updates.
-// =============================================================================
-
-export async function getVipLogs(
-  vipId: string,
-  limit = 200,
-): Promise<ActionResult<VipLog[]>> {
-  const profile = await getCurrentProfile();
-  if (!profile) return fail("Not authenticated.");
-  if (!hasPermission(profile, "vip.manage")) {
-    return fail("You don't have permission to view VIP logs.");
-  }
-
-  const admin = createAdminClient();
-
-  // Visibility: Protocol Officers see logs only for VIPs assigned to them.
-  // Broad viewers (super_admin / command_center) see all logs.
-  if (!isBroadViewer(profile)) {
-    const { data: vip } = await admin
-      .schema("palaro")
-      .from("vip_persons")
-      .select("id, protocol_officer_id")
-      .eq("id", vipId)
-      .single();
-    if (!vip || vip.protocol_officer_id !== profile.id) {
-      return fail("This VIP is not visible to you.");
-    }
-  }
-
-  const { data, error } = await admin
-    .schema("palaro")
-    .from("vip_logs")
-    .select("*")
-    .eq("vip_id", vipId)
-    .order("logged_at", { ascending: false })
-    .limit(limit);
-  if (error) return fail(error.message);
-  return ok(data ?? []);
-}
-
-export async function createVipLog(
-  input: unknown,
-): Promise<ActionResult<{ id: string }>> {
-  const profile = await getCurrentProfile();
-  if (!profile) return fail("Not authenticated.");
-  // Only the VIP's assigned Protocol Officer may add log entries.
-  if (!profile.roles.includes("protocol_officer")) {
-    return fail("Only Protocol Officers can log VIP activity.");
-  }
-
-  const parsed = createVipLogSchema.safeParse(input);
-  if (!parsed.success) {
-    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
-  }
-  const data = parsed.data;
-
-  const admin = createAdminClient();
-
-  // The caller must be the VIP's assigned Protocol Officer.
-  const { data: vip } = await admin
-    .schema("palaro")
-    .from("vip_persons")
-    .select("id, full_name, protocol_officer_id")
-    .eq("id", data.vip_id)
-    .single();
-  if (!vip) return fail("VIP not found.");
-  if (vip.protocol_officer_id !== profile.id) {
-    return fail("You can only log entries for VIPs assigned to you.");
-  }
-
-  const { data: inserted, error } = await admin
-    .schema("palaro")
-    .from("vip_logs")
-    .insert({
-      vip_id: data.vip_id,
-      protocol_officer_id: profile.id,
-      from_location: data.from_location || null,
-      to_location: data.to_location || null,
-      logged_at: data.logged_at ?? new Date().toISOString(),
-      request: data.request || null,
-      remarks: data.remarks || null,
-      // request_status defaults to 'pending' in the DB.
-    })
-    .select("id")
-    .single();
-  if (error) return fail(error.message);
-
-  await recordAudit({
-    action: "create",
-    entity_type: "vip_log",
-    entity_id: inserted.id,
-    changes: {
-      vip_id: data.vip_id,
-      from_location: data.from_location ?? null,
-      to_location: data.to_location ?? null,
-      request: data.request ?? null,
-    },
-    user_id: profile.id,
-  });
-
-  // Notify Command Center so they can act on the request.
-  if (data.request?.trim()) {
-    const notification: NotificationInsert = {
-      recipient_id: null,
-      recipient_role: "command_center",
-      title: `VIP request: ${vip.full_name}`,
-      body: data.request.trim().slice(0, 240),
-      category: "vip",
-      severity: "info",
-      reference_type: "vip_log",
-      reference_id: inserted.id,
-      link_url: VIP_PATH,
-    };
-    await admin.schema("palaro").from("notifications").insert([notification]);
-  }
-
-  revalidatePath(VIP_PATH);
-  return ok({ id: inserted.id });
-}
-
-export async function updateVipLogRequestStatus(
-  input: unknown,
-): Promise<ActionResult<void>> {
-  const profile = await getCurrentProfile();
-  if (!profile) return fail("Not authenticated.");
-  // Per spec, request status is "triggered by Command Center". Gate on
-  // command_center / super_admin specifically; vip.manage alone (e.g. a
-  // protocol officer) is not enough.
-  const callerCanSetStatus = profile.roles.some(
-    (r) => r === "command_center" || r === "super_admin",
-  );
-  if (!callerCanSetStatus) {
-    return fail("Only Command Center can update request status.");
-  }
-
-  const parsed = updateVipLogRequestStatusSchema.safeParse(input);
-  if (!parsed.success) {
-    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
-  }
-  const { log_id, request_status, remarks } = parsed.data;
-
-  const admin = createAdminClient();
-  const { data: existing } = await admin
-    .schema("palaro")
-    .from("vip_logs")
-    .select("id, vip_id, remarks, protocol_officer_id")
-    .eq("id", log_id)
-    .single();
-  if (!existing) return fail("Log entry not found.");
-
-  // Append remarks rather than overwriting so the history is preserved.
-  const composedRemarks = remarks
-    ? [existing.remarks, `[${new Date().toISOString()}] ${remarks}`]
-        .filter(Boolean)
-        .join("\n")
-    : existing.remarks;
-
-  const { error } = await admin
-    .schema("palaro")
-    .from("vip_logs")
-    .update({
-      request_status,
-      remarks: composedRemarks ?? null,
-      status_updated_by: profile.id,
-      status_updated_at: new Date().toISOString(),
-    })
-    .eq("id", log_id);
-  if (error) return fail(error.message);
-
-  await recordAudit({
-    action: "update",
-    entity_type: "vip_log",
-    entity_id: log_id,
-    changes: { request_status },
-    user_id: profile.id,
-  });
-
-  // Notify the protocol officer who logged the request, if known.
-  if (existing.protocol_officer_id) {
-    const notification: NotificationInsert = {
-      recipient_id: existing.protocol_officer_id,
-      recipient_role: null,
-      title: `VIP request ${request_status.replace("_", " ")}`,
-      body: remarks?.slice(0, 240) ?? `Status set to ${request_status}.`,
-      category: "vip",
-      severity: "info",
-      reference_type: "vip_log",
-      reference_id: log_id,
-      link_url: VIP_PATH,
-    };
-    await admin.schema("palaro").from("notifications").insert([notification]);
-  }
-
-  revalidatePath(VIP_PATH);
-  return ok();
-}

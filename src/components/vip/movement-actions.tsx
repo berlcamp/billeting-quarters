@@ -109,7 +109,7 @@ function ArrivalDialog({
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [actualArrival, setActualArrival] = useState(nowLocalIso());
-  const [notes, setNotes] = useState("");
+  const [remarks, setRemarks] = useState("");
   const router = useRouter();
 
   async function submit() {
@@ -119,7 +119,7 @@ function ArrivalDialog({
       actual_arrival: actualArrival
         ? new Date(actualArrival).toISOString()
         : undefined,
-      notes: notes || undefined,
+      remarks: remarks || undefined,
     });
     setSubmitting(false);
 
@@ -152,12 +152,12 @@ function ArrivalDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="ata-notes">Notes</Label>
+            <Label htmlFor="ata-remarks">Remarks</Label>
             <Textarea
-              id="ata-notes"
+              id="ata-remarks"
               rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
             />
           </div>
         </div>
@@ -184,7 +184,7 @@ function EtdDialog({
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [etd, setEtd] = useState(nowLocalIso());
-  const [notes, setNotes] = useState("");
+  const [remarks, setRemarks] = useState("");
   const router = useRouter();
 
   async function submit() {
@@ -192,7 +192,7 @@ function EtdDialog({
     const result = await setEstimatedDeparture({
       movement_id: movementId,
       estimated_departure: new Date(etd).toISOString(),
-      notes: notes || undefined,
+      remarks: remarks || undefined,
     });
     setSubmitting(false);
 
@@ -222,12 +222,12 @@ function EtdDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="etd-notes">Notes</Label>
+            <Label htmlFor="etd-remarks">Remarks</Label>
             <Textarea
-              id="etd-notes"
+              id="etd-remarks"
               rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
             />
           </div>
         </div>
@@ -254,7 +254,7 @@ function DepartureDialog({
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [atd, setAtd] = useState(nowLocalIso());
-  const [notes, setNotes] = useState("");
+  const [remarks, setRemarks] = useState("");
   const router = useRouter();
 
   async function submit() {
@@ -262,7 +262,7 @@ function DepartureDialog({
     const result = await logDeparture({
       movement_id: movementId,
       actual_departure: atd ? new Date(atd).toISOString() : undefined,
-      notes: notes || undefined,
+      remarks: remarks || undefined,
     });
     setSubmitting(false);
 
@@ -295,12 +295,12 @@ function DepartureDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="atd-notes">Notes</Label>
+            <Label htmlFor="atd-remarks">Remarks</Label>
             <Textarea
-              id="atd-notes"
+              id="atd-remarks"
               rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
             />
           </div>
         </div>

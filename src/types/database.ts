@@ -495,7 +495,10 @@ export type Database = {
           protocol_officer_id: string | null;
           vehicle_info: string | null;
           escort_count: number | null;
-          notes: string | null;
+          from_location: string | null;
+          to_location: string | null;
+          request: string | null;
+          remarks: string | null;
           created_by: string | null;
           updated_by: string | null;
           created_at: string;
@@ -514,7 +517,10 @@ export type Database = {
           protocol_officer_id?: string | null;
           vehicle_info?: string | null;
           escort_count?: number | null;
-          notes?: string | null;
+          from_location?: string | null;
+          to_location?: string | null;
+          request?: string | null;
+          remarks?: string | null;
           created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;
@@ -533,7 +539,10 @@ export type Database = {
           protocol_officer_id?: string | null;
           vehicle_info?: string | null;
           escort_count?: number | null;
-          notes?: string | null;
+          from_location?: string | null;
+          to_location?: string | null;
+          request?: string | null;
+          remarks?: string | null;
           created_by?: string | null;
           updated_by?: string | null;
           created_at?: string;

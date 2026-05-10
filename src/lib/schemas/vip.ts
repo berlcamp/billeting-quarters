@@ -25,6 +25,8 @@ export const updateVipSchema = createVipSchema.extend({
 export type UpdateVipInput = z.infer<typeof updateVipSchema>;
 
 // ETA at creation is required — a movement without an ETA isn't trackable.
+// The from/to/request/remarks fields used to live on the separate "Logs"
+// tab; they are now folded directly into the movement record.
 export const createMovementSchema = z.object({
   vip_id: z.string().uuid(),
   destination_site_id: z.string().uuid().nullable().optional(),
@@ -35,7 +37,10 @@ export const createMovementSchema = z.object({
   purpose: optionalShortText,
   vehicle_info: optionalShortText,
   escort_count: z.number().int().min(0).max(200).optional(),
-  notes: optionalText,
+  from_location: optionalShortText,
+  to_location: optionalShortText,
+  request: optionalText,
+  remarks: optionalText,
 });
 export type CreateMovementInput = z.infer<typeof createMovementSchema>;
 
@@ -43,7 +48,7 @@ export const logArrivalSchema = z.object({
   movement_id: z.string().uuid(),
   // Optional override; defaults to NOW() server-side.
   actual_arrival: z.string().optional(),
-  notes: optionalText,
+  remarks: optionalText,
 });
 export type LogArrivalInput = z.infer<typeof logArrivalSchema>;
 
@@ -53,14 +58,14 @@ export const setEtdSchema = z.object({
     .string()
     .min(1, "Estimated departure is required")
     .refine((s) => !isNaN(Date.parse(s)), "Invalid date"),
-  notes: optionalText,
+  remarks: optionalText,
 });
 export type SetEtdInput = z.infer<typeof setEtdSchema>;
 
 export const logDepartureSchema = z.object({
   movement_id: z.string().uuid(),
   actual_departure: z.string().optional(),
-  notes: optionalText,
+  remarks: optionalText,
 });
 export type LogDepartureInput = z.infer<typeof logDepartureSchema>;
 
@@ -83,55 +88,3 @@ export type AssignProtocolOfficerInput = z.infer<
   typeof assignProtocolOfficerSchema
 >;
 
-// =============================================================================
-// VIP LOGS (whereabouts / requests / remarks)
-// =============================================================================
-
-export const vipLogRequestStatusValues = [
-  "pending",
-  "in_progress",
-  "completed",
-  "denied",
-] as const;
-
-// Per spec: "From / To / Date and Time (autodetect system time) / Request /
-// Status of Request (triggered by Command Center) / Remarks". The protocol
-// officer enters everything except status; status is set by command center.
-// At least one of from / to / request must be provided so a row carries
-// information.
-export const createVipLogSchema = z
-  .object({
-    vip_id: z.string().uuid(),
-    from_location: optionalShortText,
-    to_location: optionalShortText,
-    // Optional override; defaults to NOW() server-side.
-    logged_at: z
-      .string()
-      .optional()
-      .refine(
-        (s) => !s || !isNaN(Date.parse(s)),
-        "Invalid date",
-      ),
-    request: optionalText,
-    remarks: optionalText,
-  })
-  .refine(
-    (v) =>
-      Boolean(v.from_location?.trim()) ||
-      Boolean(v.to_location?.trim()) ||
-      Boolean(v.request?.trim()),
-    {
-      message: "Provide at least a from/to location or a request.",
-      path: ["request"],
-    },
-  );
-export type CreateVipLogInput = z.infer<typeof createVipLogSchema>;
-
-export const updateVipLogRequestStatusSchema = z.object({
-  log_id: z.string().uuid(),
-  request_status: z.enum(vipLogRequestStatusValues),
-  remarks: optionalText,
-});
-export type UpdateVipLogRequestStatusInput = z.infer<
-  typeof updateVipLogRequestStatusSchema
->;

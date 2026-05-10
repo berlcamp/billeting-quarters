@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -152,11 +153,32 @@ export function MovementDetailsDialog({
           />
         </div>
 
-        {movement.notes ? (
+        {movement.from_location || movement.to_location ? (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">From</span>
+            <span className="font-medium">{movement.from_location ?? "—"}</span>
+            <ArrowRight className="size-3 text-muted-foreground" />
+            <span className="text-muted-foreground">To</span>
+            <span className="font-medium">{movement.to_location ?? "—"}</span>
+          </div>
+        ) : null}
+
+        {movement.request ? (
           <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Notes</div>
+            <div className="text-xs text-muted-foreground">
+              Request / concern
+            </div>
             <div className="whitespace-pre-line rounded-md border bg-muted/40 p-2 text-sm">
-              {movement.notes}
+              {movement.request}
+            </div>
+          </div>
+        ) : null}
+
+        {movement.remarks ? (
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Remarks</div>
+            <div className="whitespace-pre-line rounded-md border bg-muted/40 p-2 text-sm">
+              {movement.remarks}
             </div>
           </div>
         ) : null}

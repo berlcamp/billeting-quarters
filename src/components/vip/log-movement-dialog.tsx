@@ -84,7 +84,10 @@ export function LogMovementDialog({ vips, sites }: Props) {
       purpose: undefined,
       vehicle_info: undefined,
       escort_count: undefined,
-      notes: undefined,
+      from_location: undefined,
+      to_location: undefined,
+      request: undefined,
+      remarks: undefined,
     },
   });
 
@@ -108,7 +111,10 @@ export function LogMovementDialog({ vips, sites }: Props) {
       purpose: undefined,
       vehicle_info: undefined,
       escort_count: undefined,
-      notes: undefined,
+      from_location: undefined,
+      to_location: undefined,
+      request: undefined,
+      remarks: undefined,
     });
     setOpen(false);
     router.refresh();
@@ -120,12 +126,13 @@ export function LogMovementDialog({ vips, sites }: Props) {
         <Plus className="size-4" />
         Log movement
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Log VIP movement</DialogTitle>
           <DialogDescription>
-            Records the estimated arrival. Log actual arrival and departure
-            from the row actions once the VIP is in motion.
+            Records the estimated arrival and any whereabouts / requests for
+            the VIP. Log actual arrival and departure from the row actions
+            once the VIP is in motion.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -286,12 +293,66 @@ export function LogMovementDialog({ vips, sites }: Props) {
                 )}
               />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="from_location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>From</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Hotel"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="to_location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>To</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Opening venue"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
-              name="notes"
+              name="request"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notes</FormLabel>
+                  <FormLabel>Request / concern</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="What does the VIP need?"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="remarks"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Remarks</FormLabel>
                   <FormControl>
                     <Textarea rows={2} {...field} value={field.value ?? ""} />
                   </FormControl>
@@ -299,6 +360,7 @@ export function LogMovementDialog({ vips, sites }: Props) {
                 </FormItem>
               )}
             />
+
             <DialogFooter>
               <Button
                 type="button"
