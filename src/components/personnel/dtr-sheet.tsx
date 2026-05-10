@@ -15,56 +15,52 @@ interface Props {
 }
 
 interface DayRow {
-  amIn: Date | null;
-  amOut: Date | null;
-  pmIn: Date | null;
-  pmOut: Date | null;
+  ins: Date[];
+  outs: Date[];
   hours: number;
 }
 
-// Bucket a day's logs into AM/PM arrival/departure cells.
-//   AM In  = earliest time_in  with manila-hour < 12
-//   AM Out = latest   time_out with manila-hour < 13   (lunch grace)
-//   PM In  = earliest time_in  with manila-hour >= 12
-//   PM Out = latest   time_out with manila-hour >= 12
-// Hours = (AM Out - AM In) + (PM Out - PM In), each pair only counted when both
-// sides are present.
+// Collect every scan for the day into a Time-In list and a Time-Out list (no
+// AM/PM split — each cell stacks all times chronologically).
+// Hours = chronological pairing across the whole day. We walk events in time
+// order and pair the first unmatched time_in with the next time_out; extra
+// time_ins (forgot to tap out, then re-tapped) are ignored so the gap counts.
 function bucketDay(dayLogs: AttendanceLog[]): DayRow {
-  let amIn: Date | null = null;
-  let amOut: Date | null = null;
-  let pmIn: Date | null = null;
-  let pmOut: Date | null = null;
+  const ins: Date[] = [];
+  const outs: Date[] = [];
+  const events: { ts: Date; type: AttendanceLog["type"] }[] = [];
 
   for (const log of dayLogs) {
     const ts = new Date(log.scanned_at);
-    const hour = Number(formatInTimeZone(ts, PALARO_TZ, "H"));
-    if (log.type === "time_in") {
-      if (hour < 12) {
-        if (!amIn || ts < amIn) amIn = ts;
-      } else {
-        if (!pmIn || ts < pmIn) pmIn = ts;
-      }
-    } else {
-      if (hour < 13) {
-        if (!amOut || ts > amOut) amOut = ts;
-      }
-      if (hour >= 12) {
-        if (!pmOut || ts > pmOut) pmOut = ts;
-      }
-    }
+    events.push({ ts, type: log.type });
+    if (log.type === "time_in") ins.push(ts);
+    else outs.push(ts);
   }
 
+  const byTime = (a: Date, b: Date) => a.getTime() - b.getTime();
+  ins.sort(byTime);
+  outs.sort(byTime);
+  events.sort((a, b) => a.ts.getTime() - b.ts.getTime());
+
   let ms = 0;
-  if (amIn && amOut && amOut > amIn) ms += amOut.getTime() - amIn.getTime();
-  if (pmIn && pmOut && pmOut > pmIn) ms += pmOut.getTime() - pmIn.getTime();
+  let openIn: Date | null = null;
+  for (const evt of events) {
+    if (evt.type === "time_in") {
+      if (!openIn) openIn = evt.ts;
+    } else if (openIn && evt.ts > openIn) {
+      ms += evt.ts.getTime() - openIn.getTime();
+      openIn = null;
+    }
+  }
   const hours = ms / 3_600_000;
 
-  return { amIn, amOut, pmIn, pmOut, hours };
+  return { ins, outs, hours };
 }
 
-function fmtCell(d: Date | null): string {
-  if (!d) return "";
-  return formatInTimeZone(d, PALARO_TZ, "HH:mm");
+function fmtCell(dates: Date[]): string {
+  return dates
+    .map((d) => formatInTimeZone(d, PALARO_TZ, "HH:mm"))
+    .join("\n");
 }
 
 export function DtrSheet({ personnel, days, logs, periodLabel }: Props) {
@@ -152,30 +148,12 @@ export function DtrSheet({ personnel, days, logs, periodLabel }: Props) {
       <table className="dtr-table mt-3 w-full border-collapse text-[11px]">
         <thead>
           <tr>
-            <th rowSpan={2} className="border border-black px-1 py-1">
-              Day
-            </th>
-            <th rowSpan={2} className="border border-black px-1 py-1">
-              Date
-            </th>
-            <th colSpan={2} className="border border-black px-1 py-1">
-              A.M.
-            </th>
-            <th colSpan={2} className="border border-black px-1 py-1">
-              P.M.
-            </th>
-            <th rowSpan={2} className="border border-black px-1 py-1">
-              Total Hrs
-            </th>
-            <th rowSpan={2} className="border border-black px-1 py-1">
-              Remarks
-            </th>
-          </tr>
-          <tr>
-            <th className="border border-black px-1 py-1">Arrival</th>
-            <th className="border border-black px-1 py-1">Departure</th>
-            <th className="border border-black px-1 py-1">Arrival</th>
-            <th className="border border-black px-1 py-1">Departure</th>
+            <th className="border border-black px-1 py-1">Day</th>
+            <th className="border border-black px-1 py-1">Date</th>
+            <th className="border border-black px-1 py-1">Time-In</th>
+            <th className="border border-black px-1 py-1">Time-Out</th>
+            <th className="border border-black px-1 py-1">Total Hrs</th>
+            <th className="border border-black px-1 py-1">Remarks</th>
           </tr>
         </thead>
         <tbody>
@@ -185,39 +163,29 @@ export function DtrSheet({ personnel, days, logs, periodLabel }: Props) {
             const dateLabel = formatInTimeZone(dt, PALARO_TZ, "MMM d");
             const isWeekend = dayName === "Sat" || dayName === "Sun";
             const hoursLabel = row.hours > 0 ? row.hours.toFixed(2) : "";
+            const cellCls =
+              "border border-black px-1 py-1 text-center font-mono whitespace-pre-line align-top leading-tight";
             return (
               <tr
                 key={row.day}
                 className={isWeekend ? "bg-[#f3f3f3]" : undefined}
               >
-                <td className="border border-black px-1 py-1 text-center font-medium">
+                <td className="border border-black px-1 py-1 text-center font-medium align-top">
                   {dayName}
                 </td>
-                <td className="border border-black px-1 py-1 text-center">
+                <td className="border border-black px-1 py-1 text-center align-top">
                   {dateLabel}
                 </td>
-                <td className="border border-black px-1 py-1 text-center font-mono">
-                  {fmtCell(row.amIn)}
-                </td>
-                <td className="border border-black px-1 py-1 text-center font-mono">
-                  {fmtCell(row.amOut)}
-                </td>
-                <td className="border border-black px-1 py-1 text-center font-mono">
-                  {fmtCell(row.pmIn)}
-                </td>
-                <td className="border border-black px-1 py-1 text-center font-mono">
-                  {fmtCell(row.pmOut)}
-                </td>
-                <td className="border border-black px-1 py-1 text-center font-mono">
-                  {hoursLabel}
-                </td>
-                <td className="border border-black px-1 py-1" />
+                <td className={cellCls}>{fmtCell(row.ins)}</td>
+                <td className={cellCls}>{fmtCell(row.outs)}</td>
+                <td className={cellCls}>{hoursLabel}</td>
+                <td className="border border-black px-1 py-1 align-top" />
               </tr>
             );
           })}
           <tr>
             <td
-              colSpan={6}
+              colSpan={4}
               className="border border-black px-2 py-1 text-right font-semibold"
             >
               TOTAL
