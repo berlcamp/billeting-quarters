@@ -53,6 +53,7 @@ import type { Database } from "@/types/database";
 type Profile = Database["palaro"]["Tables"]["profiles"]["Row"];
 
 const editFormSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Enter a valid email"),
   full_name: z.string().trim().max(200).optional(),
   agency: z.string().trim().max(200).optional(),
   designation: z.string().trim().max(200).optional(),
@@ -86,6 +87,7 @@ export function EditUserDialog({
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editFormSchema),
     defaultValues: {
+      email: user?.email ?? "",
       full_name: user?.full_name ?? "",
       agency: user?.agency ?? "",
       designation: user?.designation ?? "",
@@ -97,6 +99,7 @@ export function EditUserDialog({
   useEffect(() => {
     if (!user) return;
     form.reset({
+      email: user.email ?? "",
       full_name: user.full_name ?? "",
       agency: user.agency ?? "",
       designation: user.designation ?? "",
@@ -118,10 +121,24 @@ export function EditUserDialog({
 
   async function onSubmit(values: EditFormValues) {
     if (!user) return;
+
+    const trimmedEmail = values.email.trim().toLowerCase();
+    const currentEmail = (user.email ?? "").trim().toLowerCase();
+    const emailChanged = trimmedEmail !== currentEmail;
+
+    if (emailChanged) {
+      const linked = !!user.auth_user_id;
+      const message = linked
+        ? `Change email from ${user.email} to ${trimmedEmail}?\n\nThis will sign the user out immediately. They must sign in again with the new Google account (${trimmedEmail}) to regain access.`
+        : `Change email from ${user.email} to ${trimmedEmail}?\n\nThe user must sign in with Google using ${trimmedEmail} to be linked.`;
+      if (!window.confirm(message)) return;
+    }
+
     setSubmitting(true);
 
     const detailsResult = await updateUserDetails({
       user_id: user.id,
+      email: emailChanged ? trimmedEmail : undefined,
       full_name: values.full_name || undefined,
       agency: values.agency || undefined,
       designation: values.designation || undefined,
@@ -168,12 +185,38 @@ export function EditUserDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit user</DialogTitle>
-          <DialogDescription className="font-mono text-xs">
-            {user.email}
+          <DialogDescription>
+            Changing the email signs the user out and they must re-link via
+            Google.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      autoComplete="off"
+                      disabled={!canEditTarget || isSelf}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  {isSelf ? (
+                    <p className="text-xs text-muted-foreground">
+                      You can&rsquo;t change your own email. Ask another super
+                      admin.
+                    </p>
+                  ) : null}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="full_name"

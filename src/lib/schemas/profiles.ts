@@ -39,6 +39,7 @@ export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 
 export const updateUserDetailsSchema = z.object({
   user_id: z.string().uuid(),
+  email: z.string().trim().toLowerCase().email("Enter a valid email").optional(),
   full_name: optionalNonEmpty,
   agency: optionalNonEmpty,
   designation: optionalNonEmpty,

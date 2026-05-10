@@ -232,24 +232,90 @@ export async function updateUserDetails(
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
-  const { user_id, ...rest } = parsed.data;
+  const { user_id, email, ...rest } = parsed.data;
 
   const admin = createAdminClient();
+
+  // Load current state — we need the existing email and auth_user_id to detect
+  // whether this is an email change (which has special handling) and to enforce
+  // self-edit / super-admin protections.
+  const { data: target, error: targetError } = await admin
+    .schema("palaro")
+    .from("profiles")
+    .select("email, auth_user_id, roles")
+    .eq("id", user_id)
+    .single();
+  if (targetError || !target) {
+    return fail(targetError?.message ?? "User not found.");
+  }
+
+  const targetIsSuper = (target.roles ?? []).includes("super_admin");
+  if (targetIsSuper && !auth.profile.roles.includes("super_admin")) {
+    return fail("Only a super admin can edit another super admin.");
+  }
+
+  const previousEmail = target.email;
+  const previousAuthUserId = target.auth_user_id;
+  const emailChanged =
+    email !== undefined && email !== previousEmail;
+
+  // Self-edit foot-gun: changing your own email orphans your session and could
+  // lock you out if you mistype the new address. Block it explicitly — admins
+  // can have another super admin do it for them.
+  if (emailChanged && user_id === auth.profile.id) {
+    return fail(
+      "You cannot change your own email. Ask another super admin to do it.",
+    );
+  }
+
+  if (emailChanged) {
+    const { data: emailTaken } = await admin
+      .schema("palaro")
+      .from("profiles")
+      .select("id")
+      .eq("email", email!)
+      .neq("id", user_id)
+      .maybeSingle();
+    if (emailTaken) {
+      return fail("Another profile already uses this email.");
+    }
+  }
+
+  const updatePayload: Database["palaro"]["Tables"]["profiles"]["Update"] = {
+    ...rest,
+  };
+  if (emailChanged) {
+    updatePayload.email = email;
+    // Unlink so the trigger re-links on next sign-in with the new Google account.
+    updatePayload.auth_user_id = null;
+  }
+
   const { error } = await admin
     .schema("palaro")
     .from("profiles")
-    .update(rest)
+    .update(updatePayload)
     .eq("id", user_id);
   if (error) return fail(error.message);
 
+  // Drop the orphaned auth.users row so the old Google account can't keep an
+  // unlinked session and a future sign-in with the new email always INSERTs
+  // fresh (which is what fires the linking trigger).
+  if (emailChanged && previousAuthUserId) {
+    await admin.auth.admin.deleteUser(previousAuthUserId);
+  }
+
   const cleanedChanges = Object.fromEntries(
-    Object.entries(rest).filter(([, v]) => v !== undefined),
-  );
+    Object.entries(updatePayload).filter(([, v]) => v !== undefined),
+  ) as Record<string, string | number | boolean | null>;
+  if (emailChanged) {
+    cleanedChanges.previous_email = previousEmail;
+    cleanedChanges.previous_auth_user_id = previousAuthUserId;
+  }
   await recordAudit({
     action: "update",
     entity_type: "profile",
     entity_id: user_id,
-    changes: cleanedChanges as Record<string, string | number | boolean | null>,
+    changes: cleanedChanges,
     user_id: auth.profile.id,
   });
 
