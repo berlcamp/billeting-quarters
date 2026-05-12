@@ -673,13 +673,19 @@ CREATE TRIGGER trg_patient_number BEFORE INSERT ON palaro.clinic_patients FOR EA
 -- AUTH: Google OAuth + invitation-based authorization
 -- =====================
 
--- Invite-only access enforced at the database layer.
+-- Invite-only access enforced at the database + app layer.
 -- When Supabase Auth tries to insert a row into auth.users (i.e. a user just completed Google OAuth),
 -- this trigger:
 --   1. Looks up an active, role-assigned profile by email (a profile a super_admin pre-invited).
---   2. If found: links auth_user_id to auth.users.id and stamps activated_at.
---   3. If NOT found: RAISES an exception. The auth.users INSERT aborts, the OAuth transaction
---      rolls back, and no auth.users row persists. Unauthorized users cannot create an account.
+--   2. If found and clean: links auth_user_id to auth.users.id and stamps activated_at.
+--   3. If found but stale (already linked / suspended / roleless): RAISES — the auth.users INSERT
+--      aborts so we surface a useful message instead of silently letting the user in.
+--   4. If NOT found: returns NEW silently so the auth.users INSERT proceeds. PPDMS access for
+--      unknown emails is still blocked at the app layer by checkAccess()
+--      (src/lib/auth/access-check.ts), which returns `not_authorized` when no profile exists.
+--      The silent-pass behavior exists so co-tenant apps sharing this Supabase project
+--      (e.g. SUMMIT, which has its own auth.users trigger) can sign up their own users
+--      without our RAISE aborting the transaction.
 -- Function lives in the `palaro` schema and the trigger is prefixed `palaro_` so they
 -- never collide with other apps that may share this Supabase instance and have their
 -- own `handle_new_auth_user` / `on_auth_user_created` objects.
@@ -700,9 +706,11 @@ BEGIN
   WHERE LOWER(TRIM(email)) = normalized_email
   LIMIT 1;
 
+  -- Not a PPDMS user. Let the auth.users insert proceed so other apps sharing
+  -- this Supabase project can handle their own users. App-level checkAccess()
+  -- will block them from PPDMS.
   IF matched_profile.id IS NULL THEN
-    RAISE EXCEPTION 'Email % is not on the PPDMS access list. Contact your administrator to request an invitation.', NEW.email
-      USING ERRCODE = 'insufficient_privilege';
+    RETURN NEW;
   END IF;
 
   IF matched_profile.auth_user_id IS NOT NULL THEN

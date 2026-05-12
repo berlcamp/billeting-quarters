@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { Pencil, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { ListOrdered, Pencil, UserPlus } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import { Button } from "@/components/ui/button";
 import { VipFormDialog } from "./vip-form-dialog";
@@ -109,9 +110,17 @@ export function VipsTable({
     {
       id: "actions",
       header: "",
-      className: "w-24",
+      className: "w-32",
       cell: (v) => (
         <div className="flex items-center justify-end gap-1">
+          <Link
+            href={`/dashboard/vip?vip=${v.id}`}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted"
+            aria-label="View movements"
+            title="View movements"
+          >
+            <ListOrdered className="size-3.5" />
+          </Link>
           {canAssign ? (
             <AssignProtocolOfficerDialog
               vip={{

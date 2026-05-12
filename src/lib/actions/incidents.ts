@@ -139,6 +139,8 @@ export async function createIncident(
       affected_person_name: data.affected_person_name || null,
       affected_person_age: data.affected_person_age ?? null,
       affected_person_role: data.affected_person_role || null,
+      reporting_officer_name: data.reporting_officer_name || null,
+      reporting_officer_position: data.reporting_officer_position || null,
       photo_urls: data.photo_paths && data.photo_paths.length > 0 ? data.photo_paths : null,
       reported_by: profile.id,
       reported_at: new Date().toISOString(),

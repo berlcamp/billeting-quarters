@@ -7,7 +7,12 @@ import { RequestFormDialog } from "@/components/food/request-form-dialog";
 import { RequestsTable } from "@/components/food/requests-table";
 import { SupplierFormDialog } from "@/components/food/supplier-form-dialog";
 import { SuppliersTable } from "@/components/food/suppliers-table";
-import { getRequests, getSuppliers } from "@/lib/actions/food";
+import {
+  getRequests,
+  getSupplierDelegations,
+  getSuppliers,
+} from "@/lib/actions/food";
+import { getDelegations } from "@/lib/actions/delegations";
 import { getSites } from "@/lib/actions/sites";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
@@ -26,14 +31,26 @@ export default async function FoodSupplyPage() {
     );
   }
 
-  const [suppliersRes, requestsRes, sitesRes] = await Promise.all([
+  const [
+    suppliersRes,
+    requestsRes,
+    sitesRes,
+    delegationsRes,
+    assignmentsRes,
+  ] = await Promise.all([
     getSuppliers(false),
     getRequests(),
     getSites(false),
+    getDelegations(false),
+    getSupplierDelegations(),
   ]);
   const suppliers = suppliersRes.error ? [] : (suppliersRes.data ?? []);
   const requests = requestsRes.error ? [] : (requestsRes.data ?? []);
   const sites = sitesRes.error ? [] : (sitesRes.data ?? []);
+  const delegations = delegationsRes.error ? [] : (delegationsRes.data ?? []);
+  const assignments = assignmentsRes.error
+    ? []
+    : (assignmentsRes.data ?? []);
   const bqs = sites.filter((s) => s.site_type === "billeting_quarter");
 
   const pending = requests.filter((r) => r.status === "pending").length;
@@ -97,7 +114,12 @@ export default async function FoodSupplyPage() {
         </TabsContent>
 
         <TabsContent value="suppliers" className="mt-4">
-          <SuppliersTable suppliers={suppliers} canManage={canManage} />
+          <SuppliersTable
+            suppliers={suppliers}
+            canManage={canManage}
+            delegations={delegations}
+            assignments={assignments}
+          />
         </TabsContent>
       </Tabs>
     </div>

@@ -67,6 +67,8 @@ const emptyValues: CreateIncidentInput = {
   affected_person_name: undefined,
   affected_person_age: undefined,
   affected_person_role: undefined,
+  reporting_officer_name: undefined,
+  reporting_officer_position: undefined,
   photo_paths: [],
 };
 
@@ -80,6 +82,9 @@ export function IncidentForm({ sites, delegations }: IncidentFormProps) {
     resolver: zodResolver(createIncidentSchema),
     defaultValues: emptyValues,
   });
+
+  const category = form.watch("category");
+  const showReportingOfficer = category === "security";
 
   function captureLocation() {
     if (!navigator.geolocation) {
@@ -473,6 +478,52 @@ export function IncidentForm({ sites, delegations }: IncidentFormProps) {
             </div>
           </CardContent>
         </Card>
+
+        {showReportingOfficer ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Reporting officer</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="reporting_officer_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Officer name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Full name"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="reporting_officer_position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Position</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. PO1, BLGU Tanod"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader>

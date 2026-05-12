@@ -9,7 +9,9 @@ import {
   createSupplierSchema,
   deleteRequestSchema,
   deleteSupplierSchema,
+  reassignRequestSupplierSchema,
   setRequestStatusSchema,
+  setSupplierDelegationsSchema,
   updateRequestSchema,
   updateSupplierSchema,
 } from "@/lib/schemas/food";
@@ -19,6 +21,8 @@ import type { Database } from "@/types/database";
 
 type Supplier = Database["palaro"]["Tables"]["food_suppliers"]["Row"];
 type Request = Database["palaro"]["Tables"]["food_requests"]["Row"];
+type SupplierDelegation =
+  Database["palaro"]["Tables"]["food_supplier_delegations"]["Row"];
 
 const FOOD_PATH = "/dashboard/logistics/food";
 
@@ -223,12 +227,39 @@ export async function createRequest(
     return fail("Selected site is not a billeting quarter.");
   }
 
+  // Auto-pick a supplier from the BQ's delegation's roster when the caller
+  // didn't pick one explicitly. The delegation → BQ link is on
+  // delegations.assigned_bq_id (delegations point at their BQ), so we look
+  // up the delegation that owns this BQ first.
+  let supplierId = data.supplier_id || null;
+  if (!supplierId) {
+    const { data: delegationRow } = await admin
+      .schema("palaro")
+      .from("delegations")
+      .select("id")
+      .eq("assigned_bq_id", data.bq_id)
+      .limit(1)
+      .maybeSingle();
+    if (delegationRow?.id) {
+      const { data: rosters } = await admin
+        .schema("palaro")
+        .from("food_supplier_delegations")
+        .select("supplier_id, priority")
+        .eq("delegation_id", delegationRow.id)
+        .order("priority", { ascending: true })
+        .limit(1);
+      if (rosters && rosters.length > 0) {
+        supplierId = rosters[0].supplier_id;
+      }
+    }
+  }
+
   const { data: inserted, error } = await admin
     .schema("palaro")
     .from("food_requests")
     .insert({
       bq_id: data.bq_id,
-      supplier_id: data.supplier_id || null,
+      supplier_id: supplierId,
       item_name: data.item_name,
       unit: data.unit,
       quantity: data.quantity,
@@ -370,6 +401,108 @@ export async function deleteRequest(
     action: "delete",
     entity_type: "food_request",
     entity_id: parsed.data.id,
+    user_id: auth.profile.id,
+  });
+
+  revalidatePath(FOOD_PATH);
+  return ok();
+}
+
+// =============================================================================
+// SUPPLIER ↔ DELEGATION ASSIGNMENTS
+// =============================================================================
+
+export async function getSupplierDelegations(): Promise<
+  ActionResult<SupplierDelegation[]>
+> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .schema("palaro")
+    .from("food_supplier_delegations")
+    .select("*")
+    .order("priority", { ascending: true });
+  if (error) return fail(error.message);
+  return ok(data ?? []);
+}
+
+// Replace a supplier's entire delegation assignment list in one shot. Simpler
+// than incremental add/remove and matches the "edit roster" dialog UX.
+export async function setSupplierDelegations(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const auth = await requireFoodManager();
+  if (!auth.ok) return fail(auth.error);
+
+  const parsed = setSupplierDelegationsSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+  const { supplier_id, delegation_ids } = parsed.data;
+
+  const admin = createAdminClient();
+  const { error: delErr } = await admin
+    .schema("palaro")
+    .from("food_supplier_delegations")
+    .delete()
+    .eq("supplier_id", supplier_id);
+  if (delErr) return fail(delErr.message);
+
+  if (delegation_ids.length > 0) {
+    const rows = delegation_ids.map((delegation_id, idx) => ({
+      supplier_id,
+      delegation_id,
+      priority: idx + 1,
+      created_by: auth.profile.id,
+    }));
+    const { error: insErr } = await admin
+      .schema("palaro")
+      .from("food_supplier_delegations")
+      .insert(rows);
+    if (insErr) return fail(insErr.message);
+  }
+
+  await recordAudit({
+    action: "update",
+    entity_type: "food_supplier_delegations",
+    entity_id: supplier_id,
+    changes: { delegation_ids },
+    user_id: auth.profile.id,
+  });
+
+  revalidatePath(FOOD_PATH);
+  return ok();
+}
+
+// Food admin / Command Center overriding the auto-assigned supplier for a
+// given request — used when the original supplier can't fulfill.
+export async function reassignRequestSupplier(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const auth = await requireFoodManager();
+  if (!auth.ok) return fail(auth.error);
+
+  const parsed = reassignRequestSupplierSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+  const { id, supplier_id } = parsed.data;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .schema("palaro")
+    .from("food_requests")
+    .update({ supplier_id })
+    .eq("id", id);
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "food_request",
+    entity_id: id,
+    changes: { supplier_id },
     user_id: auth.profile.id,
   });
 

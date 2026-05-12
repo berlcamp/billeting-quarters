@@ -71,3 +71,21 @@ export const setRequestStatusSchema = z.object({
 export type SetRequestStatusInput = z.infer<typeof setRequestStatusSchema>;
 
 export const deleteRequestSchema = z.object({ id: z.string().uuid() });
+
+// Replaces the supplier's full delegation-assignment list.
+export const setSupplierDelegationsSchema = z.object({
+  supplier_id: z.string().uuid(),
+  delegation_ids: z.array(z.string().uuid()).max(50),
+});
+export type SetSupplierDelegationsInput = z.infer<
+  typeof setSupplierDelegationsSchema
+>;
+
+// Command Center / food admin reassigning a request after the auto-pick.
+export const reassignRequestSupplierSchema = z.object({
+  id: z.string().uuid(),
+  supplier_id: z.string().uuid().nullable(),
+});
+export type ReassignRequestSupplierInput = z.infer<
+  typeof reassignRequestSupplierSchema
+>;

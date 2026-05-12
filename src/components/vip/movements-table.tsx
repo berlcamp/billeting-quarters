@@ -249,6 +249,25 @@ export function MovementsTable({
         filters={filters}
         pageSize={20}
         onRowClick={(m) => setOpenId(m.id)}
+        searchable={{
+          placeholder: "Search by VIP, destination, request…",
+          predicate: (m, q) => {
+            const vip = vipMap.get(m.vip_id);
+            const dest = m.destination_site_id
+              ? siteMap.get(m.destination_site_id)
+              : null;
+            return (
+              (vip?.full_name?.toLowerCase().includes(q) ?? false) ||
+              (vip?.title?.toLowerCase().includes(q) ?? false) ||
+              (vip?.organization?.toLowerCase().includes(q) ?? false) ||
+              (dest?.toLowerCase().includes(q) ?? false) ||
+              (m.request?.toLowerCase().includes(q) ?? false) ||
+              (m.purpose?.toLowerCase().includes(q) ?? false) ||
+              (m.from_location?.toLowerCase().includes(q) ?? false) ||
+              (m.to_location?.toLowerCase().includes(q) ?? false)
+            );
+          },
+        }}
         empty={{
           title: showClosed ? "No movements" : "No active movements",
           description: showClosed

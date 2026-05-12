@@ -1,4 +1,5 @@
-import { Plus, UserCog } from "lucide-react";
+import Link from "next/link";
+import { Plus, UserCog, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Forbidden } from "@/components/shared/forbidden";
 import { LiveBadge } from "@/components/shared/live-badge";
@@ -24,7 +25,12 @@ import {
 import { getDelegations } from "@/lib/actions/delegations";
 import { getSites } from "@/lib/actions/sites";
 
-export default async function VipPage() {
+export default async function VipPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ vip?: string; tab?: string }>;
+}) {
+  const params = (await searchParams) ?? {};
   const profile = await getCurrentProfile();
   if (!profile || !hasPermission(profile, "vip.manage")) {
     return (
@@ -47,11 +53,21 @@ export default async function VipPage() {
     ]);
 
   const vips = vipsRes.error ? [] : (vipsRes.data ?? []);
-  const movements = movementsRes.error ? [] : (movementsRes.data ?? []);
+  const allMovements = movementsRes.error ? [] : (movementsRes.data ?? []);
   const sites = sitesRes.error ? [] : (sitesRes.data ?? []);
   const delegations = delegationsRes.error ? [] : (delegationsRes.data ?? []);
   const officers =
     officersRes.error || !officersRes.data ? [] : officersRes.data;
+
+  // When ?vip=<id> is present, scope the movements tab to that VIP and
+  // default to the movements tab.
+  const focusedVip = params.vip
+    ? vips.find((v) => v.id === params.vip) ?? null
+    : null;
+  const movements = focusedVip
+    ? allMovements.filter((m) => m.vip_id === focusedVip.id)
+    : allMovements;
+  const defaultTab = focusedVip ? "movements" : params.tab ?? "movements";
 
   // Resolve creator/protocol-officer profile names referenced by movements.
   // Combines created_by (new) and protocol_officer_id (legacy fallback).
@@ -106,7 +122,7 @@ export default async function VipPage() {
         }
       />
 
-      <Tabs defaultValue="movements">
+      <Tabs defaultValue={defaultTab}>
         <div className="flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="movements">Movements</TabsTrigger>
@@ -115,7 +131,28 @@ export default async function VipPage() {
           <LiveBadge label="Live" />
         </div>
 
-        <TabsContent value="movements" className="mt-4">
+        <TabsContent value="movements" className="mt-4 space-y-3">
+          {focusedVip ? (
+            <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <div>
+                Showing movements for{" "}
+                <span className="font-semibold">{focusedVip.full_name}</span>
+                {focusedVip.title ? (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · {focusedVip.title}
+                  </span>
+                ) : null}
+              </div>
+              <Link
+                href="/dashboard/vip"
+                className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted"
+              >
+                <X className="size-3.5" />
+                Clear filter
+              </Link>
+            </div>
+          ) : null}
           <MovementsTable
             initialMovements={movements}
             vips={vips}

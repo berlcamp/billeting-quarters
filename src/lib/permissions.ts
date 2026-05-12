@@ -21,6 +21,7 @@ export const USER_ROLES: readonly UserRole[] = [
   "garbage_logger",
   "food_supplier_admin",
   "incident_monitoring",
+  "information_hub_officer",
 ] as const;
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -41,6 +42,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   garbage_logger: "Garbage Logger",
   food_supplier_admin: "Food Supplier Admin",
   incident_monitoring: "Incident Monitoring",
+  information_hub_officer: "Information Hub Officer",
 };
 
 export const PROFILE_STATUS_LABELS: Record<ProfileStatus, string> = {
@@ -83,6 +85,10 @@ export const PERMISSIONS = [
   "garbage.manage",
   "food.request",
   "food.manage",
+  "site_monitoring.log",
+  "site_monitoring.manage",
+  "external_personnel.log",
+  "end_of_day.log",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -107,6 +113,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "reports.view",
     "garbage.manage",
     "food.manage",
+    "site_monitoring.manage",
+    "external_personnel.log",
+    "end_of_day.log",
   ],
   medical_field: [
     "incident.create",
@@ -187,6 +196,18 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   // Access to the Command Center dashboard and the Incidents module.
   // Can view and create incidents; cannot update, resolve, or refer.
   incident_monitoring: ["incident.create", "incident.view"],
+  // Information Hub Officer — stationed at a billeting quarter. Requests
+  // garbage pickup, logs site visits / external personnel / end-of-day
+  // headcount, and reports incidents.
+  information_hub_officer: [
+    "incident.create",
+    "incident.view",
+    "garbage.log",
+    "site_monitoring.log",
+    "external_personnel.log",
+    "end_of_day.log",
+    "food.request",
+  ],
 };
 
 type ProfileLike =

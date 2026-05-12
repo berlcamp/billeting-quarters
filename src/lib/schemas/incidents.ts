@@ -32,6 +32,8 @@ export const createIncidentSchema = z.object({
   affected_person_name: optionalShortText,
   affected_person_age: z.number().int().min(0).max(150).optional(),
   affected_person_role: optionalShortText,
+  reporting_officer_name: optionalShortText,
+  reporting_officer_position: optionalShortText,
   photo_paths: z.array(z.string()).max(5).optional(),
 });
 export type CreateIncidentInput = z.infer<typeof createIncidentSchema>;

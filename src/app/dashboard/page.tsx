@@ -1,12 +1,15 @@
 import { Forbidden } from "@/components/shared/forbidden";
 import { PageHeader } from "@/components/layout/page-header";
 import { CommandCenterOverview } from "@/components/command-center/command-center-overview";
+import { DashboardExtras } from "@/components/command-center/dashboard-extras";
 import { FullscreenButton } from "@/components/command-center/fullscreen-button";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasAnyPermission, hasPermission } from "@/lib/permissions";
 import { getIncidents } from "@/lib/actions/incidents";
 import { getAllReferrals } from "@/lib/actions/referrals";
 import { getSites } from "@/lib/actions/sites";
+import { getDashboardSnapshot } from "@/lib/actions/dashboard";
+import { getVips } from "@/lib/actions/vip";
 
 export default async function CommandCenterPage() {
   const profile = await getCurrentProfile();
@@ -26,14 +29,24 @@ export default async function CommandCenterPage() {
     "referral.create_ucf_to_hospital",
   ]);
 
-  const [incidentsResult, referralsResult, sitesResult] = await Promise.all([
+  const [
+    incidentsResult,
+    referralsResult,
+    sitesResult,
+    snapshotResult,
+    vipsResult,
+  ] = await Promise.all([
     getIncidents(),
     getAllReferrals(),
     getSites(true),
+    getDashboardSnapshot(),
+    getVips(true),
   ]);
   const incidents = incidentsResult.error ? [] : (incidentsResult.data ?? []);
   const referrals = referralsResult.error ? [] : (referralsResult.data ?? []);
   const sites = sitesResult.error ? [] : (sitesResult.data ?? []);
+  const snapshot = snapshotResult.error ? null : snapshotResult.data ?? null;
+  const vips = vipsResult.error ? [] : (vipsResult.data ?? []);
 
   return (
     <div className="space-y-6">
@@ -49,6 +62,13 @@ export default async function CommandCenterPage() {
         canOpenIncidents={canOpenIncidents}
         canOpenReferrals={canOpenReferrals}
       />
+      {snapshot ? (
+        <DashboardExtras
+          snapshot={snapshot}
+          sites={sites.map((s) => ({ id: s.id, name: s.name }))}
+          vips={vips.map((v) => ({ id: v.id, full_name: v.full_name }))}
+        />
+      ) : null}
     </div>
   );
 }

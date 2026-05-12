@@ -14,6 +14,8 @@ import {
   generateGarbageWeekSchema,
   markGarbageCollectedSchema,
   markGarbageMissedSchema,
+  markNoCollectionNeededSchema,
+  requestGarbageCollectionSchema,
   toggleGarbageCollectedSchema,
   updateGarbageCollectorSchema,
   updateGarbageRuleSchema,
@@ -320,6 +322,99 @@ export async function markGarbageMissed(
 
   revalidatePath(GARBAGE_PATH);
   return ok();
+}
+
+// Info Hub officer says today's pickup isn't needed for this BQ. Flips the
+// row to no_collection_needed and stamps a note so the audit trail is clear.
+export async function markNoCollectionNeeded(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const auth = await requireGarbageLogger();
+  if (!auth.ok) return fail(auth.error);
+
+  const parsed = markNoCollectionNeededSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+  const { id, reason } = parsed.data;
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .schema("palaro")
+    .from("garbage_collections")
+    .select("notes")
+    .eq("id", id)
+    .single();
+
+  const stamp = new Date().toISOString();
+  const note = `[NO COLLECTION NEEDED ${stamp}] ${auth.profile.full_name ?? auth.profile.email}${reason ? `: ${reason}` : ""}`;
+  const composedNotes = [existing?.notes, note].filter(Boolean).join("\n");
+
+  const { error } = await admin
+    .schema("palaro")
+    .from("garbage_collections")
+    .update({ status: "no_collection_needed", notes: composedNotes })
+    .eq("id", id);
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "garbage_collection",
+    entity_id: id,
+    changes: { status: "no_collection_needed", reason: reason ?? null },
+    user_id: auth.profile.id,
+  });
+
+  revalidatePath(GARBAGE_PATH);
+  return ok();
+}
+
+// Info Hub officer requests an on-demand garbage pickup for their BQ.
+// Creates a special_request row that surfaces alongside scheduled rows.
+export async function requestGarbageCollection(
+  input: unknown,
+): Promise<ActionResult<{ id: string }>> {
+  const auth = await requireGarbageLogger();
+  if (!auth.ok) return fail(auth.error);
+
+  const parsed = requestGarbageCollectionSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+  const data = parsed.data;
+  const requestedIso = new Date(data.requested_at).toISOString();
+
+  const admin = createAdminClient();
+  const { data: inserted, error } = await admin
+    .schema("palaro")
+    .from("garbage_collections")
+    .insert({
+      site_id: data.site_id,
+      collector_id: null,
+      scheduled_at: requestedIso,
+      status: "special_request",
+      is_special_request: true,
+      notes: data.notes || null,
+      logged_by: auth.profile.id,
+    })
+    .select("id")
+    .single();
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "create",
+    entity_type: "garbage_collection",
+    entity_id: inserted.id,
+    changes: {
+      site_id: data.site_id,
+      requested_at: requestedIso,
+      is_special_request: true,
+    },
+    user_id: auth.profile.id,
+  });
+
+  revalidatePath(GARBAGE_PATH);
+  return ok({ id: inserted.id });
 }
 
 export async function deleteGarbageCollection(

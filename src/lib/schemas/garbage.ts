@@ -8,6 +8,7 @@ export const garbageStatusSchema = z.enum([
   "collected",
   "missed",
   "special_request",
+  "no_collection_needed",
 ]);
 
 // ---------- Concrete pickup rows (palaro.garbage_collections) ----------
@@ -57,6 +58,29 @@ export type ToggleGarbageCollectedInput = z.infer<
 >;
 
 export const deleteGarbageSchema = z.object({ id: z.string().uuid() });
+
+// Info Hub officer marking a BQ as "no collection needed today" — typically
+// used on a day a rule would otherwise have generated a pickup.
+export const markNoCollectionNeededSchema = z.object({
+  id: z.string().uuid(),
+  reason: z.string().trim().max(500).optional(),
+});
+export type MarkNoCollectionNeededInput = z.infer<
+  typeof markNoCollectionNeededSchema
+>;
+
+// Info Hub officer requesting an on-demand pickup for a BQ.
+export const requestGarbageCollectionSchema = z.object({
+  site_id: z.string().uuid("Pick a site."),
+  requested_at: z
+    .string()
+    .min(1, "Time is required")
+    .refine((s) => !isNaN(Date.parse(s)), "Invalid time"),
+  notes: optionalText,
+});
+export type RequestGarbageCollectionInput = z.infer<
+  typeof requestGarbageCollectionSchema
+>;
 
 // ---------- Collectors registry (palaro.garbage_collectors) ----------
 

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings, Truck } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Forbidden } from "@/components/shared/forbidden";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { WeeklySchedule } from "@/components/garbage/weekly-schedule";
+import { RequestCollectionDialog } from "@/components/garbage/request-collection-dialog";
 import {
   generateGarbageWeek,
   getGarbageCollections,
@@ -80,15 +81,26 @@ export default async function GarbageCollectionPage({ searchParams }: PageProps)
         title="Garbage Collection"
         description="Auto-generated weekly pickups from your schedule rules. Tick off each pickup as it's collected."
         actions={
-          canManage ? (
-            <Link
-              href="/dashboard/logistics/garbage/settings"
-              className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              <Settings className="size-4" />
-              Settings
-            </Link>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            <RequestCollectionDialog
+              sites={sites}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <Truck className="size-4" />
+                  Request pickup
+                </Button>
+              }
+            />
+            {canManage ? (
+              <Link
+                href="/dashboard/logistics/garbage/settings"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                <Settings className="size-4" />
+                Settings
+              </Link>
+            ) : null}
+          </div>
         }
       />
 
