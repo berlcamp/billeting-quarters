@@ -126,7 +126,7 @@ export function ManifestRowsField<TForm extends FieldValues>({
         })}
       </div>
 
-      {!showHeader && fields.length > 0 ? (
+      {!showHeader ? (
         <Button
           type="button"
           size="sm"
