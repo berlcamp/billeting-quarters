@@ -81,7 +81,7 @@ export default async function GarbageCollectionPage({ searchParams }: PageProps)
         title="Garbage Collection"
         description="Auto-generated weekly pickups from your schedule rules. Tick off each pickup as it's collected."
         actions={
-          <div className="flex items-center gap-2">
+          <>
             <RequestCollectionDialog
               sites={sites}
               trigger={
@@ -100,7 +100,7 @@ export default async function GarbageCollectionPage({ searchParams }: PageProps)
                 Settings
               </Link>
             ) : null}
-          </div>
+          </>
         }
       />
 
