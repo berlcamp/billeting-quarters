@@ -27,6 +27,8 @@ CREATE TYPE palaro.user_role AS ENUM (
   'venue_manager',
   'delegation_head',
   'transportation_dispatcher',
+  'transportation_head',
+  'transportation_driver',
   'garbage_logger',
   'food_supplier_admin',
   'incident_monitoring'
@@ -45,10 +47,11 @@ CREATE TYPE palaro.vip_movement_status AS ENUM ('eta_logged', 'arrived', 'etd_lo
 
 CREATE TYPE palaro.vehicle_type AS ENUM ('bus', 'van', 'multicab', 'pedicab', 'ambulance', 'service_vehicle');
 CREATE TYPE palaro.vehicle_log_direction AS ENUM ('in', 'out');
+CREATE TYPE palaro.dispatch_status AS ENUM ('scheduled', 'in_transit', 'completed', 'cancelled');
 
 CREATE TYPE palaro.schedule_status AS ENUM ('booked', 'special_request', 'cancelled', 'completed');
 
-CREATE TYPE palaro.garbage_collection_status AS ENUM ('scheduled', 'collected', 'missed', 'special_request');
+CREATE TYPE palaro.garbage_collection_status AS ENUM ('scheduled', 'collected', 'missed', 'special_request', 'no_collection_needed', 'cancelled');
 
 CREATE TYPE palaro.attendance_type AS ENUM ('time_in', 'time_out');
 
@@ -431,9 +434,13 @@ CREATE TABLE palaro.vehicles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Vehicle routes are templates: any vehicle from the dispatch pool can run a
+-- route, so vehicle_id is nullable. Multi-stop ordering lives in
+-- vehicle_route_stops below; the origin/destination columns are the
+-- denormalised first/last stops for fast lookups.
 CREATE TABLE palaro.vehicle_routes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  vehicle_id UUID NOT NULL REFERENCES palaro.vehicles(id) ON DELETE CASCADE,
+  vehicle_id UUID REFERENCES palaro.vehicles(id) ON DELETE CASCADE,
   route_name TEXT NOT NULL,
   origin_site_id UUID REFERENCES palaro.sites(id),
   destination_site_id UUID REFERENCES palaro.sites(id),
@@ -443,6 +450,50 @@ CREATE TABLE palaro.vehicle_routes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE palaro.vehicle_route_stops (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  route_id UUID NOT NULL REFERENCES palaro.vehicle_routes(id) ON DELETE CASCADE,
+  stop_order INTEGER NOT NULL,
+  site_id UUID REFERENCES palaro.sites(id),
+  label TEXT,                           -- free-text fallback when site_id is null
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT vehicle_route_stops_route_order_uq UNIQUE (route_id, stop_order),
+  CONSTRAINT vehicle_route_stops_site_or_label CHECK (site_id IS NOT NULL OR label IS NOT NULL)
+);
+
+CREATE INDEX idx_vehicle_route_stops_route ON palaro.vehicle_route_stops(route_id, stop_order);
+
+-- A vehicle_dispatch is the umbrella TRIP record for a bus journey. Trip legs
+-- and passenger manifest live in their own tables below. Only one trip per
+-- vehicle may be in scheduled or in_transit status at a time (partial index).
+CREATE TABLE palaro.vehicle_dispatches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id UUID NOT NULL REFERENCES palaro.vehicles(id) ON DELETE CASCADE,
+  route_id UUID REFERENCES palaro.vehicle_routes(id) ON DELETE SET NULL,
+  origin_site_id UUID REFERENCES palaro.sites(id),
+  destination_site_id UUID REFERENCES palaro.sites(id),
+  scheduled_at TIMESTAMPTZ,
+  dispatched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  dispatched_by UUID REFERENCES palaro.profiles(id),
+  status palaro.dispatch_status NOT NULL DEFAULT 'scheduled',
+  notes TEXT,
+  completed_at TIMESTAMPTZ,
+  closed_by UUID REFERENCES palaro.profiles(id),
+  force_closed_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_vehicle_dispatches_vehicle ON palaro.vehicle_dispatches(vehicle_id, dispatched_at DESC);
+CREATE INDEX idx_vehicle_dispatches_status ON palaro.vehicle_dispatches(status);
+CREATE UNIQUE INDEX vehicle_dispatches_one_open_per_vehicle
+  ON palaro.vehicle_dispatches(vehicle_id)
+  WHERE status IN ('scheduled', 'in_transit');
+
+-- vehicle_logs is the raw scan log. dispatch_id and the snapshot columns
+-- exist for legacy ad-hoc scans; the new trip flow writes to
+-- vehicle_trip_legs instead.
 CREATE TABLE palaro.vehicle_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   vehicle_id UUID NOT NULL REFERENCES palaro.vehicles(id) ON DELETE CASCADE,
@@ -451,11 +502,93 @@ CREATE TABLE palaro.vehicle_logs (
   scanned_by UUID REFERENCES palaro.profiles(id),
   scanned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   passenger_count INTEGER,
-  notes TEXT
+  notes TEXT,
+  dispatch_id UUID REFERENCES palaro.vehicle_dispatches(id) ON DELETE SET NULL,
+  delegation_id UUID REFERENCES palaro.delegations(id),
+  sport TEXT,
+  team_count INTEGER,
+  from_site_id UUID REFERENCES palaro.sites(id),
+  to_site_id UUID REFERENCES palaro.sites(id)
 );
 
 CREATE INDEX idx_vehicle_logs_vehicle ON palaro.vehicle_logs(vehicle_id, scanned_at DESC);
 CREATE INDEX idx_vehicle_logs_site ON palaro.vehicle_logs(site_id, scanned_at DESC);
+CREATE INDEX idx_vehicle_logs_dispatch ON palaro.vehicle_logs(dispatch_id);
+CREATE INDEX idx_vehicle_logs_delegation ON palaro.vehicle_logs(delegation_id);
+
+-- Per-departure→arrival segments of a trip.
+CREATE TABLE palaro.vehicle_trip_legs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dispatch_id UUID NOT NULL REFERENCES palaro.vehicle_dispatches(id) ON DELETE CASCADE,
+  leg_order INTEGER NOT NULL CHECK (leg_order >= 1),
+  from_site_id UUID REFERENCES palaro.sites(id),
+  from_label TEXT,
+  to_site_id UUID REFERENCES palaro.sites(id),
+  to_label TEXT,
+  departed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  departed_by UUID REFERENCES palaro.profiles(id),
+  arrived_at TIMESTAMPTZ,
+  arrived_by UUID REFERENCES palaro.profiles(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT vehicle_trip_legs_order_uq UNIQUE (dispatch_id, leg_order),
+  CONSTRAINT vehicle_trip_legs_from_site_or_label CHECK (from_site_id IS NOT NULL OR from_label IS NOT NULL),
+  CONSTRAINT vehicle_trip_legs_to_site_or_label CHECK (to_site_id IS NOT NULL OR to_label IS NOT NULL)
+);
+
+CREATE INDEX idx_vehicle_trip_legs_dispatch ON palaro.vehicle_trip_legs(dispatch_id, leg_order);
+CREATE INDEX idx_vehicle_trip_legs_departed_at ON palaro.vehicle_trip_legs(departed_at DESC);
+CREATE UNIQUE INDEX vehicle_trip_legs_one_open_per_dispatch
+  ON palaro.vehicle_trip_legs(dispatch_id)
+  WHERE arrived_at IS NULL;
+
+-- Passenger groups (delegation + team) carried by a trip. Counts drain
+-- across legs as groups drop off.
+CREATE TABLE palaro.vehicle_trip_manifest (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dispatch_id UUID NOT NULL REFERENCES palaro.vehicle_dispatches(id) ON DELETE CASCADE,
+  delegation_id UUID REFERENCES palaro.delegations(id),
+  team_name TEXT NOT NULL,
+  total_passengers INTEGER NOT NULL CHECK (total_passengers >= 1),
+  dropped_off INTEGER NOT NULL DEFAULT 0 CHECK (dropped_off >= 0 AND dropped_off <= total_passengers),
+  boarded_at_leg_id UUID REFERENCES palaro.vehicle_trip_legs(id) ON DELETE SET NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_vehicle_trip_manifest_dispatch ON palaro.vehicle_trip_manifest(dispatch_id);
+CREATE INDEX idx_vehicle_trip_manifest_delegation ON palaro.vehicle_trip_manifest(delegation_id);
+
+-- Per-leg per-group dropoff events (history + reporting).
+CREATE TABLE palaro.vehicle_trip_dropoffs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  leg_id UUID NOT NULL REFERENCES palaro.vehicle_trip_legs(id) ON DELETE CASCADE,
+  manifest_id UUID NOT NULL REFERENCES palaro.vehicle_trip_manifest(id) ON DELETE CASCADE,
+  count INTEGER NOT NULL CHECK (count >= 1),
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  recorded_by UUID REFERENCES palaro.profiles(id),
+  notes TEXT
+);
+
+CREATE INDEX idx_vehicle_trip_dropoffs_leg ON palaro.vehicle_trip_dropoffs(leg_id);
+CREATE INDEX idx_vehicle_trip_dropoffs_manifest ON palaro.vehicle_trip_dropoffs(manifest_id);
+
+-- Fuel consumption inventory per vehicle.
+CREATE TABLE palaro.vehicle_fuel_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vehicle_id UUID NOT NULL REFERENCES palaro.vehicles(id) ON DELETE CASCADE,
+  refilled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  liters NUMERIC(10, 2) NOT NULL CHECK (liters >= 0),
+  cost_php NUMERIC(12, 2) CHECK (cost_php IS NULL OR cost_php >= 0),
+  odometer_km INTEGER CHECK (odometer_km IS NULL OR odometer_km >= 0),
+  station TEXT,
+  logged_by UUID REFERENCES palaro.profiles(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_vehicle_fuel_logs_vehicle ON palaro.vehicle_fuel_logs(vehicle_id, refilled_at DESC);
 
 
 -- =====================

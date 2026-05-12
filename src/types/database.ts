@@ -969,10 +969,6 @@ export type Database = {
           id: string;
           vehicle_id: string;
           route_id: string | null;
-          delegation_id: string | null;
-          sport: string | null;
-          team_count: number | null;
-          expected_pax: number | null;
           origin_site_id: string | null;
           destination_site_id: string | null;
           scheduled_at: string | null;
@@ -981,6 +977,8 @@ export type Database = {
           status: Database["palaro"]["Enums"]["dispatch_status"];
           notes: string | null;
           completed_at: string | null;
+          closed_by: string | null;
+          force_closed_reason: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -988,10 +986,6 @@ export type Database = {
           id?: string;
           vehicle_id: string;
           route_id?: string | null;
-          delegation_id?: string | null;
-          sport?: string | null;
-          team_count?: number | null;
-          expected_pax?: number | null;
           origin_site_id?: string | null;
           destination_site_id?: string | null;
           scheduled_at?: string | null;
@@ -1000,6 +994,8 @@ export type Database = {
           status?: Database["palaro"]["Enums"]["dispatch_status"];
           notes?: string | null;
           completed_at?: string | null;
+          closed_by?: string | null;
+          force_closed_reason?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1007,10 +1003,6 @@ export type Database = {
           id?: string;
           vehicle_id?: string;
           route_id?: string | null;
-          delegation_id?: string | null;
-          sport?: string | null;
-          team_count?: number | null;
-          expected_pax?: number | null;
           origin_site_id?: string | null;
           destination_site_id?: string | null;
           scheduled_at?: string | null;
@@ -1019,8 +1011,127 @@ export type Database = {
           status?: Database["palaro"]["Enums"]["dispatch_status"];
           notes?: string | null;
           completed_at?: string | null;
+          closed_by?: string | null;
+          force_closed_reason?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      vehicle_trip_legs: {
+        Row: {
+          id: string;
+          dispatch_id: string;
+          leg_order: number;
+          from_site_id: string | null;
+          from_label: string | null;
+          to_site_id: string | null;
+          to_label: string | null;
+          departed_at: string;
+          departed_by: string | null;
+          arrived_at: string | null;
+          arrived_by: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          dispatch_id: string;
+          leg_order: number;
+          from_site_id?: string | null;
+          from_label?: string | null;
+          to_site_id?: string | null;
+          to_label?: string | null;
+          departed_at?: string;
+          departed_by?: string | null;
+          arrived_at?: string | null;
+          arrived_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          dispatch_id?: string;
+          leg_order?: number;
+          from_site_id?: string | null;
+          from_label?: string | null;
+          to_site_id?: string | null;
+          to_label?: string | null;
+          departed_at?: string;
+          departed_by?: string | null;
+          arrived_at?: string | null;
+          arrived_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      vehicle_trip_manifest: {
+        Row: {
+          id: string;
+          dispatch_id: string;
+          delegation_id: string | null;
+          team_name: string;
+          total_passengers: number;
+          dropped_off: number;
+          boarded_at_leg_id: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          dispatch_id: string;
+          delegation_id?: string | null;
+          team_name: string;
+          total_passengers: number;
+          dropped_off?: number;
+          boarded_at_leg_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          dispatch_id?: string;
+          delegation_id?: string | null;
+          team_name?: string;
+          total_passengers?: number;
+          dropped_off?: number;
+          boarded_at_leg_id?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      vehicle_trip_dropoffs: {
+        Row: {
+          id: string;
+          leg_id: string;
+          manifest_id: string;
+          count: number;
+          recorded_at: string;
+          recorded_by: string | null;
+          notes: string | null;
+        };
+        Insert: {
+          id?: string;
+          leg_id: string;
+          manifest_id: string;
+          count: number;
+          recorded_at?: string;
+          recorded_by?: string | null;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          leg_id?: string;
+          manifest_id?: string;
+          count?: number;
+          recorded_at?: string;
+          recorded_by?: string | null;
+          notes?: string | null;
         };
         Relationships: [];
       };
@@ -1693,7 +1804,8 @@ export type Database = {
         | "collected"
         | "missed"
         | "special_request"
-        | "no_collection_needed";
+        | "no_collection_needed"
+        | "cancelled";
     };
     CompositeTypes: { [_ in never]: never };
   };

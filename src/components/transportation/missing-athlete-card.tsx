@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatManila } from "@/lib/timezone";
-import { cn } from "@/lib/utils";
 import type { MissingAthleteRow } from "@/lib/actions/vehicles";
 import type { Database } from "@/types/database";
 
@@ -42,45 +41,43 @@ export function MissingAthleteCard({
   sites,
   delegations,
 }: Props) {
-  const vehicleMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const v of vehicles) m.set(v.id, v.vehicle_code);
-    return m;
-  }, [vehicles]);
-  const siteMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const s of sites) m.set(s.id, s.name);
-    return m;
-  }, [sites]);
-  const delegationMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const d of delegations) m.set(d.id, d.region_code);
-    return m;
-  }, [delegations]);
+  const vehicleMap = useMemo(
+    () => new Map(vehicles.map((v) => [v.id, v.vehicle_code])),
+    [vehicles],
+  );
+  const siteMap = useMemo(
+    () => new Map(sites.map((s) => [s.id, s.name])),
+    [sites],
+  );
+  const delegationMap = useMemo(
+    () => new Map(delegations.map((d) => [d.id, d.region_code])),
+    [delegations],
+  );
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <AlertTriangle className="size-4 text-amber-600" />
-          Missing-athlete report
+          Trips closed with passengers on board
         </CardTitle>
         <CardDescription>
-          Dispatches where the boarded count and the destination scan don&apos;t
-          match. Investigate any negative diff (e.g. 10 boarded, 9 arrived).
+          Force-closed trips where one or more groups never got dropped off.
+          Investigate each — they usually indicate a missed scan or an
+          incomplete transfer.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
           <EmptyState
             title="No discrepancies"
-            description="All dispatches matched their boarded headcount."
+            description="Every closed trip dropped off all manifest groups."
           />
         ) : (
           <ul className="divide-y rounded-md border">
             {rows.map((row) => (
               <li
-                key={row.dispatch_id}
+                key={row.manifest_id}
                 className="flex items-center gap-3 p-3 text-sm"
               >
                 <div className="min-w-0 flex-1">
@@ -93,11 +90,9 @@ export function MissingAthleteCard({
                         {delegationMap.get(row.delegation_id) ?? "—"}
                       </Badge>
                     ) : null}
-                    {row.sport ? (
-                      <span className="text-xs text-muted-foreground">
-                        {row.sport}
-                      </span>
-                    ) : null}
+                    <span className="text-xs text-muted-foreground">
+                      {row.team_name}
+                    </span>
                   </div>
                   <div className="mt-0.5 text-xs text-muted-foreground">
                     {row.origin_site_id
@@ -110,23 +105,21 @@ export function MissingAthleteCard({
                     {" · "}
                     {formatManila(row.dispatched_at, "MMM d · HH:mm")}
                   </div>
+                  {row.force_closed_reason ? (
+                    <p className="mt-0.5 text-xs text-destructive">
+                      Reason: {row.force_closed_reason}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span className="font-mono text-xs text-muted-foreground">
-                    {row.expected_pax} → {row.arrived_pax}
+                    {row.total_passengers - row.remaining} / {row.total_passengers}
                   </span>
                   <Badge
                     variant="secondary"
-                    className={cn(
-                      "border-transparent",
-                      row.diff > 0
-                        ? "bg-red-100 text-red-800"
-                        : "bg-amber-100 text-amber-800",
-                    )}
+                    className="border-transparent bg-amber-100 text-amber-800"
                   >
-                    {row.diff > 0
-                      ? `${row.diff} missing`
-                      : `${Math.abs(row.diff)} extra`}
+                    {row.remaining} unaccounted
                   </Badge>
                 </div>
               </li>

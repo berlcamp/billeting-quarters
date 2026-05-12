@@ -198,11 +198,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   incident_monitoring: ["incident.create", "incident.view"],
   // Information Hub Officer — stationed at a billeting quarter. Requests
   // garbage pickup, logs site visits / external personnel / end-of-day
-  // headcount, and reports incidents.
+  // headcount, and reports incidents. Also manages the recurring weekly
+  // garbage schedule and collectors at their hub.
   information_hub_officer: [
     "incident.create",
     "incident.view",
     "garbage.log",
+    "garbage.manage",
     "site_monitoring.log",
     "external_personnel.log",
     "end_of_day.log",

@@ -1,10 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -13,7 +12,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
-import { updateDispatchStatus } from "@/lib/actions/vehicles";
 import {
   DISPATCH_STATUSES,
   DISPATCH_STATUS_BADGE,
@@ -25,6 +23,22 @@ import { cn } from "@/lib/utils";
 import type { Database } from "@/types/database";
 
 type Dispatch = Database["palaro"]["Tables"]["vehicle_dispatches"]["Row"];
+type Leg = Pick<
+  Database["palaro"]["Tables"]["vehicle_trip_legs"]["Row"],
+  | "id"
+  | "dispatch_id"
+  | "leg_order"
+  | "from_site_id"
+  | "from_label"
+  | "to_site_id"
+  | "to_label"
+  | "departed_at"
+  | "arrived_at"
+>;
+type Manifest = Pick<
+  Database["palaro"]["Tables"]["vehicle_trip_manifest"]["Row"],
+  "dispatch_id" | "total_passengers" | "dropped_off"
+>;
 type Vehicle = Pick<
   Database["palaro"]["Tables"]["vehicles"]["Row"],
   "id" | "vehicle_code"
@@ -33,104 +47,131 @@ type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
   "id" | "name"
 >;
-type Delegation = Pick<
-  Database["palaro"]["Tables"]["delegations"]["Row"],
-  "id" | "region_code"
->;
 
 const ALL = "__all__";
 
 interface Props {
   dispatches: Dispatch[];
+  legs: Leg[];
+  manifest: Manifest[];
   vehicles: Vehicle[];
   sites: Site[];
-  delegations: Delegation[];
-  canManage: boolean;
 }
 
 export function DispatchTable({
   dispatches,
+  legs,
+  manifest,
   vehicles,
   sites,
-  delegations,
-  canManage,
 }: Props) {
-  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<DispatchStatus | typeof ALL>(
     ALL,
   );
 
-  const vehicleMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const v of vehicles) m.set(v.id, v.vehicle_code);
+  const vehicleMap = useMemo(
+    () => new Map(vehicles.map((v) => [v.id, v.vehicle_code])),
+    [vehicles],
+  );
+  const siteMap = useMemo(
+    () => new Map(sites.map((s) => [s.id, s.name])),
+    [sites],
+  );
+
+  const lastLegByDispatch = useMemo(() => {
+    const m = new Map<string, Leg>();
+    for (const leg of legs) {
+      const prev = m.get(leg.dispatch_id);
+      if (!prev || leg.leg_order > prev.leg_order) m.set(leg.dispatch_id, leg);
+    }
     return m;
-  }, [vehicles]);
-  const siteMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const s of sites) m.set(s.id, s.name);
+  }, [legs]);
+
+  const manifestSummary = useMemo(() => {
+    const m = new Map<string, { groups: number; pax: number; remaining: number }>();
+    for (const row of manifest) {
+      const prev = m.get(row.dispatch_id) ?? {
+        groups: 0,
+        pax: 0,
+        remaining: 0,
+      };
+      prev.groups += 1;
+      prev.pax += row.total_passengers;
+      prev.remaining += row.total_passengers - row.dropped_off;
+      m.set(row.dispatch_id, prev);
+    }
     return m;
-  }, [sites]);
-  const delegationMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const d of delegations) m.set(d.id, d.region_code);
-    return m;
-  }, [delegations]);
+  }, [manifest]);
 
   const filtered = useMemo(() => {
     if (statusFilter === ALL) return dispatches;
     return dispatches.filter((d) => d.status === statusFilter);
   }, [dispatches, statusFilter]);
 
-  async function setStatus(id: string, status: DispatchStatus) {
-    const result = await updateDispatchStatus({ id, status });
-    if (result.error) {
-      toast.error("Update failed", { description: result.error });
-      return;
-    }
-    toast.success(`Marked ${DISPATCH_STATUS_LABELS[status].toLowerCase()}`);
-    router.refresh();
-  }
-
   const columns: DataTableColumn<Dispatch>[] = [
     {
-      id: "trip",
-      header: "Trip",
+      id: "vehicle",
+      header: "Vehicle",
       cell: (d) => (
-        <div className="flex flex-col">
-          <span className="font-mono font-semibold">
-            {vehicleMap.get(d.vehicle_id) ?? "—"}
+        <Link
+          href={`/dashboard/transportation/trips/${d.id}`}
+          className="font-mono font-semibold hover:underline"
+        >
+          {vehicleMap.get(d.vehicle_id) ?? "—"}
+        </Link>
+      ),
+    },
+    {
+      id: "current_leg",
+      header: "Current leg",
+      cell: (d) => {
+        const leg = lastLegByDispatch.get(d.id);
+        if (!leg) {
+          return <span className="text-xs text-muted-foreground">—</span>;
+        }
+        const from = leg.from_site_id
+          ? siteMap.get(leg.from_site_id) ?? leg.from_label
+          : leg.from_label;
+        const to = leg.to_site_id
+          ? siteMap.get(leg.to_site_id) ?? leg.to_label
+          : leg.to_label;
+        return (
+          <div className="flex flex-col text-sm">
+            <span>
+              {from ?? "—"} <ArrowRight className="mx-1 inline size-3" />{" "}
+              {to ?? "—"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              leg {leg.leg_order} ·{" "}
+              {leg.arrived_at
+                ? `arrived ${formatManila(leg.arrived_at, "MMM d · HH:mm")}`
+                : "in transit"}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      id: "manifest",
+      header: "Manifest",
+      cell: (d) => {
+        const s = manifestSummary.get(d.id);
+        if (!s) return <span className="text-xs text-muted-foreground">—</span>;
+        return (
+          <span className="text-sm">
+            {s.groups} group{s.groups === 1 ? "" : "s"} · {s.pax} pax
+            {s.remaining > 0 ? (
+              <span className="ml-1 text-amber-700 dark:text-amber-300">
+                ({s.remaining} on board)
+              </span>
+            ) : null}
           </span>
-          <span className="text-xs text-muted-foreground">
-            {d.delegation_id ? delegationMap.get(d.delegation_id) ?? "—" : "—"}
-            {d.sport ? ` · ${d.sport}` : ""}
-            {d.team_count ? ` · ${d.team_count} team${d.team_count > 1 ? "s" : ""}` : ""}
-          </span>
-        </div>
-      ),
+        );
+      },
     },
     {
-      id: "route",
-      header: "From → To",
-      cell: (d) => (
-        <span className="text-sm">
-          {d.origin_site_id ? siteMap.get(d.origin_site_id) ?? "—" : "—"}
-          {" → "}
-          {d.destination_site_id
-            ? siteMap.get(d.destination_site_id) ?? "—"
-            : "—"}
-        </span>
-      ),
-    },
-    {
-      id: "pax",
-      header: "Pax",
-      cell: (d) => (
-        <span className="font-mono text-sm">{d.expected_pax ?? "—"}</span>
-      ),
-    },
-    {
-      id: "scheduled",
-      header: "Scheduled",
+      id: "opened",
+      header: "Opened",
       cell: (d) => (
         <span className="font-mono text-xs">
           {formatManila(d.dispatched_at, "MMM d · HH:mm")}
@@ -153,47 +194,6 @@ export function DispatchTable({
       ),
     },
   ];
-
-  if (canManage) {
-    columns.push({
-      id: "actions",
-      header: "",
-      className: "w-44 text-right",
-      cell: (d) => {
-        const status = d.status as DispatchStatus;
-        if (status === "completed" || status === "cancelled") {
-          return <span className="text-muted-foreground text-xs">—</span>;
-        }
-        return (
-          <div className="flex items-center justify-end gap-1">
-            {status === "scheduled" ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setStatus(d.id, "in_transit")}
-              >
-                Start
-              </Button>
-            ) : null}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setStatus(d.id, "completed")}
-            >
-              Complete
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setStatus(d.id, "cancelled")}
-            >
-              Cancel
-            </Button>
-          </div>
-        );
-      },
-    });
-  }
 
   return (
     <DataTable
@@ -227,9 +227,9 @@ export function DispatchTable({
         </Select>
       }
       empty={{
-        title: "No dispatches yet",
+        title: "No trips yet",
         description:
-          "Create a dispatch when a vehicle leaves with delegation passengers.",
+          "Use Scan for Departure on a bus to open the first trip.",
       }}
     />
   );

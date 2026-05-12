@@ -1,4 +1,4 @@
-import { Fuel, Plus, Route as RouteIcon, Send } from "lucide-react";
+import { Fuel, Plus, Route as RouteIcon } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Forbidden } from "@/components/shared/forbidden";
 import { Button } from "@/components/ui/button";
@@ -10,27 +10,29 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DispatchFormDialog } from "@/components/transportation/dispatch-form-dialog";
+import { BusRouteReport } from "@/components/transportation/bus-route-report";
 import { DispatchTable } from "@/components/transportation/dispatch-table";
 import { FuelLogDialog } from "@/components/transportation/fuel-log-dialog";
 import { FuelLogTable } from "@/components/transportation/fuel-log-table";
-import { ManualLogDialog } from "@/components/transportation/manual-log-dialog";
 import { MissingAthleteCard } from "@/components/transportation/missing-athlete-card";
-import { RecentLogs } from "@/components/transportation/recent-logs";
+import { PassengerReport } from "@/components/transportation/passenger-report";
 import { RouteFormDialog } from "@/components/transportation/route-form-dialog";
 import { RouteTable } from "@/components/transportation/route-table";
-import { ScanVehicleDialog } from "@/components/transportation/scan-vehicle-dialog";
+import { ScanArrivalDialog } from "@/components/transportation/scan-arrival-dialog";
+import { ScanDepartureDialog } from "@/components/transportation/scan-departure-dialog";
 import { VehicleFormDialog } from "@/components/transportation/vehicle-form-dialog";
 import { VehicleTable } from "@/components/transportation/vehicle-table";
 import {
+  getBusRouteReport,
   getDispatches,
   getFuelLogs,
   getMissingAthleteReport,
+  getPassengerReport,
   getTransportSummary,
-  getVehicleLogs,
   getVehicleRoutes,
   getVehicles,
 } from "@/lib/actions/vehicles";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getSites } from "@/lib/actions/sites";
 import { getDelegations } from "@/lib/actions/delegations";
 import { getCurrentProfile } from "@/lib/auth/session";
@@ -61,7 +63,6 @@ export default async function TransportationPage() {
 
   const [
     vehiclesRes,
-    logsRes,
     routesRes,
     sitesRes,
     delegationsRes,
@@ -69,9 +70,10 @@ export default async function TransportationPage() {
     fuelRes,
     summaryRes,
     missingRes,
+    busRouteRes,
+    passengerRes,
   ] = await Promise.all([
     getVehicles(false),
-    getVehicleLogs(200),
     getVehicleRoutes(),
     getSites(false),
     getDelegations(false),
@@ -79,10 +81,11 @@ export default async function TransportationPage() {
     getFuelLogs(200),
     getTransportSummary(),
     getMissingAthleteReport(50),
+    getBusRouteReport({ limit: 100 }),
+    getPassengerReport({ limit: 100 }),
   ]);
 
   const vehicles = vehiclesRes.error ? [] : (vehiclesRes.data ?? []);
-  const logs = logsRes.error ? [] : (logsRes.data ?? []);
   const routes = routesRes.error ? [] : (routesRes.data ?? []);
   const sites = sitesRes.error ? [] : (sitesRes.data ?? []);
   const delegations = delegationsRes.error ? [] : (delegationsRes.data ?? []);
@@ -90,6 +93,53 @@ export default async function TransportationPage() {
   const fuelLogs = fuelRes.error ? [] : (fuelRes.data ?? []);
   const summary = summaryRes.error ? null : summaryRes.data;
   const missingRows = missingRes.error ? [] : (missingRes.data ?? []);
+  const busRouteRows = busRouteRes.error ? [] : (busRouteRes.data ?? []);
+  const passengerRows = passengerRes.error ? [] : (passengerRes.data ?? []);
+
+  // Pull trip legs + manifest for the active dispatches so the table can
+  // render "current leg" and "manifest" columns without N+1 fetches.
+  const dispatchIds = dispatches.map((d) => d.id);
+  let tripLegs: Array<{
+    id: string;
+    dispatch_id: string;
+    leg_order: number;
+    from_site_id: string | null;
+    from_label: string | null;
+    to_site_id: string | null;
+    to_label: string | null;
+    departed_at: string;
+    arrived_at: string | null;
+  }> = [];
+  let manifest: Array<{
+    dispatch_id: string;
+    total_passengers: number;
+    dropped_off: number;
+  }> = [];
+  if (dispatchIds.length > 0) {
+    const admin = createAdminClient();
+    const [legsRes2, manifestRes2] = await Promise.all([
+      admin
+        .schema("palaro")
+        .from("vehicle_trip_legs")
+        .select(
+          "id, dispatch_id, leg_order, from_site_id, from_label, to_site_id, to_label, departed_at, arrived_at",
+        )
+        .in("dispatch_id", dispatchIds),
+      admin
+        .schema("palaro")
+        .from("vehicle_trip_manifest")
+        .select("dispatch_id, total_passengers, dropped_off")
+        .in("dispatch_id", dispatchIds),
+    ]);
+    tripLegs = legsRes2.data ?? [];
+    manifest = manifestRes2.data ?? [];
+  }
+
+  const activeVehicleIds = new Set(
+    dispatches
+      .filter((d) => d.status === "scheduled" || d.status === "in_transit")
+      .map((d) => d.vehicle_id),
+  );
 
   const tripsToday = summary?.total_dispatches_today ?? 0;
   const paxToday = summary?.total_pax_today ?? 0;
@@ -99,31 +149,14 @@ export default async function TransportationPage() {
     <div className="space-y-6">
       <PageHeader
         title="Transportation"
-        description="Vehicles, multi-stop routes, dispatches, and per-venue arrival/departure scans."
+        description="Bus dispatching, terminal-to-terminal trips, and per-group passenger tracking."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {canDispatch ? (
-              <DispatchFormDialog
-                vehicles={vehicles}
-                sites={sites}
-                delegations={delegations}
-                routes={routes}
-                trigger={
-                  <Button>
-                    <Send className="size-4" />
-                    Dispatch
-                  </Button>
-                }
-              />
+              <ScanDepartureDialog sites={sites} delegations={delegations} />
             ) : null}
-            {canScan ? <ScanVehicleDialog sites={sites} /> : null}
-            {canScan ? (
-              <ManualLogDialog
-                vehicles={vehicles}
-                sites={sites}
-                delegations={delegations}
-                dispatches={dispatches}
-              />
+            {canDispatch ? (
+              <ScanArrivalDialog sites={sites} delegations={delegations} />
             ) : null}
             {canManage ? (
               <VehicleFormDialog
@@ -146,30 +179,29 @@ export default async function TransportationPage() {
         <StatCard label="Fuel today (L)" value={fuelToday} />
       </div>
 
-      <Tabs defaultValue="dispatches">
+      <Tabs defaultValue="trips">
         <TabsList>
-          <TabsTrigger value="dispatches">Dispatches</TabsTrigger>
+          <TabsTrigger value="trips">Trips</TabsTrigger>
           <TabsTrigger value="vehicles">Vehicles</TabsTrigger>
           <TabsTrigger value="routes">Routes</TabsTrigger>
-          <TabsTrigger value="logs">Activity</TabsTrigger>
           <TabsTrigger value="fuel">Fuel</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dispatches" className="mt-4">
+        <TabsContent value="trips" className="mt-4">
           <DispatchTable
             dispatches={dispatches}
+            legs={tripLegs}
+            manifest={manifest}
             vehicles={vehicles}
             sites={sites}
-            delegations={delegations}
-            canManage={canDispatch}
           />
         </TabsContent>
 
         <TabsContent value="vehicles" className="mt-4">
           <VehicleTable
             vehicles={vehicles}
-            logs={logs}
+            activeVehicleIds={activeVehicleIds}
             canManage={canManage}
           />
         </TabsContent>
@@ -199,25 +231,6 @@ export default async function TransportationPage() {
           />
         </TabsContent>
 
-        <TabsContent value="logs" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Recent vehicle scans</CardTitle>
-              <CardDescription>
-                Latest 30 arrivals and departures across all sites.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RecentLogs
-                logs={logs}
-                vehicles={vehicles}
-                sites={sites}
-                delegations={delegations}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="fuel" className="mt-4 space-y-4">
           {canFuel ? (
             <div className="flex justify-end">
@@ -244,6 +257,15 @@ export default async function TransportationPage() {
             rows={missingRows}
             vehicles={vehicles}
             sites={sites}
+            delegations={delegations}
+          />
+          <BusRouteReport
+            initial={busRouteRows}
+            vehicles={vehicles}
+            sites={sites}
+          />
+          <PassengerReport
+            initial={passengerRows}
             delegations={delegations}
           />
           <Card>

@@ -26,37 +26,21 @@ import { cn } from "@/lib/utils";
 import type { Database } from "@/types/database";
 
 type Vehicle = Database["palaro"]["Tables"]["vehicles"]["Row"];
-type VehicleLog = Database["palaro"]["Tables"]["vehicle_logs"]["Row"];
-
-type Direction = "in" | "out";
 
 const ALL_TYPE = "__all__";
 
 interface Props {
   vehicles: Vehicle[];
-  logs: VehicleLog[];
+  // Vehicle IDs that currently have an open trip (status = scheduled or in_transit).
+  activeVehicleIds: Set<string>;
   canManage: boolean;
 }
 
-export function VehicleTable({ vehicles, logs, canManage }: Props) {
+export function VehicleTable({ vehicles, activeVehicleIds, canManage }: Props) {
   const router = useRouter();
   const [typeFilter, setTypeFilter] = useState<VehicleType | typeof ALL_TYPE>(
     ALL_TYPE,
   );
-
-  // Latest log per vehicle drives the "Currently in/out" badge.
-  const latestPerVehicle = useMemo(() => {
-    const m = new Map<string, { direction: Direction; at: string }>();
-    for (const log of logs) {
-      if (!m.has(log.vehicle_id)) {
-        m.set(log.vehicle_id, {
-          direction: log.direction as Direction,
-          at: log.scanned_at,
-        });
-      }
-    }
-    return m;
-  }, [logs]);
 
   const filtered = useMemo(() => {
     if (typeFilter === ALL_TYPE) return vehicles;
@@ -126,25 +110,18 @@ export function VehicleTable({ vehicles, logs, canManage }: Props) {
       id: "status",
       header: "Status",
       cell: (v) => {
-        const last = latestPerVehicle.get(v.id);
-        if (!last) {
-          return (
-            <Badge variant="secondary" className="bg-gray-100 text-gray-700">
-              No scans yet
-            </Badge>
-          );
-        }
+        const onTrip = activeVehicleIds.has(v.id);
         return (
           <Badge
             variant="secondary"
             className={cn(
               "border-transparent",
-              last.direction === "in"
-                ? "bg-green-100 text-green-800"
-                : "bg-blue-100 text-blue-800",
+              onTrip
+                ? "bg-blue-100 text-blue-800"
+                : "bg-gray-100 text-gray-700",
             )}
           >
-            Last: {last.direction === "in" ? "checked in" : "checked out"}
+            {onTrip ? "On trip" : "Idle"}
           </Badge>
         );
       },

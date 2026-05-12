@@ -12,9 +12,11 @@ import {
   deleteGarbageRuleSchema,
   deleteGarbageSchema,
   generateGarbageWeekSchema,
+  markGarbageCancelledSchema,
   markGarbageCollectedSchema,
   markGarbageMissedSchema,
   markNoCollectionNeededSchema,
+  unmarkGarbageCancelledSchema,
   requestGarbageCollectionSchema,
   toggleGarbageCollectedSchema,
   updateGarbageCollectorSchema,
@@ -362,6 +364,97 @@ export async function markNoCollectionNeeded(
     entity_type: "garbage_collection",
     entity_id: id,
     changes: { status: "no_collection_needed", reason: reason ?? null },
+    user_id: auth.profile.id,
+  });
+
+  revalidatePath(GARBAGE_PATH);
+  return ok();
+}
+
+// Cancel a specific scheduled pickup (e.g. venue is closed today, athletes
+// already left). Flips the row to "cancelled" and appends an audit note.
+// Available to anyone with garbage.log — see unmarkGarbageCancelled for undo.
+export async function markGarbageCancelled(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const auth = await requireGarbageLogger();
+  if (!auth.ok) return fail(auth.error);
+
+  const parsed = markGarbageCancelledSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+  const { id, reason } = parsed.data;
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .schema("palaro")
+    .from("garbage_collections")
+    .select("notes")
+    .eq("id", id)
+    .single();
+
+  const stamp = new Date().toISOString();
+  const note = `[CANCELLED ${stamp}] ${auth.profile.full_name ?? auth.profile.email}${reason ? `: ${reason}` : ""}`;
+  const composedNotes = [existing?.notes, note].filter(Boolean).join("\n");
+
+  const { error } = await admin
+    .schema("palaro")
+    .from("garbage_collections")
+    .update({ status: "cancelled", notes: composedNotes })
+    .eq("id", id);
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "garbage_collection",
+    entity_id: id,
+    changes: { status: "cancelled", reason: reason ?? null },
+    user_id: auth.profile.id,
+  });
+
+  revalidatePath(GARBAGE_PATH);
+  return ok();
+}
+
+// Undo a cancellation — flips the row back to "scheduled" and stamps an
+// audit note so the trail records both directions.
+export async function unmarkGarbageCancelled(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const auth = await requireGarbageLogger();
+  if (!auth.ok) return fail(auth.error);
+
+  const parsed = unmarkGarbageCancelledSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+  const { id } = parsed.data;
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .schema("palaro")
+    .from("garbage_collections")
+    .select("notes")
+    .eq("id", id)
+    .single();
+
+  const stamp = new Date().toISOString();
+  const note = `[CANCEL UNDONE ${stamp}] ${auth.profile.full_name ?? auth.profile.email}`;
+  const composedNotes = [existing?.notes, note].filter(Boolean).join("\n");
+
+  const { error } = await admin
+    .schema("palaro")
+    .from("garbage_collections")
+    .update({ status: "scheduled", notes: composedNotes })
+    .eq("id", id);
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "garbage_collection",
+    entity_id: id,
+    changes: { status: "scheduled", from: "cancelled" },
     user_id: auth.profile.id,
   });
 

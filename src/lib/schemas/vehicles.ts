@@ -52,44 +52,6 @@ export type UpdateVehicleInput = z.infer<typeof updateVehicleSchema>;
 export const deleteVehicleSchema = z.object({ id: z.string().uuid() });
 
 // ---------------------------------------------------------------------------
-// VEHICLE LOGS (per-venue arrival/departure scans)
-// ---------------------------------------------------------------------------
-
-// Manual log entry — operator picks vehicle + direction. dispatch_id and the
-// snapshot fields are optional so ad-hoc logs (no dispatch in the system yet)
-// still record cleanly.
-export const logVehicleSchema = z.object({
-  vehicle_id: z.string().uuid("Pick a vehicle."),
-  site_id: z.string().uuid("Pick a site."),
-  direction: z.enum(["in", "out"]),
-  dispatch_id: z.string().uuid().nullable().optional(),
-  delegation_id: z.string().uuid().nullable().optional(),
-  sport: optionalShortText,
-  team_count: z.number().int().min(0).max(50).optional(),
-  passenger_count: z.number().int().min(0).max(500).optional(),
-  from_site_id: z.string().uuid().nullable().optional(),
-  to_site_id: z.string().uuid().nullable().optional(),
-  notes: optionalText,
-});
-export type LogVehicleInput = z.infer<typeof logVehicleSchema>;
-
-// QR scan — auto-decides direction (last log was 'in' → next is 'out', else 'in').
-// The dispatcher can attach the active dispatch + per-scan snapshot fields.
-export const scanVehicleSchema = z.object({
-  scanned_value: z.string().trim().min(1, "Scan value is empty").max(500),
-  site_id: z.string().uuid("Pick a site."),
-  dispatch_id: z.string().uuid().nullable().optional(),
-  delegation_id: z.string().uuid().nullable().optional(),
-  sport: optionalShortText,
-  team_count: z.number().int().min(0).max(50).optional(),
-  passenger_count: z.number().int().min(0).max(500).optional(),
-  from_site_id: z.string().uuid().nullable().optional(),
-  to_site_id: z.string().uuid().nullable().optional(),
-  notes: optionalText,
-});
-export type ScanVehicleInput = z.infer<typeof scanVehicleSchema>;
-
-// ---------------------------------------------------------------------------
 // ROUTES (multi-stop)
 // ---------------------------------------------------------------------------
 
@@ -126,29 +88,132 @@ export type CreateRouteInput = z.infer<typeof createRouteSchema>;
 export const deleteRouteSchema = z.object({ id: z.string().uuid() });
 
 // ---------------------------------------------------------------------------
-// DISPATCHES (the trip record before a vehicle leaves)
+// TRIPS / DISPATCHES — multi-leg, multi-group passenger trips
 // ---------------------------------------------------------------------------
 
-export const createDispatchSchema = z.object({
-  vehicle_id: z.string().uuid("Pick a vehicle."),
-  route_id: z.string().uuid().nullable().optional(),
-  delegation_id: z.string().uuid("Pick a delegation."),
-  sport: z.string().trim().min(1, "Pick or type the sport / team.").max(120),
-  team_count: z.number().int().min(1, "At least one team.").max(50),
-  expected_pax: z
+// One passenger group on a trip (delegation + team + headcount).
+export const manifestRowSchema = z.object({
+  delegation_id: z.string().uuid().nullable().optional(),
+  team_name: z
+    .string()
+    .trim()
+    .min(1, "Team name is required.")
+    .max(120),
+  total_passengers: z
     .number()
     .int()
-    .min(1, "Headcount boarding at origin is required.")
+    .min(1, "At least one passenger.")
     .max(500),
-  origin_site_id: z.string().uuid("Pick the origin site."),
-  destination_site_id: z.string().uuid("Pick the destination site."),
-  scheduled_at: z
-    .string()
-    .refine((s) => !s || !isNaN(Date.parse(s)), "Invalid date/time")
-    .optional(),
   notes: optionalText,
 });
-export type CreateDispatchInput = z.infer<typeof createDispatchSchema>;
+export type ManifestRowInput = z.infer<typeof manifestRowSchema>;
+
+// Either a site_id or a free-text label must be set for a terminal.
+const terminalRefinement = <
+  T extends { site_id?: string | null; label?: string | null },
+>(
+  obj: T,
+) =>
+  Boolean(obj.site_id) || (typeof obj.label === "string" && obj.label.trim().length > 0);
+
+const fromTerminal = z.object({
+  from_site_id: z.string().uuid().nullable().optional(),
+  from_label: z.string().trim().max(200).optional(),
+});
+const toTerminal = z.object({
+  to_site_id: z.string().uuid().nullable().optional(),
+  to_label: z.string().trim().max(200).optional(),
+});
+
+// Open a brand-new trip from a "Scan for Departure" action.
+export const openTripFromDepartureSchema = z
+  .object({
+    scanned_value: z.string().trim().min(1, "Scan value is empty.").max(500),
+    route_id: z.string().uuid().nullable().optional(),
+    scheduled_at: z
+      .string()
+      .refine((s) => !s || !isNaN(Date.parse(s)), "Invalid date/time")
+      .optional(),
+    manifest: z
+      .array(manifestRowSchema)
+      .min(1, "Add at least one passenger group.")
+      .max(50),
+    notes: optionalText,
+  })
+  .merge(fromTerminal)
+  .merge(toTerminal)
+  .refine((d) => terminalRefinement({ site_id: d.from_site_id, label: d.from_label }), {
+    message: "Pick or label the origin terminal.",
+    path: ["from_site_id"],
+  })
+  .refine((d) => terminalRefinement({ site_id: d.to_site_id, label: d.to_label }), {
+    message: "Pick or label the destination terminal.",
+    path: ["to_site_id"],
+  });
+export type OpenTripFromDepartureInput = z.infer<
+  typeof openTripFromDepartureSchema
+>;
+
+// Continue an active trip — dispatcher scanned for departure again at a
+// terminal the bus arrived at earlier. Adds a new leg and optionally adjusts
+// the manifest (board new groups; tweak existing totals if needed).
+export const continueDepartureSchema = z
+  .object({
+    dispatch_id: z.string().uuid(),
+    add_manifest: z.array(manifestRowSchema).max(50).optional(),
+    adjust_manifest: z
+      .array(
+        z.object({
+          manifest_id: z.string().uuid(),
+          total_passengers: z.number().int().min(1).max(500),
+        }),
+      )
+      .max(50)
+      .optional(),
+    notes: optionalText,
+  })
+  .merge(toTerminal)
+  .refine((d) => terminalRefinement({ site_id: d.to_site_id, label: d.to_label }), {
+    message: "Pick or label the next terminal.",
+    path: ["to_site_id"],
+  });
+export type ContinueDepartureInput = z.infer<typeof continueDepartureSchema>;
+
+// Record arrival of the currently-open leg, with per-group drop-off counts.
+export const recordArrivalSchema = z.object({
+  dispatch_id: z.string().uuid(),
+  leg_id: z.string().uuid(),
+  dropoffs: z
+    .array(
+      z.object({
+        manifest_id: z.string().uuid(),
+        count: z.number().int().min(0).max(500),
+      }),
+    )
+    .max(50),
+  arrival_notes: optionalText,
+});
+export type RecordArrivalInput = z.infer<typeof recordArrivalSchema>;
+
+// Close a trip. Requires force=true + reason when any manifest row has
+// remaining > 0.
+export const closeTripSchema = z
+  .object({
+    dispatch_id: z.string().uuid(),
+    force: z.boolean().optional(),
+    reason: z.string().trim().max(500).optional(),
+  })
+  .refine((d) => !d.force || (d.reason && d.reason.length > 0), {
+    message: "Force-close requires a reason.",
+    path: ["reason"],
+  });
+export type CloseTripInput = z.infer<typeof closeTripSchema>;
+
+// QR lookup helper used by both scan dialogs before showing the right form.
+export const scanLookupSchema = z.object({
+  scanned_value: z.string().trim().min(1, "Scan value is empty.").max(500),
+});
+export type ScanLookupInput = z.infer<typeof scanLookupSchema>;
 
 export const updateDispatchStatusSchema = z.object({
   id: z.string().uuid(),

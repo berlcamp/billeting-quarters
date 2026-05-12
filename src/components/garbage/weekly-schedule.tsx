@@ -2,9 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarOff } from "lucide-react";
+import { Ban, CalendarOff, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -13,7 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toggleGarbageCollected } from "@/lib/actions/garbage";
+import {
+  markGarbageCancelled,
+  toggleGarbageCollected,
+  unmarkGarbageCancelled,
+} from "@/lib/actions/garbage";
 import {
   DAY_OF_WEEK_LABELS,
   ISO_DAYS,
@@ -132,6 +137,34 @@ export function WeeklySchedule({
     });
   }
 
+  async function handleCancel(row: GarbageRow) {
+    if (!canLog) return;
+    startTransition(async () => {
+      const result = await markGarbageCancelled({ id: row.id });
+      if (result.error) {
+        toast.error("Cancel failed", { description: result.error });
+        return;
+      }
+      toast.success("Pickup cancelled", {
+        description: `${siteMap.get(row.site_id) ?? "Pickup"} · ${formatManila(row.scheduled_at, "MMM d HH:mm")}`,
+      });
+      router.refresh();
+    });
+  }
+
+  async function handleUndoCancel(row: GarbageRow) {
+    if (!canLog) return;
+    startTransition(async () => {
+      const result = await unmarkGarbageCancelled({ id: row.id });
+      if (result.error) {
+        toast.error("Undo failed", { description: result.error });
+        return;
+      }
+      toast.success("Pickup restored");
+      router.refresh();
+    });
+  }
+
   const filteredCount = filteredCollections.length;
   const totalCount = collections.length;
   const isFiltered = siteFilter !== ALL_SITES;
@@ -213,7 +246,8 @@ export function WeeklySchedule({
             ) : (
               <ul className="divide-y">
                 {rows.map((row) => {
-                  const collected = isCollected(row);
+                  const cancelled = row.status === "cancelled";
+                  const collected = !cancelled && isCollected(row);
                   const collector = row.collector_id
                     ? collectorMap.get(row.collector_id)
                     : undefined;
@@ -228,11 +262,12 @@ export function WeeklySchedule({
                       className={cn(
                         "flex items-start gap-3 px-3 py-2.5 text-sm",
                         collected && "bg-green-50/50",
+                        cancelled && "bg-muted/40",
                       )}
                     >
                       <Checkbox
                         checked={collected}
-                        disabled={!canLog || pending}
+                        disabled={!canLog || pending || cancelled}
                         onCheckedChange={(v) => handleToggle(row, v === true)}
                         aria-label={
                           collected
@@ -249,7 +284,7 @@ export function WeeklySchedule({
                           <span
                             className={cn(
                               "truncate font-medium",
-                              collected &&
+                              (collected || cancelled) &&
                                 "text-muted-foreground line-through decoration-1",
                             )}
                           >
@@ -261,6 +296,14 @@ export function WeeklySchedule({
                               className="border-transparent bg-yellow-100 text-yellow-800"
                             >
                               Special
+                            </Badge>
+                          ) : null}
+                          {cancelled ? (
+                            <Badge
+                              variant="secondary"
+                              className="border-transparent bg-red-100 text-red-800"
+                            >
+                              Cancelled
                             </Badge>
                           ) : null}
                         </div>
@@ -277,6 +320,34 @@ export function WeeklySchedule({
                           </div>
                         ) : null}
                       </div>
+                      {canLog && !collected ? (
+                        cancelled ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={pending}
+                            onClick={() => handleUndoCancel(row)}
+                            aria-label="Undo cancellation"
+                            title="Undo cancellation"
+                          >
+                            <Undo2 className="size-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={pending}
+                            onClick={() => handleCancel(row)}
+                            aria-label="Cancel this pickup"
+                            title="Cancel this pickup"
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Ban className="size-4" />
+                          </Button>
+                        )
+                      ) : null}
                     </li>
                   );
                 })}

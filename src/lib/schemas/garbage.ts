@@ -9,6 +9,7 @@ export const garbageStatusSchema = z.enum([
   "missed",
   "special_request",
   "no_collection_needed",
+  "cancelled",
 ]);
 
 // ---------- Concrete pickup rows (palaro.garbage_collections) ----------
@@ -67,6 +68,23 @@ export const markNoCollectionNeededSchema = z.object({
 });
 export type MarkNoCollectionNeededInput = z.infer<
   typeof markNoCollectionNeededSchema
+>;
+
+// Cancel a specific pickup on the weekly grid (e.g. venue is closed today).
+// Reversible — see unmarkGarbageCancelledSchema below for the undo path.
+export const markGarbageCancelledSchema = z.object({
+  id: z.string().uuid(),
+  reason: z.string().trim().max(500).optional(),
+});
+export type MarkGarbageCancelledInput = z.infer<
+  typeof markGarbageCancelledSchema
+>;
+
+export const unmarkGarbageCancelledSchema = z.object({
+  id: z.string().uuid(),
+});
+export type UnmarkGarbageCancelledInput = z.infer<
+  typeof unmarkGarbageCancelledSchema
 >;
 
 // Info Hub officer requesting an on-demand pickup for a BQ.

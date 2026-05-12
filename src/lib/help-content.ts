@@ -716,7 +716,12 @@ export const MODULE_GUIDES: ModuleGuide[] = [
       "Maintain a registry of collectors and a recurring weekly schedule. Each week's pickups are generated automatically and ticked off as they're collected.",
     icon: Trash2,
     category: "Logistics",
-    audience: ["logistics_officer", "garbage_logger", "command_center"],
+    audience: [
+      "logistics_officer",
+      "garbage_logger",
+      "command_center",
+      "information_hub_officer",
+    ],
     sections: [
       {
         heading: "Add collectors and rules (one-time setup)",
