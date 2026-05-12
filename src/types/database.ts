@@ -234,6 +234,8 @@ export type Database = {
           resolved_at: string | null;
           resolution_notes: string | null;
           photo_urls: string[] | null;
+          reporting_officer_name: string | null;
+          reporting_officer_position: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -259,6 +261,8 @@ export type Database = {
           resolved_at?: string | null;
           resolution_notes?: string | null;
           photo_urls?: string[] | null;
+          reporting_officer_name?: string | null;
+          reporting_officer_position?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -284,6 +288,8 @@ export type Database = {
           resolved_at?: string | null;
           resolution_notes?: string | null;
           photo_urls?: string[] | null;
+          reporting_officer_name?: string | null;
+          reporting_officer_position?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1432,6 +1438,165 @@ export type Database = {
         };
         Relationships: [];
       };
+      food_supplier_delegations: {
+        Row: {
+          id: string;
+          supplier_id: string;
+          delegation_id: string;
+          priority: number;
+          created_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          supplier_id: string;
+          delegation_id: string;
+          priority?: number;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          supplier_id?: string;
+          delegation_id?: string;
+          priority?: number;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Relationships: [];
+      };
+      site_monitoring_visits: {
+        Row: {
+          id: string;
+          site_id: string;
+          visit_title: string;
+          individuals: Json;
+          visited_at: string;
+          observations: string | null;
+          notes_to_admin: string | null;
+          logged_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          visit_title: string;
+          individuals?: Json;
+          visited_at?: string;
+          observations?: string | null;
+          notes_to_admin?: string | null;
+          logged_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          site_id?: string;
+          visit_title?: string;
+          individuals?: Json;
+          visited_at?: string;
+          observations?: string | null;
+          notes_to_admin?: string | null;
+          logged_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      external_personnel_logs: {
+        Row: {
+          id: string;
+          site_id: string | null;
+          full_name: string;
+          position: string;
+          organization: string | null;
+          logged_at: string;
+          status: string;
+          notes: string | null;
+          logged_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          site_id?: string | null;
+          full_name: string;
+          position: string;
+          organization?: string | null;
+          logged_at?: string;
+          status?: string;
+          notes?: string | null;
+          logged_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          site_id?: string | null;
+          full_name?: string;
+          position?: string;
+          organization?: string | null;
+          logged_at?: string;
+          status?: string;
+          notes?: string | null;
+          logged_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      end_of_day_reports: {
+        Row: {
+          id: string;
+          site_id: string;
+          report_date: string;
+          all_accounted_for: boolean;
+          outside_athletes: number;
+          outside_personnel: number;
+          outside_officials: number;
+          outside_details: string | null;
+          reporting_officer_name: string;
+          reporting_officer_position: string | null;
+          notes: string | null;
+          logged_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          report_date: string;
+          all_accounted_for?: boolean;
+          outside_athletes?: number;
+          outside_personnel?: number;
+          outside_officials?: number;
+          outside_details?: string | null;
+          reporting_officer_name: string;
+          reporting_officer_position?: string | null;
+          notes?: string | null;
+          logged_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          site_id?: string;
+          report_date?: string;
+          all_accounted_for?: boolean;
+          outside_athletes?: number;
+          outside_personnel?: number;
+          outside_officials?: number;
+          outside_details?: string | null;
+          reporting_officer_name?: string;
+          reporting_officer_position?: string | null;
+          notes?: string | null;
+          logged_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
@@ -1453,7 +1618,8 @@ export type Database = {
         | "transportation_driver"
         | "garbage_logger"
         | "food_supplier_admin"
-        | "incident_monitoring";
+        | "incident_monitoring"
+        | "information_hub_officer";
       profile_status: "pending" | "active" | "suspended";
       incident_category:
         | "medical"
@@ -1526,7 +1692,8 @@ export type Database = {
         | "scheduled"
         | "collected"
         | "missed"
-        | "special_request";
+        | "special_request"
+        | "no_collection_needed";
     };
     CompositeTypes: { [_ in never]: never };
   };

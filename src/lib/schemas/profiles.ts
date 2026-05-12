@@ -18,6 +18,7 @@ export const userRoleSchema = z.enum([
   "garbage_logger",
   "food_supplier_admin",
   "incident_monitoring",
+  "information_hub_officer",
 ]);
 
 export const profileStatusSchema = z.enum(["active", "suspended"]);
