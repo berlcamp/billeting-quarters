@@ -25,6 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -218,17 +219,15 @@ export function VisitFormDialog({ trigger, sites, visit }: Props) {
                 </FormItem>
               )}
             />
-            <FormItem>
-              <FormLabel>Individuals who came</FormLabel>
-              <FormControl>
-                <Textarea
-                  rows={2}
-                  placeholder="Comma-separated, e.g. Dr. Cruz, Engr. Reyes"
-                  value={individualsRaw}
-                  onChange={(e) => setIndividualsRaw(e.target.value)}
-                />
-              </FormControl>
-            </FormItem>
+            <div className="space-y-2">
+              <Label>Individuals who came</Label>
+              <Textarea
+                rows={2}
+                placeholder="Comma-separated, e.g. Dr. Cruz, Engr. Reyes"
+                value={individualsRaw}
+                onChange={(e) => setIndividualsRaw(e.target.value)}
+              />
+            </div>
             <FormField
               control={form.control}
               name="observations"
