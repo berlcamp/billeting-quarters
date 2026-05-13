@@ -122,36 +122,11 @@ export function EndOfDayTable({ reports, sites, canEdit }: Props) {
                   </TableCell>
                   {canEdit ? (
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          }
-                        />
-                        <DropdownMenuContent align="end">
-                          <EndOfDayFormDialog
-                            sites={sites}
-                            report={r}
-                            trigger={
-                              <DropdownMenuItem
-                                onSelect={(e) => e.preventDefault()}
-                              >
-                                <Pencil className="size-4" />
-                                Edit
-                              </DropdownMenuItem>
-                            }
-                          />
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(r.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="size-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <EodRowActions
+                        report={r}
+                        sites={sites}
+                        onDelete={() => handleDelete(r.id)}
+                      />
                     </TableCell>
                   ) : null}
                 </TableRow>
@@ -161,5 +136,44 @@ export function EndOfDayTable({ reports, sites, canEdit }: Props) {
         </Table>
       </div>
     </div>
+  );
+}
+
+interface EodRowActionsProps {
+  report: Row;
+  sites: Site[];
+  onDelete: () => void;
+}
+
+function EodRowActions({ report, sites, onDelete }: EodRowActionsProps) {
+  const [editOpen, setEditOpen] = useState(false);
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setEditOpen(true)}>
+            <Pencil className="size-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onDelete} className="text-destructive">
+            <Trash2 className="size-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <EndOfDayFormDialog
+        sites={sites}
+        report={report}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
+    </>
   );
 }

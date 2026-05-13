@@ -55,14 +55,28 @@ function todayPH(): string {
 }
 
 interface Props {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   sites: Site[];
   report?: Row;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function EndOfDayFormDialog({ trigger, sites, report }: Props) {
+export function EndOfDayFormDialog({
+  trigger,
+  sites,
+  report,
+  open: controlledOpen,
+  onOpenChange,
+}: Props) {
   const isEdit = !!report;
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
@@ -136,7 +150,7 @@ export function EndOfDayFormDialog({ trigger, sites, report }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
+      {trigger ? <DialogTrigger render={trigger as React.ReactElement} /> : null}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>

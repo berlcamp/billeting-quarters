@@ -152,42 +152,12 @@ export function ExternalPersonnelTable({ logs, sites, canEdit }: Props) {
                   </TableCell>
                   {canEdit ? (
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          }
-                        />
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => toggleStatus(l.id, l.status)}
-                          >
-                            Mark{" "}
-                            {l.status === "active" ? "inactive" : "active"}
-                          </DropdownMenuItem>
-                          <ExternalPersonnelFormDialog
-                            sites={sites}
-                            log={l}
-                            trigger={
-                              <DropdownMenuItem
-                                onSelect={(e) => e.preventDefault()}
-                              >
-                                <Pencil className="size-4" />
-                                Edit
-                              </DropdownMenuItem>
-                            }
-                          />
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(l.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="size-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <PersonnelRowActions
+                        log={l}
+                        sites={sites}
+                        onToggleStatus={() => toggleStatus(l.id, l.status)}
+                        onDelete={() => handleDelete(l.id)}
+                      />
                     </TableCell>
                   ) : null}
                 </TableRow>
@@ -197,5 +167,53 @@ export function ExternalPersonnelTable({ logs, sites, canEdit }: Props) {
         </Table>
       </div>
     </div>
+  );
+}
+
+interface PersonnelRowActionsProps {
+  log: Row;
+  sites: Site[];
+  onToggleStatus: () => void;
+  onDelete: () => void;
+}
+
+function PersonnelRowActions({
+  log,
+  sites,
+  onToggleStatus,
+  onDelete,
+}: PersonnelRowActionsProps) {
+  const [editOpen, setEditOpen] = useState(false);
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={onToggleStatus}>
+            Mark {log.status === "active" ? "inactive" : "active"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setEditOpen(true)}>
+            <Pencil className="size-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onDelete} className="text-destructive">
+            <Trash2 className="size-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ExternalPersonnelFormDialog
+        sites={sites}
+        log={log}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
+    </>
   );
 }

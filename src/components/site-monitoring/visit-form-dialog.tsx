@@ -69,14 +69,28 @@ function formatIndividuals(list: unknown): string {
 }
 
 interface Props {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   sites: Site[];
   visit?: Visit;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function VisitFormDialog({ trigger, sites, visit }: Props) {
+export function VisitFormDialog({
+  trigger,
+  sites,
+  visit,
+  open: controlledOpen,
+  onOpenChange,
+}: Props) {
   const isEdit = !!visit;
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [submitting, setSubmitting] = useState(false);
   const [individualsRaw, setIndividualsRaw] = useState(
     visit ? formatIndividuals(visit.individuals) : "",
@@ -139,7 +153,7 @@ export function VisitFormDialog({ trigger, sites, visit }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
+      {trigger ? <DialogTrigger render={trigger as React.ReactElement} /> : null}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>

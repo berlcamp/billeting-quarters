@@ -60,14 +60,28 @@ function nowLocal(): string {
 }
 
 interface Props {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   sites: Site[];
   log?: Row;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ExternalPersonnelFormDialog({ trigger, sites, log }: Props) {
+export function ExternalPersonnelFormDialog({
+  trigger,
+  sites,
+  log,
+  open: controlledOpen,
+  onOpenChange,
+}: Props) {
   const isEdit = !!log;
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
@@ -122,7 +136,7 @@ export function ExternalPersonnelFormDialog({ trigger, sites, log }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
+      {trigger ? <DialogTrigger render={trigger as React.ReactElement} /> : null}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>

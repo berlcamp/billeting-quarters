@@ -118,36 +118,11 @@ export function VisitsTable({ visits, sites, canEdit }: Props) {
                   </TableCell>
                   {canEdit ? (
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          }
-                        />
-                        <DropdownMenuContent align="end">
-                          <VisitFormDialog
-                            sites={sites}
-                            visit={v}
-                            trigger={
-                              <DropdownMenuItem
-                                onSelect={(e) => e.preventDefault()}
-                              >
-                                <Pencil className="size-4" />
-                                Edit
-                              </DropdownMenuItem>
-                            }
-                          />
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(v.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="size-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <VisitRowActions
+                        visit={v}
+                        sites={sites}
+                        onDelete={() => handleDelete(v.id)}
+                      />
                     </TableCell>
                   ) : null}
                 </TableRow>
@@ -157,5 +132,44 @@ export function VisitsTable({ visits, sites, canEdit }: Props) {
         </Table>
       </div>
     </div>
+  );
+}
+
+interface VisitRowActionsProps {
+  visit: Visit;
+  sites: Site[];
+  onDelete: () => void;
+}
+
+function VisitRowActions({ visit, sites, onDelete }: VisitRowActionsProps) {
+  const [editOpen, setEditOpen] = useState(false);
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => setEditOpen(true)}>
+            <Pencil className="size-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onDelete} className="text-destructive">
+            <Trash2 className="size-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <VisitFormDialog
+        sites={sites}
+        visit={visit}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
+    </>
   );
 }
