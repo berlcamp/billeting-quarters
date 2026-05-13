@@ -83,6 +83,8 @@ interface Props {
   defaultVenueId?: string;
   defaultStart?: string; // ISO
   defaultCourtNumber?: number;
+  // Set false when the trigger element is not a native <button> (e.g. a div).
+  triggerNativeButton?: boolean;
 }
 
 const COURT_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
@@ -95,6 +97,7 @@ export function ScheduleFormDialog({
   defaultVenueId,
   defaultStart,
   defaultCourtNumber,
+  triggerNativeButton,
 }: Props) {
   const isEdit = !!schedule;
   const [open, setOpen] = useState(false);
@@ -174,7 +177,12 @@ export function ScheduleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
+      <DialogTrigger
+        render={trigger as React.ReactElement}
+        {...(triggerNativeButton === undefined
+          ? {}
+          : { nativeButton: triggerNativeButton })}
+      />
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>

@@ -95,155 +95,174 @@ export function DayGrid({
     );
   }
 
+  const stripGradient = `repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(100% / ${HOURS.length} - 1px),
+    var(--border) calc(100% / ${HOURS.length} - 1px),
+    var(--border) calc(100% / ${HOURS.length})
+  )`;
+
   return (
     <div className="overflow-x-auto rounded-md border">
-      <div
-        className="grid min-w-[720px]"
-        style={{
-          gridTemplateColumns: `120px repeat(${HOURS.length}, minmax(48px, 1fr))`,
-        }}
-      >
+      <div className="min-w-[720px]">
         {/* Header row */}
-        <div className="border-b bg-muted/40 px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Venue
-        </div>
-        {HOURS.map((h) => (
-          <div
-            key={`h-${h}`}
-            className="border-b border-l bg-muted/40 py-2 text-center font-mono text-xs text-muted-foreground"
-          >
-            {String(h).padStart(2, "0")}
+        <div className="flex border-b bg-muted/40">
+          <div className="flex shrink-0" style={{ width: "180px" }}>
+            <div className="w-[120px] px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Venue
+            </div>
+            <div className="w-[60px] border-l py-2 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Court
+            </div>
           </div>
-        ))}
-
-        {/* One row per (venue, court) pair */}
-        {venues.flatMap((v) => {
-          const courts = courtsFor(v.id);
-          return courts.map((court) => {
-            const items =
-              byVenueCourt.get(v.id)?.get(court) ?? [];
-            return (
+          <div className="flex flex-1">
+            {HOURS.map((h) => (
               <div
-                key={`${v.id}-${court}`}
-                className="contents"
-                data-venue-id={v.id}
-                data-court={court}
+                key={`h-${h}`}
+                className="flex-1 border-l py-2 text-center font-mono text-xs text-muted-foreground"
               >
-                <div className="border-t px-3 py-3 text-sm">
-                  <div className="font-medium">{v.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Court {court}
-                  </div>
-                </div>
-                <div
-                  className="relative col-span-full border-t"
-                  style={{
-                    gridColumn: `2 / ${HOURS.length + 2}`,
-                    // Re-create cell separators with a layered background.
-                    backgroundImage: `repeating-linear-gradient(
-                      to right,
-                      transparent 0,
-                      transparent calc(100% / ${HOURS.length} - 1px),
-                      var(--border) calc(100% / ${HOURS.length} - 1px),
-                      var(--border) calc(100% / ${HOURS.length})
-                    )`,
-                    minHeight: "64px",
-                  }}
-                >
-                  {/* Existing bookings on this court */}
-                  {items.map((s) => {
-                    const start = toManilaHm(s.scheduled_start);
-                    const end = toManilaHm(s.scheduled_end);
-                    const startMins = start.h * 60 + start.m;
-                    const endMins = end.h * 60 + end.m;
-                    const gridStartMins = HOUR_START * 60;
-                    const gridEndMins = (HOUR_END + 1) * 60;
-                    const totalMins = gridEndMins - gridStartMins;
-                    const left = Math.max(
-                      0,
-                      ((startMins - gridStartMins) / totalMins) * 100,
-                    );
-                    const width = Math.min(
-                      100 - left,
-                      ((endMins - Math.max(startMins, gridStartMins)) /
-                        totalMins) *
-                        100,
-                    );
-                    if (width <= 0) return null;
-                    const status = s.status as ScheduleStatus;
-                    const del = delMap.get(s.delegation_id);
-                    const cancelled = status === "cancelled";
-
-                    const inner = (
-                      <div
-                        className={cn(
-                          "group absolute top-1 bottom-1 overflow-hidden rounded-md border px-2 py-1 text-xs shadow-sm transition",
-                          cancelled
-                            ? "border-gray-300 bg-gray-100/80 text-gray-600 line-through"
-                            : status === "special_request"
-                              ? "border-yellow-300 bg-yellow-50 text-yellow-900"
-                              : status === "completed"
-                                ? "border-green-300 bg-green-50 text-green-900"
-                                : "border-blue-300 bg-blue-50 text-blue-900",
-                          canBook && !cancelled
-                            ? "cursor-pointer hover:brightness-95"
-                            : "",
-                        )}
-                        style={{ left: `${left}%`, width: `${width}%` }}
-                        title={`${del?.region_code ?? ""} ${s.sport ?? ""} · Court ${court} · ${SCHEDULE_STATUS_LABELS[status]}`}
-                      >
-                        <div className="flex items-center gap-1 font-semibold">
-                          {del?.region_code ?? "—"}
-                        </div>
-                        {s.sport ? (
-                          <div className="truncate text-[10px] opacity-80">
-                            {s.sport}
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-
-                    return canBook && !cancelled ? (
-                      <ScheduleFormDialog
-                        key={s.id}
-                        venues={venues}
-                        delegations={delegations}
-                        schedule={s}
-                        trigger={inner}
-                      />
-                    ) : (
-                      <div key={s.id}>{inner}</div>
-                    );
-                  })}
-
-                  {/* Click-to-book hour cells */}
-                  {canBook
-                    ? HOURS.map((h) => (
-                        <ScheduleFormDialog
-                          key={`book-${v.id}-${court}-${h}`}
-                          venues={venues}
-                          delegations={delegations}
-                          defaultVenueId={v.id}
-                          defaultStart={isoForLocal(date, h)}
-                          defaultCourtNumber={court}
-                          trigger={
-                            <button
-                              type="button"
-                              aria-label={`Book ${v.name} court ${court} at ${h}:00`}
-                              className="absolute top-0 bottom-0 cursor-pointer hover:bg-accent/20"
-                              style={{
-                                left: `${((h - HOUR_START) / HOURS.length) * 100}%`,
-                                width: `${100 / HOURS.length}%`,
-                              }}
-                            />
-                          }
-                        />
-                      ))
-                    : null}
-                </div>
+                {String(h).padStart(2, "0")}
               </div>
-            );
-          });
+            ))}
+          </div>
+        </div>
+
+        {/* One block per venue; the venue label is shown once and its courts
+            are listed as sub-rows on the right. */}
+        {venues.map((v) => {
+          const courts = courtsFor(v.id);
+          return (
+            <div key={v.id} className="flex border-t" data-venue-id={v.id}>
+              <div
+                className="flex shrink-0 items-center bg-muted/10 px-3 py-3 text-sm font-medium"
+                style={{ width: "120px" }}
+              >
+                {v.name}
+              </div>
+              <div className="flex flex-1 flex-col">
+                {courts.map((court, idx) => {
+                  const items =
+                    byVenueCourt.get(v.id)?.get(court) ?? [];
+                  return (
+                    <div
+                      key={court}
+                      className={cn("flex", idx > 0 && "border-t")}
+                      data-court={court}
+                    >
+                      <div className="flex w-[60px] shrink-0 items-center justify-center border-l py-3 text-xs text-muted-foreground">
+                        Court {court}
+                      </div>
+                      <div
+                        className="relative flex-1 border-l"
+                        style={{
+                          backgroundImage: stripGradient,
+                          minHeight: "64px",
+                        }}
+                      >
+                        {/* Click-to-book hour cells first (rendered underneath
+                            booking pills so pill clicks hit the pill). */}
+                        {canBook
+                          ? HOURS.map((h) => (
+                              <ScheduleFormDialog
+                                key={`book-${v.id}-${court}-${h}`}
+                                venues={venues}
+                                delegations={delegations}
+                                defaultVenueId={v.id}
+                                defaultStart={isoForLocal(date, h)}
+                                defaultCourtNumber={court}
+                                trigger={
+                                  <button
+                                    type="button"
+                                    aria-label={`Book ${v.name} court ${court} at ${h}:00`}
+                                    className="absolute top-0 bottom-0 cursor-pointer hover:bg-accent/20"
+                                    style={{
+                                      left: `${((h - HOUR_START) / HOURS.length) * 100}%`,
+                                      width: `${100 / HOURS.length}%`,
+                                    }}
+                                  />
+                                }
+                              />
+                            ))
+                          : null}
+
+                        {/* Existing bookings on this court (rendered on top of
+                            the click-to-book cells so the pill receives clicks). */}
+                        {items.map((s) => {
+                          const start = toManilaHm(s.scheduled_start);
+                          const end = toManilaHm(s.scheduled_end);
+                          const startMins = start.h * 60 + start.m;
+                          const endMins = end.h * 60 + end.m;
+                          const gridStartMins = HOUR_START * 60;
+                          const gridEndMins = (HOUR_END + 1) * 60;
+                          const totalMins = gridEndMins - gridStartMins;
+                          const left = Math.max(
+                            0,
+                            ((startMins - gridStartMins) / totalMins) * 100,
+                          );
+                          const width = Math.min(
+                            100 - left,
+                            ((endMins - Math.max(startMins, gridStartMins)) /
+                              totalMins) *
+                              100,
+                          );
+                          if (width <= 0) return null;
+                          const status = s.status as ScheduleStatus;
+                          const del = delMap.get(s.delegation_id);
+                          const cancelled = status === "cancelled";
+
+                          const inner = (
+                            <div
+                              className={cn(
+                                "group absolute top-1 bottom-1 overflow-hidden rounded-md border px-2 py-1 text-xs shadow-sm transition",
+                                cancelled
+                                  ? "border-gray-300 bg-gray-100/80 text-gray-600 line-through"
+                                  : status === "special_request"
+                                    ? "border-yellow-300 bg-yellow-50 text-yellow-900"
+                                    : status === "completed"
+                                      ? "border-green-300 bg-green-50 text-green-900"
+                                      : "border-blue-300 bg-blue-50 text-blue-900",
+                                canBook && !cancelled
+                                  ? "cursor-pointer hover:brightness-95"
+                                  : "",
+                              )}
+                              style={{
+                                left: `${left}%`,
+                                width: `${width}%`,
+                              }}
+                              title={`${del?.region_code ?? ""} ${s.sport ?? ""} · Court ${court} · ${SCHEDULE_STATUS_LABELS[status]}`}
+                            >
+                              <div className="flex items-center gap-1 font-semibold">
+                                {del?.region_code ?? "—"}
+                              </div>
+                              {s.sport ? (
+                                <div className="truncate text-[10px] opacity-80">
+                                  {s.sport}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+
+                          return canBook && !cancelled ? (
+                            <ScheduleFormDialog
+                              key={s.id}
+                              venues={venues}
+                              delegations={delegations}
+                              schedule={s}
+                              trigger={inner}
+                              triggerNativeButton={false}
+                            />
+                          ) : (
+                            <div key={s.id}>{inner}</div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
         })}
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { AlertOctagon, ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -14,9 +14,11 @@ import { Button } from "@/components/ui/button";
 import { useRealtimeIncidents } from "@/lib/hooks/use-realtime-incidents";
 import { useRealtimeReferrals } from "@/lib/hooks/use-realtime-referrals";
 import { StatCards } from "./stat-cards";
+import { IncidentsByCategoryCard } from "./incidents-by-category";
 import { PipelineView } from "./pipeline-view";
 import { LiveIncidentFeed } from "./live-incident-feed";
 import { ActiveReferralsTracker } from "./active-referrals-tracker";
+import { INCIDENT_CATEGORIES, type IncidentCategory } from "@/lib/labels";
 import type { Database } from "@/types/database";
 
 type Incident = Database["palaro"]["Tables"]["incidents"]["Row"];
@@ -68,9 +70,27 @@ export function CommandCenterOverview({
   const incidents = initialIncidents;
   const siteLookup = new Map(sites.map((s) => [s.id, s.name]));
 
+  const incidentsByCategory = useMemo(() => {
+    const base: Record<IncidentCategory, number> = {
+      medical: 0,
+      utility: 0,
+      vip_status: 0,
+      security: 0,
+      facility: 0,
+      other: 0,
+    };
+    for (const i of incidents) {
+      if (INCIDENT_CATEGORIES.includes(i.category)) {
+        base[i.category]++;
+      }
+    }
+    return base;
+  }, [incidents]);
+
   return (
     <div className="space-y-6">
       <StatCards incidents={incidents} referrals={referrals} />
+      <IncidentsByCategoryCard byCategory={incidentsByCategory} />
       <PipelineView incidents={incidents} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">

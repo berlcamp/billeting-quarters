@@ -61,18 +61,18 @@ export function StatCards({ incidents, referrals }: StatCardsProps) {
   ).length;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <Card data-size="sm" className="gap-1">
+        <CardHeader>
+          <CardTitle className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             Open incidents
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="text-3xl font-bold tabular-nums">
+        <CardContent className="space-y-1">
+          <div className="text-xl font-bold tabular-nums leading-none">
             {openIncidents.length}
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
             {SEVERITIES.map((s) => (
               <span key={s} className="inline-flex items-center gap-1">
                 <span className={cn("size-1.5 rounded-full", DOT[s])} />
@@ -83,55 +83,58 @@ export function StatCards({ incidents, referrals }: StatCardsProps) {
         </CardContent>
       </Card>
 
-      <Card className={cn(critical > 0 && "border-destructive/60")}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      <Card
+        data-size="sm"
+        className={cn("gap-1", critical > 0 && "border-destructive/60")}
+      >
+        <CardHeader>
+          <CardTitle className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             Critical (active)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div
             className={cn(
-              "text-3xl font-bold tabular-nums",
+              "text-xl font-bold tabular-nums leading-none",
               critical > 0 && "text-destructive animate-pulse",
             )}
           >
             {critical}
           </div>
-          <p className="text-[11px] text-muted-foreground mt-2">
-            {critical > 0
-              ? "Requires immediate command-center attention"
-              : "All clear"}
+          <p className="text-[10px] text-muted-foreground mt-1">
+            {critical > 0 ? "Needs immediate attention" : "All clear"}
           </p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      <Card data-size="sm" className="gap-1">
+        <CardHeader>
+          <CardTitle className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             Active referrals
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold tabular-nums">{activeReferrals}</div>
-          <p className="text-[11px] text-muted-foreground mt-2">
+          <div className="text-xl font-bold tabular-nums leading-none">
+            {activeReferrals}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">
             Pending · Accepted · In treatment
           </p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      <Card data-size="sm" className="gap-1">
+        <CardHeader>
+          <CardTitle className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
             Hospitalizations today
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold tabular-nums">
+          <div className="text-xl font-bold tabular-nums leading-none">
             {hospitalizationsToday}
           </div>
-          <p className="text-[11px] text-muted-foreground mt-2">
-            Patients sent to hospital today
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Sent to hospital today
           </p>
         </CardContent>
       </Card>

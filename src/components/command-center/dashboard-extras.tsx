@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import {
-  AlertTriangle,
   ClipboardList,
   Crown,
-  MessageSquareWarning,
   Moon,
   Pill,
   Thermometer,
@@ -21,11 +19,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  INCIDENT_CATEGORIES,
-  INCIDENT_CATEGORY_LABELS,
-  type IncidentCategory,
-} from "@/lib/labels";
 import { formatManila } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 import type { DashboardSnapshot } from "@/lib/actions/dashboard";
@@ -43,56 +36,12 @@ interface Props {
   vips: Vip[];
 }
 
-const CATEGORY_ICON: Record<IncidentCategory, React.ComponentType<{ className?: string }>> = {
-  medical: Pill,
-  utility: AlertTriangle,
-  vip_status: Crown,
-  security: AlertTriangle,
-  facility: Trash2,
-  other: MessageSquareWarning,
-};
-
 export function DashboardExtras({ snapshot, sites, vips }: Props) {
   const siteName = new Map(sites.map((s) => [s.id, s.name]));
   const vipName = new Map(vips.map((v) => [v.id, v.full_name]));
 
   return (
     <div className="space-y-6">
-      {/* Incidents by category */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Incidents by category</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {INCIDENT_CATEGORIES.map((c) => {
-              const Icon = CATEGORY_ICON[c];
-              const count = snapshot.incidentsByCategory[c] ?? 0;
-              return (
-                <Link
-                  key={c}
-                  href={`/dashboard/incidents?category=${c}`}
-                  className={cn(
-                    "rounded-md border p-3 transition hover:bg-muted/40",
-                    count > 0 && "border-foreground/30",
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <Icon className="size-4 text-muted-foreground" />
-                    <span className="text-2xl font-bold tabular-nums">
-                      {count}
-                    </span>
-                  </div>
-                  <div className="mt-1 text-xs font-medium">
-                    {INCIDENT_CATEGORY_LABELS[c]}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Clinic patients served */}
         <Card>
