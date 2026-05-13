@@ -54,6 +54,10 @@ export const cancelScheduleSchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
 
+export const deleteScheduleSchema = z.object({
+  id: z.string().uuid(),
+});
+
 export const approveScheduleSchema = z.object({
   id: z.string().uuid(),
 });

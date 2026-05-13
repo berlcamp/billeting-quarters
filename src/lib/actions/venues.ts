@@ -9,6 +9,7 @@ import {
   cancelScheduleSchema,
   completeScheduleSchema,
   createScheduleSchema,
+  deleteScheduleSchema,
   updateScheduleSchema,
 } from "@/lib/schemas/venues";
 import { recordAudit } from "./audit";
@@ -311,6 +312,47 @@ export async function approveSchedule(
     entity_type: "venue_schedule",
     entity_id: parsed.data.id,
     changes: { status: "booked", approved_by: auth.profile.id },
+    user_id: auth.profile.id,
+  });
+
+  revalidatePath(VENUES_PATH);
+  return ok();
+}
+
+// Hard-delete a schedule. Audit-logged. Cancellation lives in cancelSchedule —
+// this is for the operator-initiated "remove from calendar" action.
+export async function deleteSchedule(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const auth = await requireBooker();
+  if (!auth.ok) return fail(auth.error);
+
+  const parsed = deleteScheduleSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .schema("palaro")
+    .from("venue_schedules")
+    .select("venue_id, delegation_id, court_number, scheduled_start, scheduled_end")
+    .eq("id", parsed.data.id)
+    .single();
+  if (!existing) return fail("Schedule not found.");
+
+  const { error } = await admin
+    .schema("palaro")
+    .from("venue_schedules")
+    .delete()
+    .eq("id", parsed.data.id);
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "delete",
+    entity_type: "venue_schedule",
+    entity_id: parsed.data.id,
+    changes: existing,
     user_id: auth.profile.id,
   });
 

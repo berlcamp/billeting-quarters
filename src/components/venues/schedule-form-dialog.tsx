@@ -76,7 +76,7 @@ function plusHoursLocal(hours: number): string {
 }
 
 interface Props {
-  trigger: ReactNode;
+  trigger?: ReactNode;
   venues: Venue[];
   delegations: Delegation[];
   schedule?: Schedule;
@@ -85,6 +85,9 @@ interface Props {
   defaultCourtNumber?: number;
   // Set false when the trigger element is not a native <button> (e.g. a div).
   triggerNativeButton?: boolean;
+  // Controlled mode — provide both to drive open state from a parent.
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const COURT_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
@@ -98,9 +101,17 @@ export function ScheduleFormDialog({
   defaultStart,
   defaultCourtNumber,
   triggerNativeButton,
+  open: controlledOpen,
+  onOpenChange,
 }: Props) {
   const isEdit = !!schedule;
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = (next: boolean) => {
+    if (!isControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
+  };
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
@@ -177,12 +188,14 @@ export function ScheduleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={trigger as React.ReactElement}
-        {...(triggerNativeButton === undefined
-          ? {}
-          : { nativeButton: triggerNativeButton })}
-      />
+      {trigger ? (
+        <DialogTrigger
+          render={trigger as React.ReactElement}
+          {...(triggerNativeButton === undefined
+            ? {}
+            : { nativeButton: triggerNativeButton })}
+        />
+      ) : null}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>

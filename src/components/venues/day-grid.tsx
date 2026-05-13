@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { ScheduleFormDialog } from "./schedule-form-dialog";
 import { Badge } from "@/components/ui/badge";
+import { deleteSchedule } from "@/lib/actions/venues";
 import {
   SCHEDULE_STATUS_BADGE,
   SCHEDULE_STATUS_LABELS,
@@ -188,74 +192,19 @@ export function DayGrid({
 
                         {/* Existing bookings on this court (rendered on top of
                             the click-to-book cells so the pill receives clicks). */}
-                        {items.map((s) => {
-                          const start = toManilaHm(s.scheduled_start);
-                          const end = toManilaHm(s.scheduled_end);
-                          const startMins = start.h * 60 + start.m;
-                          const endMins = end.h * 60 + end.m;
-                          const gridStartMins = HOUR_START * 60;
-                          const gridEndMins = (HOUR_END + 1) * 60;
-                          const totalMins = gridEndMins - gridStartMins;
-                          const left = Math.max(
-                            0,
-                            ((startMins - gridStartMins) / totalMins) * 100,
-                          );
-                          const width = Math.min(
-                            100 - left,
-                            ((endMins - Math.max(startMins, gridStartMins)) /
-                              totalMins) *
-                              100,
-                          );
-                          if (width <= 0) return null;
-                          const status = s.status as ScheduleStatus;
-                          const del = delMap.get(s.delegation_id);
-                          const cancelled = status === "cancelled";
-
-                          const inner = (
-                            <div
-                              className={cn(
-                                "group absolute top-1 bottom-1 overflow-hidden rounded-md border px-2 py-1 text-xs shadow-sm transition",
-                                cancelled
-                                  ? "border-gray-300 bg-gray-100/80 text-gray-600 line-through"
-                                  : status === "special_request"
-                                    ? "border-yellow-300 bg-yellow-50 text-yellow-900"
-                                    : status === "completed"
-                                      ? "border-green-300 bg-green-50 text-green-900"
-                                      : "border-blue-300 bg-blue-50 text-blue-900",
-                                canBook && !cancelled
-                                  ? "cursor-pointer hover:brightness-95"
-                                  : "",
-                              )}
-                              style={{
-                                left: `${left}%`,
-                                width: `${width}%`,
-                              }}
-                              title={`${del?.region_code ?? ""} ${s.sport ?? ""} · Court ${court} · ${SCHEDULE_STATUS_LABELS[status]}`}
-                            >
-                              <div className="flex items-center gap-1 font-semibold">
-                                {del?.region_code ?? "—"}
-                              </div>
-                              {s.sport ? (
-                                <div className="truncate text-[10px] opacity-80">
-                                  {s.sport}
-                                </div>
-                              ) : null}
-                            </div>
-                          );
-
-                          return canBook && !cancelled ? (
-                            <ScheduleFormDialog
-                              key={s.id}
-                              venues={venues}
-                              delegations={delegations}
-                              schedule={s}
-                              trigger={inner}
-                              triggerNativeButton={false}
-                            />
-                          ) : (
-                            <div key={s.id}>{inner}</div>
-                          );
-                        })}
+                        {items.map((s) => (
+                          <BookingPill
+                            key={s.id}
+                            schedule={s}
+                            court={court}
+                            delegationName={
+                              delMap.get(s.delegation_id)?.region_code ?? null
+                            }
+                            venues={venues}
+                            delegations={delegations}
+                            canEdit={canBook}
+                          />
+                        ))}
                       </div>
                     </div>
                   );
@@ -299,5 +248,120 @@ export function DayGrid({
         </div>
       </div>
     </div>
+  );
+}
+
+interface BookingPillProps {
+  schedule: Schedule;
+  court: number;
+  delegationName: string | null;
+  venues: Venue[];
+  delegations: Delegation[];
+  canEdit: boolean;
+}
+
+function BookingPill({
+  schedule: s,
+  court,
+  delegationName,
+  venues,
+  delegations,
+  canEdit,
+}: BookingPillProps) {
+  const router = useRouter();
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const start = toManilaHm(s.scheduled_start);
+  const end = toManilaHm(s.scheduled_end);
+  const startMins = start.h * 60 + start.m;
+  const endMins = end.h * 60 + end.m;
+  const gridStartMins = HOUR_START * 60;
+  const gridEndMins = (HOUR_END + 1) * 60;
+  const totalMins = gridEndMins - gridStartMins;
+  const left = Math.max(0, ((startMins - gridStartMins) / totalMins) * 100);
+  const width = Math.min(
+    100 - left,
+    ((endMins - Math.max(startMins, gridStartMins)) / totalMins) * 100,
+  );
+  if (width <= 0) return null;
+
+  const status = s.status as ScheduleStatus;
+  const cancelled = status === "cancelled";
+  const showActions = canEdit && !cancelled;
+
+  async function handleDelete() {
+    if (!window.confirm("Delete this booking? This cannot be undone.")) return;
+    setDeleting(true);
+    const result = await deleteSchedule({ id: s.id });
+    setDeleting(false);
+    if (result.error) {
+      toast.error("Delete failed", { description: result.error });
+      return;
+    }
+    toast.success("Booking deleted");
+    router.refresh();
+  }
+
+  return (
+    <>
+      <div
+        className={cn(
+          "absolute top-1 bottom-1 overflow-hidden rounded-md border px-2 py-1 text-xs shadow-sm transition",
+          cancelled
+            ? "border-gray-300 bg-gray-100/80 text-gray-600 line-through"
+            : status === "special_request"
+              ? "border-yellow-300 bg-yellow-50 text-yellow-900"
+              : status === "completed"
+                ? "border-green-300 bg-green-50 text-green-900"
+                : "border-blue-300 bg-blue-50 text-blue-900",
+        )}
+        style={{ left: `${left}%`, width: `${width}%` }}
+        title={`${delegationName ?? ""} ${s.sport ?? ""} · Court ${court} · ${SCHEDULE_STATUS_LABELS[status]}`}
+      >
+        <div className="flex items-center gap-1 pr-12 font-semibold">
+          {delegationName ?? "—"}
+        </div>
+        {s.sport ? (
+          <div className="truncate pr-12 text-[10px] opacity-80">{s.sport}</div>
+        ) : null}
+        {showActions ? (
+          <div className="absolute right-0.5 top-0.5 flex items-center gap-0.5">
+            <button
+              type="button"
+              aria-label="Edit booking"
+              className="rounded p-0.5 text-current/70 hover:bg-black/10 hover:text-current"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditOpen(true);
+              }}
+            >
+              <Pencil className="size-3" />
+            </button>
+            <button
+              type="button"
+              aria-label="Delete booking"
+              disabled={deleting}
+              className="rounded p-0.5 text-current/70 hover:bg-red-500/15 hover:text-red-700 disabled:opacity-40"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleDelete();
+              }}
+            >
+              <Trash2 className="size-3" />
+            </button>
+          </div>
+        ) : null}
+      </div>
+      {showActions ? (
+        <ScheduleFormDialog
+          venues={venues}
+          delegations={delegations}
+          schedule={s}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
+      ) : null}
+    </>
   );
 }
