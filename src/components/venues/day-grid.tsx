@@ -65,16 +65,27 @@ export function DayGrid({
     return m;
   }, [delegations]);
 
-  // Group bookings by venue. Status='cancelled' is rendered with reduced opacity.
-  const byVenue = useMemo(() => {
-    const m = new Map<string, Schedule[]>();
+  // Group bookings by venue → court so multi-court venues render one row per
+  // court in use. Status='cancelled' is rendered with reduced opacity.
+  const byVenueCourt = useMemo(() => {
+    const m = new Map<string, Map<number, Schedule[]>>();
     for (const s of schedules) {
-      const arr = m.get(s.venue_id) ?? [];
+      const courts = m.get(s.venue_id) ?? new Map<number, Schedule[]>();
+      const arr = courts.get(s.court_number) ?? [];
       arr.push(s);
-      m.set(s.venue_id, arr);
+      courts.set(s.court_number, arr);
+      m.set(s.venue_id, courts);
     }
     return m;
   }, [schedules]);
+
+  // For each venue, the sorted list of courts that have bookings today.
+  // Falls back to [1] so an empty venue still has a click-to-book row.
+  function courtsFor(venueId: string): number[] {
+    const courts = byVenueCourt.get(venueId);
+    if (!courts || courts.size === 0) return [1];
+    return Array.from(courts.keys()).sort((a, b) => a - b);
+  }
 
   if (venues.length === 0) {
     return (
@@ -105,125 +116,134 @@ export function DayGrid({
           </div>
         ))}
 
-        {/* One row per venue */}
-        {venues.map((v, vi) => {
-          const items = byVenue.get(v.id) ?? [];
-          return (
-            <div
-              key={v.id}
-              className="contents"
-              data-row-i={vi}
-            >
-              <div className="border-t px-3 py-3 text-sm font-medium">
-                {v.name}
-              </div>
+        {/* One row per (venue, court) pair */}
+        {venues.flatMap((v) => {
+          const courts = courtsFor(v.id);
+          return courts.map((court) => {
+            const items =
+              byVenueCourt.get(v.id)?.get(court) ?? [];
+            return (
               <div
-                className="relative col-span-full border-t"
-                style={{
-                  gridColumn: `2 / ${HOURS.length + 2}`,
-                  // Re-create cell separators with a layered background.
-                  backgroundImage: `repeating-linear-gradient(
-                    to right,
-                    transparent 0,
-                    transparent calc(100% / ${HOURS.length} - 1px),
-                    var(--border) calc(100% / ${HOURS.length} - 1px),
-                    var(--border) calc(100% / ${HOURS.length})
-                  )`,
-                  minHeight: "64px",
-                }}
+                key={`${v.id}-${court}`}
+                className="contents"
+                data-venue-id={v.id}
+                data-court={court}
               >
-                {/* Existing bookings */}
-                {items.map((s) => {
-                  const start = toManilaHm(s.scheduled_start);
-                  const end = toManilaHm(s.scheduled_end);
-                  const startMins = start.h * 60 + start.m;
-                  const endMins = end.h * 60 + end.m;
-                  const gridStartMins = HOUR_START * 60;
-                  const gridEndMins = (HOUR_END + 1) * 60;
-                  const totalMins = gridEndMins - gridStartMins;
-                  const left = Math.max(
-                    0,
-                    ((startMins - gridStartMins) / totalMins) * 100,
-                  );
-                  const width = Math.min(
-                    100 - left,
-                    ((endMins - Math.max(startMins, gridStartMins)) /
-                      totalMins) *
-                      100,
-                  );
-                  if (width <= 0) return null;
-                  const status = s.status as ScheduleStatus;
-                  const del = delMap.get(s.delegation_id);
-                  const cancelled = status === "cancelled";
+                <div className="border-t px-3 py-3 text-sm">
+                  <div className="font-medium">{v.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Court {court}
+                  </div>
+                </div>
+                <div
+                  className="relative col-span-full border-t"
+                  style={{
+                    gridColumn: `2 / ${HOURS.length + 2}`,
+                    // Re-create cell separators with a layered background.
+                    backgroundImage: `repeating-linear-gradient(
+                      to right,
+                      transparent 0,
+                      transparent calc(100% / ${HOURS.length} - 1px),
+                      var(--border) calc(100% / ${HOURS.length} - 1px),
+                      var(--border) calc(100% / ${HOURS.length})
+                    )`,
+                    minHeight: "64px",
+                  }}
+                >
+                  {/* Existing bookings on this court */}
+                  {items.map((s) => {
+                    const start = toManilaHm(s.scheduled_start);
+                    const end = toManilaHm(s.scheduled_end);
+                    const startMins = start.h * 60 + start.m;
+                    const endMins = end.h * 60 + end.m;
+                    const gridStartMins = HOUR_START * 60;
+                    const gridEndMins = (HOUR_END + 1) * 60;
+                    const totalMins = gridEndMins - gridStartMins;
+                    const left = Math.max(
+                      0,
+                      ((startMins - gridStartMins) / totalMins) * 100,
+                    );
+                    const width = Math.min(
+                      100 - left,
+                      ((endMins - Math.max(startMins, gridStartMins)) /
+                        totalMins) *
+                        100,
+                    );
+                    if (width <= 0) return null;
+                    const status = s.status as ScheduleStatus;
+                    const del = delMap.get(s.delegation_id);
+                    const cancelled = status === "cancelled";
 
-                  const inner = (
-                    <div
-                      className={cn(
-                        "group absolute top-1 bottom-1 overflow-hidden rounded-md border px-2 py-1 text-xs shadow-sm transition",
-                        cancelled
-                          ? "border-gray-300 bg-gray-100/80 text-gray-600 line-through"
-                          : status === "special_request"
-                            ? "border-yellow-300 bg-yellow-50 text-yellow-900"
-                            : status === "completed"
-                              ? "border-green-300 bg-green-50 text-green-900"
-                              : "border-blue-300 bg-blue-50 text-blue-900",
-                        canBook && !cancelled
-                          ? "cursor-pointer hover:brightness-95"
-                          : "",
-                      )}
-                      style={{ left: `${left}%`, width: `${width}%` }}
-                      title={`${del?.region_code ?? ""} ${s.sport ?? ""} · ${SCHEDULE_STATUS_LABELS[status]}`}
-                    >
-                      <div className="flex items-center gap-1 font-semibold">
-                        {del?.region_code ?? "—"}
-                      </div>
-                      {s.sport ? (
-                        <div className="truncate text-[10px] opacity-80">
-                          {s.sport}
+                    const inner = (
+                      <div
+                        className={cn(
+                          "group absolute top-1 bottom-1 overflow-hidden rounded-md border px-2 py-1 text-xs shadow-sm transition",
+                          cancelled
+                            ? "border-gray-300 bg-gray-100/80 text-gray-600 line-through"
+                            : status === "special_request"
+                              ? "border-yellow-300 bg-yellow-50 text-yellow-900"
+                              : status === "completed"
+                                ? "border-green-300 bg-green-50 text-green-900"
+                                : "border-blue-300 bg-blue-50 text-blue-900",
+                          canBook && !cancelled
+                            ? "cursor-pointer hover:brightness-95"
+                            : "",
+                        )}
+                        style={{ left: `${left}%`, width: `${width}%` }}
+                        title={`${del?.region_code ?? ""} ${s.sport ?? ""} · Court ${court} · ${SCHEDULE_STATUS_LABELS[status]}`}
+                      >
+                        <div className="flex items-center gap-1 font-semibold">
+                          {del?.region_code ?? "—"}
                         </div>
-                      ) : null}
-                    </div>
-                  );
+                        {s.sport ? (
+                          <div className="truncate text-[10px] opacity-80">
+                            {s.sport}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
 
-                  return canBook && !cancelled ? (
-                    <ScheduleFormDialog
-                      key={s.id}
-                      venues={venues}
-                      delegations={delegations}
-                      schedule={s}
-                      trigger={inner}
-                    />
-                  ) : (
-                    <div key={s.id}>{inner}</div>
-                  );
-                })}
-
-                {/* Click-to-book hour cells */}
-                {canBook
-                  ? HOURS.map((h) => (
+                    return canBook && !cancelled ? (
                       <ScheduleFormDialog
-                        key={`book-${v.id}-${h}`}
+                        key={s.id}
                         venues={venues}
                         delegations={delegations}
-                        defaultVenueId={v.id}
-                        defaultStart={isoForLocal(date, h)}
-                        trigger={
-                          <button
-                            type="button"
-                            aria-label={`Book ${v.name} at ${h}:00`}
-                            className="absolute top-0 bottom-0 cursor-pointer hover:bg-accent/20"
-                            style={{
-                              left: `${((h - HOUR_START) / HOURS.length) * 100}%`,
-                              width: `${100 / HOURS.length}%`,
-                            }}
-                          />
-                        }
+                        schedule={s}
+                        trigger={inner}
                       />
-                    ))
-                  : null}
+                    ) : (
+                      <div key={s.id}>{inner}</div>
+                    );
+                  })}
+
+                  {/* Click-to-book hour cells */}
+                  {canBook
+                    ? HOURS.map((h) => (
+                        <ScheduleFormDialog
+                          key={`book-${v.id}-${court}-${h}`}
+                          venues={venues}
+                          delegations={delegations}
+                          defaultVenueId={v.id}
+                          defaultStart={isoForLocal(date, h)}
+                          defaultCourtNumber={court}
+                          trigger={
+                            <button
+                              type="button"
+                              aria-label={`Book ${v.name} court ${court} at ${h}:00`}
+                              className="absolute top-0 bottom-0 cursor-pointer hover:bg-accent/20"
+                              style={{
+                                left: `${((h - HOUR_START) / HOURS.length) * 100}%`,
+                                width: `${100 / HOURS.length}%`,
+                              }}
+                            />
+                          }
+                        />
+                      ))
+                    : null}
+                </div>
               </div>
-            </div>
-          );
+            );
+          });
         })}
       </div>
 

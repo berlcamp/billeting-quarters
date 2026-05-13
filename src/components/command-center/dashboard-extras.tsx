@@ -3,12 +3,15 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  ClipboardList,
   Crown,
   MessageSquareWarning,
+  Moon,
   Pill,
   Thermometer,
   Trash2,
   Truck,
+  UsersRound,
   UtensilsCrossed,
 } from "lucide-react";
 import {
@@ -301,6 +304,30 @@ export function DashboardExtras({ snapshot, sites, vips }: Props) {
         </Card>
       </div>
 
+      {/* Site monitoring — today */}
+      <Card>
+        <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base inline-flex items-center gap-2">
+            <ClipboardList className="size-4 text-muted-foreground" />
+            Site monitoring — today
+          </CardTitle>
+          <Link
+            href="/dashboard/site-monitoring"
+            className="text-xs underline"
+          >
+            View
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <SiteMonitoringSummary
+            visits={snapshot.siteVisitsToday}
+            externals={snapshot.externalPersonnelToday}
+            eod={snapshot.endOfDayReportsToday}
+            siteName={siteName}
+          />
+        </CardContent>
+      </Card>
+
       {/* Transportation pointer */}
       <Card>
         <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
@@ -318,6 +345,133 @@ export function DashboardExtras({ snapshot, sites, vips }: Props) {
           </p>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function SiteMonitoringSummary({
+  visits,
+  externals,
+  eod,
+  siteName,
+}: {
+  visits: Database["palaro"]["Tables"]["site_monitoring_visits"]["Row"][];
+  externals: Database["palaro"]["Tables"]["external_personnel_logs"]["Row"][];
+  eod: Database["palaro"]["Tables"]["end_of_day_reports"]["Row"][];
+  siteName: Map<string, string>;
+}) {
+  const accountedFor = eod.filter((r) => r.all_accounted_for).length;
+  const outsideFlagged = eod.filter((r) => !r.all_accounted_for).length;
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Stat label="Visits" value={visits.length} />
+        <Stat label="External personnel" value={externals.length} />
+        <Stat label="EOD reports" value={eod.length} />
+        <Stat
+          label="EOD: outside"
+          value={outsideFlagged}
+          accent={outsideFlagged > 0}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <div>
+          <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <ClipboardList className="size-3.5" />
+            Recent visits
+          </div>
+          {visits.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No visits today.</p>
+          ) : (
+            <ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
+              {visits.slice(0, 6).map((v) => (
+                <li
+                  key={v.id}
+                  className="flex items-center justify-between rounded border px-2 py-1"
+                >
+                  <span className="min-w-0 truncate">
+                    <span className="font-medium">{v.visit_title}</span>
+                    <span className="text-muted-foreground">
+                      {" · "}
+                      {siteName.get(v.site_id) ?? "—"}
+                    </span>
+                  </span>
+                  <span className="ml-2 shrink-0 text-muted-foreground">
+                    {formatManila(v.visited_at, "HH:mm")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div>
+          <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <UsersRound className="size-3.5" />
+            External personnel
+          </div>
+          {externals.length === 0 ? (
+            <p className="text-xs text-muted-foreground">None today.</p>
+          ) : (
+            <ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
+              {externals.slice(0, 6).map((p) => (
+                <li
+                  key={p.id}
+                  className="flex items-center justify-between rounded border px-2 py-1"
+                >
+                  <span className="min-w-0 truncate">
+                    <span className="font-medium">{p.full_name}</span>
+                    <span className="text-muted-foreground">
+                      {" · "}
+                      {p.position}
+                    </span>
+                  </span>
+                  <Badge variant="outline" className="ml-2 shrink-0 capitalize">
+                    {p.status.replace(/_/g, " ")}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div>
+          <div className="mb-1 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Moon className="size-3.5" />
+            EOD reports
+          </div>
+          {eod.length === 0 ? (
+            <p className="text-xs text-muted-foreground">None filed today.</p>
+          ) : (
+            <ul className="max-h-40 space-y-1 overflow-y-auto text-xs">
+              {eod.slice(0, 6).map((r) => (
+                <li
+                  key={r.id}
+                  className="flex items-center justify-between rounded border px-2 py-1"
+                >
+                  <span className="min-w-0 truncate">
+                    {siteName.get(r.site_id) ?? "—"}
+                  </span>
+                  {r.all_accounted_for ? (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 shrink-0 border-emerald-500/40 text-emerald-700 dark:text-emerald-400"
+                    >
+                      All in
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="ml-2 shrink-0">
+                      Outside
+                    </Badge>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        Accounted for: {accountedFor} / {eod.length}
+      </div>
     </div>
   );
 }

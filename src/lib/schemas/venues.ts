@@ -7,6 +7,11 @@ const baseFields = z.object({
   venue_id: z.string().uuid("Pick a playing venue."),
   delegation_id: z.string().uuid("Pick a delegation."),
   sport: optionalShortText,
+  court_number: z
+    .number({ error: "Pick a court." })
+    .int()
+    .min(1, "Court must be between 1 and 10.")
+    .max(10, "Court must be between 1 and 10."),
   scheduled_start: z
     .string()
     .min(1, "Start time is required")

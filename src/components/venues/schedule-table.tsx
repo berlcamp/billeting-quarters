@@ -133,7 +133,14 @@ export function ScheduleTable({
     {
       id: "venue",
       header: "Venue",
-      cell: (s) => venueMap.get(s.venue_id)?.name ?? "—",
+      cell: (s) => (
+        <div className="flex flex-col">
+          <span>{venueMap.get(s.venue_id)?.name ?? "—"}</span>
+          <span className="text-xs text-muted-foreground">
+            Court {s.court_number}
+          </span>
+        </div>
+      ),
     },
     {
       id: "delegation",

@@ -82,7 +82,10 @@ interface Props {
   schedule?: Schedule;
   defaultVenueId?: string;
   defaultStart?: string; // ISO
+  defaultCourtNumber?: number;
 }
+
+const COURT_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 export function ScheduleFormDialog({
   trigger,
@@ -91,6 +94,7 @@ export function ScheduleFormDialog({
   schedule,
   defaultVenueId,
   defaultStart,
+  defaultCourtNumber,
 }: Props) {
   const isEdit = !!schedule;
   const [open, setOpen] = useState(false);
@@ -103,6 +107,7 @@ export function ScheduleFormDialog({
       venue_id: schedule?.venue_id ?? defaultVenueId ?? "",
       delegation_id: schedule?.delegation_id ?? "",
       sport: schedule?.sport ?? undefined,
+      court_number: schedule?.court_number ?? defaultCourtNumber ?? 1,
       scheduled_start: schedule
         ? isoToLocal(schedule.scheduled_start)
         : defaultStart
@@ -128,6 +133,7 @@ export function ScheduleFormDialog({
         venue_id: schedule?.venue_id ?? defaultVenueId ?? "",
         delegation_id: schedule?.delegation_id ?? "",
         sport: schedule?.sport ?? undefined,
+        court_number: schedule?.court_number ?? defaultCourtNumber ?? 1,
         scheduled_start: schedule
           ? isoToLocal(schedule.scheduled_start)
           : defaultStart
@@ -141,7 +147,7 @@ export function ScheduleFormDialog({
         notes: schedule?.notes ?? undefined,
       });
     }
-  }, [open, schedule, defaultVenueId, defaultStart, form]);
+  }, [open, schedule, defaultVenueId, defaultStart, defaultCourtNumber, form]);
 
   async function onSubmit(values: CreateScheduleInput) {
     setSubmitting(true);
@@ -168,7 +174,7 @@ export function ScheduleFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger nativeButton={false} render={trigger as React.ReactElement} />
+      <DialogTrigger render={trigger as React.ReactElement} />
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
@@ -251,41 +257,74 @@ export function ScheduleFormDialog({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="sport"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sport</FormLabel>
-                  <Select
-                    value={field.value ?? SPORT_NONE}
-                    onValueChange={(v) =>
-                      field.onChange(v === SPORT_NONE ? undefined : v)
-                    }
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue>
-                          {(v: string | null) => {
-                            if (!v || v === SPORT_NONE) return "—";
-                            return v;
-                          }}
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={SPORT_NONE}>—</SelectItem>
-                      {PALARO_SPORTS.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="sport"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sport</FormLabel>
+                    <Select
+                      value={field.value ?? SPORT_NONE}
+                      onValueChange={(v) =>
+                        field.onChange(v === SPORT_NONE ? undefined : v)
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {(v: string | null) => {
+                              if (!v || v === SPORT_NONE) return "—";
+                              return v;
+                            }}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={SPORT_NONE}>—</SelectItem>
+                        {PALARO_SPORTS.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="court_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Court #</FormLabel>
+                    <Select
+                      value={String(field.value ?? 1)}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {(v: string | null) =>
+                              v ? `Court ${v}` : "Pick a court"
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {COURT_OPTIONS.map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            Court {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}

@@ -47,9 +47,10 @@ async function requireApprover() {
 }
 
 // Returns true if the proposed slot overlaps any active (non-cancelled) booking
-// at the same venue. Special-request slots also count as conflicts.
+// at the same venue AND court. Special-request slots also count as conflicts.
 async function findConflict(opts: {
   venueId: string;
+  courtNumber: number;
   start: string;
   end: string;
   excludeId?: string;
@@ -60,6 +61,7 @@ async function findConflict(opts: {
     .from("venue_schedules")
     .select("*")
     .eq("venue_id", opts.venueId)
+    .eq("court_number", opts.courtNumber)
     .neq("status", "cancelled")
     .lt("scheduled_start", opts.end)
     .gt("scheduled_end", opts.start);
@@ -121,6 +123,7 @@ export async function createSchedule(
 
   const conflict = await findConflict({
     venueId: data.venue_id,
+    courtNumber: data.court_number,
     start: startIso,
     end: endIso,
   });
@@ -129,7 +132,7 @@ export async function createSchedule(
   // special request (which requires a reason and command-center approval).
   if (conflict && !data.is_special_request) {
     return fail(
-      `Time slot overlaps an existing booking at this venue (${conflict.scheduled_start.slice(11, 16)}–${conflict.scheduled_end.slice(11, 16)}). Mark as a special request if you need to override.`,
+      `Court ${data.court_number} at this venue is already booked from ${conflict.scheduled_start.slice(11, 16)}–${conflict.scheduled_end.slice(11, 16)}. Pick another court, or mark this as a special request to override.`,
     );
   }
 
@@ -143,6 +146,7 @@ export async function createSchedule(
       venue_id: data.venue_id,
       delegation_id: data.delegation_id,
       sport: data.sport || null,
+      court_number: data.court_number,
       scheduled_start: startIso,
       scheduled_end: endIso,
       status,
@@ -190,12 +194,15 @@ export async function updateSchedule(
 
   const conflict = await findConflict({
     venueId: data.venue_id,
+    courtNumber: data.court_number,
     start: startIso,
     end: endIso,
     excludeId: id,
   });
   if (conflict && !data.is_special_request) {
-    return fail("Updated slot overlaps an existing booking at this venue.");
+    return fail(
+      `Court ${data.court_number} at this venue is already booked in that window.`,
+    );
   }
 
   const admin = createAdminClient();
@@ -206,6 +213,7 @@ export async function updateSchedule(
       venue_id: data.venue_id,
       delegation_id: data.delegation_id,
       sport: data.sport || null,
+      court_number: data.court_number,
       scheduled_start: startIso,
       scheduled_end: endIso,
       is_special_request: data.is_special_request ?? false,

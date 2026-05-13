@@ -12,6 +12,11 @@ type HeatReading = Database["palaro"]["Tables"]["heat_index_readings"]["Row"];
 type VenueSchedule = Database["palaro"]["Tables"]["venue_schedules"]["Row"];
 type GarbageRow = Database["palaro"]["Tables"]["garbage_collections"]["Row"];
 type FoodRequest = Database["palaro"]["Tables"]["food_requests"]["Row"];
+type SiteVisit = Database["palaro"]["Tables"]["site_monitoring_visits"]["Row"];
+type ExternalPersonnelLog =
+  Database["palaro"]["Tables"]["external_personnel_logs"]["Row"];
+type EndOfDayReport =
+  Database["palaro"]["Tables"]["end_of_day_reports"]["Row"];
 
 export interface DashboardSnapshot {
   // Live counters surfaced beside the existing StatCards.
@@ -29,6 +34,10 @@ export interface DashboardSnapshot {
   garbageToday: GarbageRow[];
   // Today's food requests.
   foodRequestsToday: FoodRequest[];
+  // Site monitoring activity for today (Manila local day).
+  siteVisitsToday: SiteVisit[];
+  externalPersonnelToday: ExternalPersonnelLog[];
+  endOfDayReportsToday: EndOfDayReport[];
 }
 
 const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -59,6 +68,9 @@ export async function getDashboardSnapshot(): Promise<
 
   // Run all the count / list queries in parallel — service role bypasses RLS;
   // the underlying tables are aggregate counts only, no PII surfacing here.
+  const phToday = new Date(new Date().getTime() + MANILA_OFFSET_MS)
+    .toISOString()
+    .slice(0, 10);
   const [
     clinicTotal,
     clinicToday,
@@ -68,6 +80,9 @@ export async function getDashboardSnapshot(): Promise<
     venueToday,
     garbToday,
     foodToday,
+    siteVisits,
+    externalPersonnel,
+    endOfDay,
   ] = await Promise.all([
     admin.schema("palaro").from("clinic_visits").select("id", {
       count: "exact",
@@ -121,6 +136,29 @@ export async function getDashboardSnapshot(): Promise<
       .lt("required_at", endIso)
       .order("required_at", { ascending: true })
       .limit(500),
+    admin
+      .schema("palaro")
+      .from("site_monitoring_visits")
+      .select("*")
+      .gte("visited_at", startIso)
+      .lt("visited_at", endIso)
+      .order("visited_at", { ascending: false })
+      .limit(200),
+    admin
+      .schema("palaro")
+      .from("external_personnel_logs")
+      .select("*")
+      .gte("logged_at", startIso)
+      .lt("logged_at", endIso)
+      .order("logged_at", { ascending: false })
+      .limit(500),
+    admin
+      .schema("palaro")
+      .from("end_of_day_reports")
+      .select("*")
+      .eq("report_date", phToday)
+      .order("created_at", { ascending: false })
+      .limit(200),
   ]);
 
   const incidentsByCategory: Record<IncidentCategory, number> = {
@@ -157,5 +195,8 @@ export async function getDashboardSnapshot(): Promise<
     venueSchedulesToday: (venueToday.data ?? []) as VenueSchedule[],
     garbageToday: (garbToday.data ?? []) as GarbageRow[],
     foodRequestsToday: (foodToday.data ?? []) as FoodRequest[],
+    siteVisitsToday: (siteVisits.data ?? []) as SiteVisit[],
+    externalPersonnelToday: (externalPersonnel.data ?? []) as ExternalPersonnelLog[],
+    endOfDayReportsToday: (endOfDay.data ?? []) as EndOfDayReport[],
   });
 }

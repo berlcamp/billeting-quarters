@@ -393,6 +393,7 @@ CREATE TABLE palaro.venue_schedules (
   venue_id UUID NOT NULL REFERENCES palaro.sites(id),  -- must be palaro.site_type=playing_venue
   delegation_id UUID NOT NULL REFERENCES palaro.delegations(id),
   sport TEXT,                      -- 'basketball', 'volleyball'
+  court_number INTEGER NOT NULL,   -- 1..10 — multiple courts can run in parallel
   scheduled_start TIMESTAMPTZ NOT NULL,
   scheduled_end TIMESTAMPTZ NOT NULL,
   status palaro.schedule_status NOT NULL DEFAULT 'booked',
@@ -405,10 +406,11 @@ CREATE TABLE palaro.venue_schedules (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  CONSTRAINT venue_schedule_time_check CHECK (scheduled_end > scheduled_start)
+  CONSTRAINT venue_schedule_time_check CHECK (scheduled_end > scheduled_start),
+  CONSTRAINT venue_schedule_court_check CHECK (court_number BETWEEN 1 AND 10)
 );
 
-CREATE INDEX idx_venue_schedules_venue_time ON palaro.venue_schedules(venue_id, scheduled_start);
+CREATE INDEX idx_venue_schedules_venue_court_time ON palaro.venue_schedules(venue_id, court_number, scheduled_start);
 CREATE INDEX idx_venue_schedules_delegation ON palaro.venue_schedules(delegation_id);
 CREATE INDEX idx_venue_schedules_status ON palaro.venue_schedules(status);
 

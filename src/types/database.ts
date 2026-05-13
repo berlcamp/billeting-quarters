@@ -1180,6 +1180,7 @@ export type Database = {
           venue_id: string;
           delegation_id: string;
           sport: string | null;
+          court_number: number;
           scheduled_start: string;
           scheduled_end: string;
           status: Database["palaro"]["Enums"]["schedule_status"];
@@ -1197,6 +1198,7 @@ export type Database = {
           venue_id: string;
           delegation_id: string;
           sport?: string | null;
+          court_number: number;
           scheduled_start: string;
           scheduled_end: string;
           status?: Database["palaro"]["Enums"]["schedule_status"];
@@ -1214,6 +1216,7 @@ export type Database = {
           venue_id?: string;
           delegation_id?: string;
           sport?: string | null;
+          court_number?: number;
           scheduled_start?: string;
           scheduled_end?: string;
           status?: Database["palaro"]["Enums"]["schedule_status"];
