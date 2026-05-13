@@ -65,3 +65,8 @@ export const approveScheduleSchema = z.object({
 export const completeScheduleSchema = z.object({
   id: z.string().uuid(),
 });
+
+export const setScheduleStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["booked", "special_request", "completed", "cancelled"]),
+});

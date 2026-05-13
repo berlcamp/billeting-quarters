@@ -303,6 +303,7 @@ export function MovementsTable({
           return cid ? profileMap.get(cid) ?? null : null;
         })()}
         canAct={openMovement ? isOwnerOf(openMovement) : false}
+        canForceStatus={isSuperAdmin}
       />
     </>
   );

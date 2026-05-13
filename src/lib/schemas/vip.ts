@@ -75,6 +75,21 @@ export const cancelMovementSchema = z.object({
 });
 export type CancelMovementInput = z.infer<typeof cancelMovementSchema>;
 
+// Super-admin override — set a movement's status to any value, bypassing the
+// owner gate and the closed-state guards that block re-opening a departed or
+// cancelled movement.
+export const setMovementStatusSchema = z.object({
+  movement_id: z.string().uuid(),
+  status: z.enum([
+    "eta_logged",
+    "arrived",
+    "etd_logged",
+    "departed",
+    "cancelled",
+  ]),
+});
+export type SetMovementStatusInput = z.infer<typeof setMovementStatusSchema>;
+
 // =============================================================================
 // PROTOCOL OFFICER ASSIGNMENT (1 VIP : 1 Protocol Officer)
 // =============================================================================

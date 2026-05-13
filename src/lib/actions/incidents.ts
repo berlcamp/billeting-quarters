@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, isSuperAdmin } from "@/lib/permissions";
 import { createIncidentSchema } from "@/lib/schemas/incidents";
 import { recordAudit } from "./audit";
 import { fail, ok, type ActionResult } from "./types";
@@ -99,6 +99,67 @@ export async function updateIncidentStatus(
     entity_type: "incident",
     entity_id: id,
     changes: { status, resolution_notes: resolution_notes ?? null },
+    user_id: profile.id,
+  });
+
+  revalidatePath(INCIDENTS_PATH);
+  revalidatePath(`${INCIDENTS_PATH}/${id}`);
+  return ok();
+}
+
+const forceStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["open", "in_progress", "referred", "resolved", "closed"]),
+});
+
+// Super-admin override — set an incident's status to any value, bypassing
+// the UI's transition map and the closed-state lockout. Audit-logged.
+export async function forceIncidentStatus(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (!isSuperAdmin(profile)) {
+    return fail("Only super admins can force a status change.");
+  }
+
+  const parsed = forceStatusSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+  const { id, status } = parsed.data;
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .schema("palaro")
+    .from("incidents")
+    .select("status")
+    .eq("id", id)
+    .single();
+  if (!existing) return fail("Incident not found.");
+  if (existing.status === status) return ok();
+
+  const isResolution = status === "resolved" || status === "closed";
+  const { error } = await admin
+    .schema("palaro")
+    .from("incidents")
+    .update({
+      status,
+      resolved_by: isResolution ? profile.id : null,
+      resolved_at: isResolution ? new Date().toISOString() : null,
+    })
+    .eq("id", id);
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "incident",
+    entity_id: id,
+    changes: {
+      status,
+      previous_status: existing.status,
+      forced_by_super_admin: true,
+    },
     user_id: profile.id,
   });
 

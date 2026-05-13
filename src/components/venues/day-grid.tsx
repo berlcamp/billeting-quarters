@@ -31,6 +31,7 @@ interface Props {
   delegations: Delegation[];
   schedules: Schedule[];
   canBook: boolean;
+  canForceStatus?: boolean;
 }
 
 const HOUR_START = 6; // 06:00 PHT
@@ -62,6 +63,7 @@ export function DayGrid({
   delegations,
   schedules,
   canBook,
+  canForceStatus = false,
 }: Props) {
   const delMap = useMemo(() => {
     const m = new Map<string, Delegation>();
@@ -203,6 +205,7 @@ export function DayGrid({
                             venues={venues}
                             delegations={delegations}
                             canEdit={canBook}
+                            canForceStatus={canForceStatus}
                           />
                         ))}
                       </div>
@@ -258,6 +261,7 @@ interface BookingPillProps {
   venues: Venue[];
   delegations: Delegation[];
   canEdit: boolean;
+  canForceStatus: boolean;
 }
 
 function BookingPill({
@@ -267,6 +271,7 @@ function BookingPill({
   venues,
   delegations,
   canEdit,
+  canForceStatus,
 }: BookingPillProps) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
@@ -288,7 +293,9 @@ function BookingPill({
 
   const status = s.status as ScheduleStatus;
   const cancelled = status === "cancelled";
-  const showActions = canEdit && !cancelled;
+  // Super admins keep edit/delete on cancelled bookings so they can revive
+  // mis-cancelled slots; everyone else sees a read-only pill.
+  const showActions = canEdit && (!cancelled || canForceStatus);
 
   async function handleDelete() {
     if (!window.confirm("Delete this booking? This cannot be undone.")) return;

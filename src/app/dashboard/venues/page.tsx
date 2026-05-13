@@ -18,7 +18,7 @@ import { getDelegations } from "@/lib/actions/delegations";
 import { getSites } from "@/lib/actions/sites";
 import { getSchedules } from "@/lib/actions/venues";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, isSuperAdmin } from "@/lib/permissions";
 import { manilaDayBoundsUtc, todayInManila } from "@/lib/timezone";
 
 interface PageProps {
@@ -30,6 +30,7 @@ export default async function VenuesPage({ searchParams }: PageProps) {
   const canBook = !!profile && hasPermission(profile, "venue.book");
   const canApprove =
     !!profile && hasPermission(profile, "venue.approve_special");
+  const canForceStatus = !!profile && isSuperAdmin(profile);
 
   if (!canBook && !canApprove) {
     return (
@@ -119,6 +120,7 @@ export default async function VenuesPage({ searchParams }: PageProps) {
                 delegations={delegations}
                 schedules={daySchedules}
                 canBook={canBook}
+                canForceStatus={canForceStatus}
               />
             </CardContent>
           </Card>
@@ -131,6 +133,7 @@ export default async function VenuesPage({ searchParams }: PageProps) {
             delegations={delegations}
             canBook={canBook}
             canApprove={canApprove}
+            canForceStatus={canForceStatus}
           />
         </TabsContent>
       </Tabs>

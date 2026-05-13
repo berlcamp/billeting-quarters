@@ -27,7 +27,7 @@ import { getIncident } from "@/lib/actions/incidents";
 import { getSites } from "@/lib/actions/sites";
 import { getDelegations } from "@/lib/actions/delegations";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, isSuperAdmin } from "@/lib/permissions";
 import {
   INCIDENT_CATEGORY_LABELS,
   INCIDENT_STATUS_LABELS,
@@ -239,6 +239,7 @@ export default async function IncidentDetailPage({ params }: PageProps) {
                 incidentId={incident.id}
                 currentStatus={incident.status}
                 canUpdate={canUpdate}
+                canForceStatus={isSuperAdmin(profile)}
               />
               {canCreateFieldReferral ? (
                 <div className="border-t pt-4">

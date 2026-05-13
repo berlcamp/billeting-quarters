@@ -15,7 +15,7 @@ import { MovementsTable } from "@/components/vip/movements-table";
 import { VipFormDialog } from "@/components/vip/vip-form-dialog";
 import { VipsTable } from "@/components/vip/vips-table";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, isSuperAdmin } from "@/lib/permissions";
 import {
   getMovements,
   getProfilesByIds,
@@ -159,7 +159,7 @@ export default async function VipPage({
             sites={sites}
             profiles={movementProfiles}
             currentProfileId={profile.id}
-            isSuperAdmin={false}
+            isSuperAdmin={isSuperAdmin(profile)}
           />
         </TabsContent>
 

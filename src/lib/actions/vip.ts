@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, isSuperAdmin } from "@/lib/permissions";
 import {
   assignProtocolOfficerSchema,
   cancelMovementSchema,
@@ -12,6 +12,7 @@ import {
   logArrivalSchema,
   logDepartureSchema,
   setEtdSchema,
+  setMovementStatusSchema,
   updateVipSchema,
 } from "@/lib/schemas/vip";
 import { recordAudit } from "./audit";
@@ -705,6 +706,57 @@ export async function cancelMovement(
     entity_id: movement_id,
     changes: { status: "cancelled", reason },
     user_id: auth.profile.id,
+  });
+
+  revalidatePath(VIP_PATH);
+  return ok();
+}
+
+// Super-admin override — force a movement's status to any value, bypassing
+// the owner gate and the closed-state guards that block re-opening departed
+// or cancelled movements.
+export async function setMovementStatus(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (!isSuperAdmin(profile)) {
+    return fail("Only super admins can force a status change.");
+  }
+
+  const parsed = setMovementStatusSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+  const { movement_id, status } = parsed.data;
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .schema("palaro")
+    .from("vip_movements")
+    .select("id, status")
+    .eq("id", movement_id)
+    .single();
+  if (!existing) return fail("Movement not found.");
+  if (existing.status === status) return ok();
+
+  const { error } = await admin
+    .schema("palaro")
+    .from("vip_movements")
+    .update({ status, updated_by: profile.id })
+    .eq("id", movement_id);
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "vip_movement",
+    entity_id: movement_id,
+    changes: {
+      status,
+      previous_status: existing.status,
+      forced_by_super_admin: true,
+    },
+    user_id: profile.id,
   });
 
   revalidatePath(VIP_PATH);

@@ -25,6 +25,7 @@ import {
   approveSchedule,
   cancelSchedule,
   completeSchedule,
+  setScheduleStatus,
 } from "@/lib/actions/venues";
 import {
   SCHEDULE_STATUSES,
@@ -54,6 +55,7 @@ interface Props {
   delegations: Delegation[];
   canBook: boolean;
   canApprove: boolean;
+  canForceStatus?: boolean;
 }
 
 export function ScheduleTable({
@@ -62,6 +64,7 @@ export function ScheduleTable({
   delegations,
   canBook,
   canApprove,
+  canForceStatus = false,
 }: Props) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<
@@ -115,6 +118,16 @@ export function ScheduleTable({
     router.refresh();
   }
 
+  async function handleForceStatus(id: string, status: ScheduleStatus) {
+    const result = await setScheduleStatus({ id, status });
+    if (result.error) {
+      toast.error("Status change failed", { description: result.error });
+      return;
+    }
+    toast.success(`Status set to ${SCHEDULE_STATUS_LABELS[status]}`);
+    router.refresh();
+  }
+
   const columns: DataTableColumn<Schedule>[] = [
     {
       id: "when",
@@ -165,17 +178,51 @@ export function ScheduleTable({
     {
       id: "status",
       header: "Status",
-      cell: (s) => (
-        <Badge
-          variant="secondary"
-          className={cn(
-            "border-transparent capitalize",
-            SCHEDULE_STATUS_BADGE[s.status as ScheduleStatus],
-          )}
-        >
-          {SCHEDULE_STATUS_LABELS[s.status as ScheduleStatus]}
-        </Badge>
-      ),
+      cell: (s) => {
+        const status = s.status as ScheduleStatus;
+        if (canForceStatus) {
+          return (
+            <Select
+              value={status}
+              onValueChange={(v) =>
+                handleForceStatus(s.id, v as ScheduleStatus)
+              }
+            >
+              <SelectTrigger
+                className={cn(
+                  "h-8 w-36 border-transparent capitalize",
+                  SCHEDULE_STATUS_BADGE[status],
+                )}
+                aria-label="Change status"
+              >
+                <SelectValue>
+                  {(v: string | null) =>
+                    SCHEDULE_STATUS_LABELS[(v ?? status) as ScheduleStatus]
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {SCHEDULE_STATUSES.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {SCHEDULE_STATUS_LABELS[opt]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        }
+        return (
+          <Badge
+            variant="secondary"
+            className={cn(
+              "border-transparent capitalize",
+              SCHEDULE_STATUS_BADGE[status],
+            )}
+          >
+            {SCHEDULE_STATUS_LABELS[status]}
+          </Badge>
+        );
+      },
     },
     {
       id: "actions",
@@ -184,6 +231,9 @@ export function ScheduleTable({
       cell: (s) => {
         const status = s.status as ScheduleStatus;
         const finished = status === "cancelled" || status === "completed";
+        // Super admins keep edit/cancel access on finished bookings so they
+        // can correct mis-completed slots after the fact.
+        const canEditRow = canBook && (!finished || canForceStatus);
         return (
           <div className="flex items-center justify-end gap-1">
             {canApprove && status === "special_request" ? (
@@ -196,7 +246,7 @@ export function ScheduleTable({
                 Approve
               </Button>
             ) : null}
-            {canBook && !finished ? (
+            {canEditRow ? (
               <ScheduleFormDialog
                 venues={venues}
                 delegations={delegations}
@@ -218,7 +268,7 @@ export function ScheduleTable({
                 <CheckCircle2 className="size-3.5" />
               </Button>
             ) : null}
-            {canBook && !finished ? (
+            {canBook && (!finished || canForceStatus) && status !== "cancelled" ? (
               <Button
                 size="icon-sm"
                 variant="ghost"
@@ -228,7 +278,7 @@ export function ScheduleTable({
                 <X className="size-3.5" />
               </Button>
             ) : null}
-            {finished ? (
+            {finished && !canForceStatus ? (
               <CircleDashed className="size-3.5 text-muted-foreground" />
             ) : null}
           </div>

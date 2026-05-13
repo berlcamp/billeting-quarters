@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -8,11 +10,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { MovementActions } from "./movement-actions";
+import { setMovementStatus } from "@/lib/actions/vip";
 import { cn } from "@/lib/utils";
 import {
   VIP_MOVEMENT_STATUS_BADGE,
   VIP_MOVEMENT_STATUS_LABELS,
+  VIP_MOVEMENT_STATUSES,
   type VipMovementStatus,
 } from "@/lib/labels";
 import { formatManila } from "@/lib/timezone";
@@ -37,6 +48,9 @@ interface Props {
   creator: ProfileLite | null;
   // True iff the current viewer is the creator (and may take actions).
   canAct: boolean;
+  // Super-admin override — shows an inline status select that bypasses the
+  // closed-state guard, so departed/cancelled movements can be re-opened.
+  canForceStatus?: boolean;
 }
 
 function Field({
@@ -68,9 +82,25 @@ export function MovementDetailsDialog({
   destinationName,
   creator,
   canAct,
+  canForceStatus = false,
 }: Props) {
+  const router = useRouter();
   if (!movement) return null;
   const status = movement.status as VipMovementStatus;
+  const movementId = movement.id;
+
+  async function handleForceStatus(next: VipMovementStatus) {
+    const result = await setMovementStatus({
+      movement_id: movementId,
+      status: next,
+    });
+    if (result.error) {
+      toast.error("Status change failed", { description: result.error });
+      return;
+    }
+    toast.success(`Status set to ${VIP_MOVEMENT_STATUS_LABELS[next]}`);
+    router.refresh();
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,14 +108,46 @@ export function MovementDetailsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span>{vipName ?? "Movement"}</span>
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-xs font-medium",
-                VIP_MOVEMENT_STATUS_BADGE[status],
-              )}
-            >
-              {VIP_MOVEMENT_STATUS_LABELS[status]}
-            </span>
+            {canForceStatus ? (
+              <Select
+                value={status}
+                onValueChange={(v) =>
+                  handleForceStatus(v as VipMovementStatus)
+                }
+              >
+                <SelectTrigger
+                  className={cn(
+                    "h-7 w-36 border-transparent text-xs font-medium",
+                    VIP_MOVEMENT_STATUS_BADGE[status],
+                  )}
+                  aria-label="Change status"
+                >
+                  <SelectValue>
+                    {(v: string | null) =>
+                      VIP_MOVEMENT_STATUS_LABELS[
+                        (v ?? status) as VipMovementStatus
+                      ]
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {VIP_MOVEMENT_STATUSES.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {VIP_MOVEMENT_STATUS_LABELS[opt]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-medium",
+                  VIP_MOVEMENT_STATUS_BADGE[status],
+                )}
+              >
+                {VIP_MOVEMENT_STATUS_LABELS[status]}
+              </span>
+            )}
           </DialogTitle>
           {vipTitle || vipOrganization ? (
             <DialogDescription>

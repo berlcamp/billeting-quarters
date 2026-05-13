@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, isSuperAdmin } from "@/lib/permissions";
 import {
   approveScheduleSchema,
   cancelScheduleSchema,
   completeScheduleSchema,
   createScheduleSchema,
   deleteScheduleSchema,
+  setScheduleStatusSchema,
   updateScheduleSchema,
 } from "@/lib/schemas/venues";
 import { recordAudit } from "./audit";
@@ -385,6 +386,55 @@ export async function completeSchedule(
     entity_id: parsed.data.id,
     changes: { status: "completed" },
     user_id: auth.profile.id,
+  });
+
+  revalidatePath(VENUES_PATH);
+  return ok();
+}
+
+// Super-admin override — set a schedule's status to any value, bypassing the
+// finished-state gates that block re-opening completed/cancelled bookings.
+export async function setScheduleStatus(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (!isSuperAdmin(profile)) {
+    return fail("Only super admins can force a status change.");
+  }
+
+  const parsed = setScheduleStatusSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .schema("palaro")
+    .from("venue_schedules")
+    .select("status")
+    .eq("id", parsed.data.id)
+    .single();
+  if (!existing) return fail("Schedule not found.");
+  if (existing.status === parsed.data.status) return ok();
+
+  const { error } = await admin
+    .schema("palaro")
+    .from("venue_schedules")
+    .update({ status: parsed.data.status })
+    .eq("id", parsed.data.id);
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "venue_schedule",
+    entity_id: parsed.data.id,
+    changes: {
+      status: parsed.data.status,
+      previous_status: existing.status,
+      forced_by_super_admin: true,
+    },
+    user_id: profile.id,
   });
 
   revalidatePath(VENUES_PATH);
