@@ -208,24 +208,16 @@ export function PatientReferralForm({
 
   return (
     <article className="patient-referral-form mx-auto w-[210mm] bg-white p-[8mm] text-black [font-family:'Times_New_Roman',Times,serif]">
-      {/* ── Header ── */}
-      <header className="mb-1 flex flex-col items-center gap-0.5 text-center">
+      {/* ── Header (single composite logo: seals + titles + form name) ── */}
+      <header className="mb-1">
         <Image
-          src="/banner.png"
-          alt="Palarong Pambansa 2026 — Agusan del Sur"
-          width={1494}
-          height={1073}
-          className="h-[52px] w-auto"
+          src="/medical_logo.png"
+          alt="Palarong Pambansa 2026 — Patient Consultation/Referral Form"
+          width={1252}
+          height={344}
+          className="mx-auto block h-auto w-full"
           priority
         />
-        <div className="text-[12pt] font-bold leading-tight tracking-wide">
-          PALARONG PAMBANSA 2026
-        </div>
-        <div className="text-[9pt] leading-tight">Province of Agusan del Sur</div>
-        <div className="my-0.5 w-full border-t border-black" />
-        <div className="text-[11pt] font-bold leading-tight tracking-wide">
-          PATIENT CONSULTATION/REFERRAL FORM
-        </div>
       </header>
 
       {/* ── Body table ── */}
