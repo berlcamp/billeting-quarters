@@ -98,6 +98,28 @@ export async function getLatestReferralByIncident(
   return ok(latest);
 }
 
+// Returns the full referral chain for one incident, oldest first. Used by the
+// printable patient-consultation form so the latest vitals / treatment /
+// diagnosis values can flow into the paper layout.
+export async function getReferralsByIncident(
+  incidentId: string,
+): Promise<ActionResult<Referral[]>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  if (!hasPermission(profile, "incident.view")) {
+    return fail("You don't have permission to view referrals.");
+  }
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .schema("palaro")
+    .from("referrals")
+    .select("*")
+    .eq("incident_id", incidentId)
+    .order("referred_at", { ascending: true });
+  if (error) return fail(error.message);
+  return ok(data ?? []);
+}
+
 // Returns all field-to-UCF referrals visible to the caller.
 // Future: filter to user's primary_assignment_site_id when role is medical_ucf and assignment is set.
 export async function getUcfInbox(): Promise<ActionResult<Referral[]>> {

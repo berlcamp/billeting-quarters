@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { AlertOctagon } from "lucide-react";
+import { AlertOctagon, Printer } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { LiveBadge } from "@/components/shared/live-badge";
@@ -195,6 +196,29 @@ export function IncidentsTable({
         </span>
       ),
     },
+    ...(lockedCategory === "medical"
+      ? [
+          {
+            id: "print",
+            header: "",
+            className: "w-12 text-right",
+            cell: (row: Incident) => (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/dashboard/medical/incidents/${row.id}/print`);
+                }}
+                aria-label={`Print consultation/referral form for ${row.incident_number}`}
+                title="Print patient consultation/referral form"
+              >
+                <Printer className="size-4 text-muted-foreground" />
+              </Button>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
