@@ -36,7 +36,10 @@ import {
   AFFECTED_PERSON_ROLES,
   INCIDENT_CATEGORIES,
   INCIDENT_CATEGORY_LABELS,
+  PATIENT_GENDERS,
+  PATIENT_GENDER_LABELS,
   type IncidentCategory,
+  type PatientGender,
 } from "@/lib/labels";
 import type { Database } from "@/types/database";
 
@@ -70,6 +73,28 @@ const emptyValues: CreateIncidentInput = {
   reporting_officer_name: undefined,
   reporting_officer_position: undefined,
   photo_paths: [],
+  medical_data: {
+    patient_birthdate: undefined,
+    patient_sex: undefined,
+    patient_address: undefined,
+    patient_contact_number: undefined,
+    division: undefined,
+    sports_event: undefined,
+    chief_complaint: undefined,
+    pe_findings: undefined,
+    allergies: undefined,
+    current_medications: undefined,
+    past_medical_history: undefined,
+    last_meal: undefined,
+    vital_bp: undefined,
+    vital_hr: undefined,
+    vital_rr: undefined,
+    vital_temp: undefined,
+    vital_spo2: undefined,
+    treatment: undefined,
+    diagnosis: undefined,
+    remarks: undefined,
+  },
 };
 
 export function IncidentForm({ sites, delegations }: IncidentFormProps) {
@@ -85,6 +110,7 @@ export function IncidentForm({ sites, delegations }: IncidentFormProps) {
 
   const category = form.watch("category");
   const showReportingOfficer = category === "security";
+  const showMedicalFields = category === "medical";
 
   function captureLocation() {
     if (!navigator.geolocation) {
@@ -109,9 +135,12 @@ export function IncidentForm({ sites, delegations }: IncidentFormProps) {
 
   async function onSubmit(values: CreateIncidentInput) {
     setSubmitting(true);
+    const { medical_data, ...rest } = values;
     const result = await createIncident({
-      ...values,
+      ...rest,
       photo_paths: photos.map((p) => p.path),
+      // Only persist the medical block on medical incidents.
+      medical_data: rest.category === "medical" ? medical_data : undefined,
     });
     setSubmitting(false);
 
@@ -478,6 +507,457 @@ export function IncidentForm({ sites, delegations }: IncidentFormProps) {
             </div>
           </CardContent>
         </Card>
+
+        {showMedicalFields ? (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Patient details (for referral form)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="medical_data.patient_birthdate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Birthdate</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(e.target.value || undefined)
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical_data.patient_sex"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sex</FormLabel>
+                        <Select
+                          value={field.value ?? ""}
+                          onValueChange={(v) =>
+                            field.onChange((v || undefined) as PatientGender | undefined)
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue>
+                                {(v: string | null) =>
+                                  v && v in PATIENT_GENDER_LABELS ? (
+                                    PATIENT_GENDER_LABELS[v as PatientGender]
+                                  ) : (
+                                    <span className="text-muted-foreground">
+                                      Pick sex
+                                    </span>
+                                  )
+                                }
+                              </SelectValue>
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {PATIENT_GENDERS.map((g) => (
+                              <SelectItem key={g} value={g}>
+                                {PATIENT_GENDER_LABELS[g]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="medical_data.patient_address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Complete address (for surveillance)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="medical_data.patient_contact_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact number</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. 0917 555 1234"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical_data.division"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Division{" "}
+                          <span className="text-muted-foreground text-xs">
+                            (N/A if from CO and Region)
+                          </span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="medical_data.sports_event"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Sports event{" "}
+                        <span className="text-muted-foreground text-xs">
+                          (for athletes and coaches only)
+                        </span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. Basketball, Athletics"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Assessment and findings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <FormField
+                  control={form.control}
+                  name="medical_data.chief_complaint"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Chief complaint/s</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="What the patient is presenting with"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="medical_data.pe_findings"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>PE finding/s</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          placeholder="Physical examination findings"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Other findings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="medical_data.allergies"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Allergies</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            rows={2}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical_data.current_medications"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current medication/s</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            rows={2}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="medical_data.past_medical_history"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Past medical history</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="medical_data.last_meal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last meal taken</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. Lunch — 12:00, rice and chicken"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Vital signs</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="medical_data.vital_bp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Blood pressure</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. 120/80"
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical_data.vital_hr"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pulse rate (bpm)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(v === "" ? undefined : Number(v));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical_data.vital_rr"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Respiration rate (/min)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(v === "" ? undefined : Number(v));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical_data.vital_temp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Temperature (°C)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(v === "" ? undefined : Number(v));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="medical_data.vital_spo2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>SpO₂ (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={field.value ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              field.onChange(v === "" ? undefined : Number(v));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Treatment, diagnosis and remarks
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <FormField
+                  control={form.control}
+                  name="medical_data.treatment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Treatment / intervention</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="medical_data.diagnosis"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Impression / diagnosis</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="medical_data.remarks"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Remarks</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
+          </>
+        ) : null}
 
         {showReportingOfficer ? (
           <Card>

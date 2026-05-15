@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/shared/data-table";
+import { VisitDetailDialog } from "./visit-detail-dialog";
 import { formatManila } from "@/lib/timezone";
 import type { Database } from "@/types/database";
 
@@ -19,14 +20,16 @@ interface Props {
 }
 
 export function VisitsTable({ visits, patients, sites }: Props) {
+  const [activeVisit, setActiveVisit] = useState<Visit | null>(null);
+
   const patientMap = useMemo(() => {
     const m = new Map<string, Patient>();
     for (const p of patients) m.set(p.id, p);
     return m;
   }, [patients]);
   const siteMap = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const s of sites) m.set(s.id, s.name);
+    const m = new Map<string, Site>();
+    for (const s of sites) m.set(s.id, s);
     return m;
   }, [sites]);
 
@@ -60,7 +63,7 @@ export function VisitsTable({ visits, patients, sites }: Props) {
     {
       id: "site",
       header: "Clinic",
-      cell: (v) => siteMap.get(v.site_id) ?? "—",
+      cell: (v) => siteMap.get(v.site_id)?.name ?? "—",
     },
     {
       id: "complaint",
@@ -85,27 +88,39 @@ export function VisitsTable({ visits, patients, sites }: Props) {
   ];
 
   return (
-    <DataTable
-      data={visits}
-      columns={columns}
-      rowKey={(v) => v.id}
-      pageSize={20}
-      searchable={{
-        placeholder: "Search by patient, complaint, diagnosis…",
-        predicate: (v, q) => {
-          const p = patientMap.get(v.patient_id);
-          return (
-            (p?.full_name.toLowerCase().includes(q) ?? false) ||
-            (p?.patient_number.toLowerCase().includes(q) ?? false) ||
-            (v.chief_complaint?.toLowerCase().includes(q) ?? false) ||
-            (v.diagnosis?.toLowerCase().includes(q) ?? false)
-          );
-        },
-      }}
-      empty={{
-        title: "No visits logged",
-        description: "Log the first visit to start tracking clinic activity.",
-      }}
-    />
+    <>
+      <DataTable
+        data={visits}
+        columns={columns}
+        rowKey={(v) => v.id}
+        pageSize={20}
+        searchable={{
+          placeholder: "Search by patient, complaint, diagnosis…",
+          predicate: (v, q) => {
+            const p = patientMap.get(v.patient_id);
+            return (
+              (p?.full_name.toLowerCase().includes(q) ?? false) ||
+              (p?.patient_number.toLowerCase().includes(q) ?? false) ||
+              (v.chief_complaint?.toLowerCase().includes(q) ?? false) ||
+              (v.diagnosis?.toLowerCase().includes(q) ?? false)
+            );
+          },
+        }}
+        onRowClick={(v) => setActiveVisit(v)}
+        empty={{
+          title: "No visits logged",
+          description: "Log the first visit to start tracking clinic activity.",
+        }}
+      />
+      {activeVisit ? (
+        <VisitDetailDialog
+          open
+          visit={activeVisit}
+          patient={patientMap.get(activeVisit.patient_id) ?? null}
+          site={siteMap.get(activeVisit.site_id) ?? null}
+          onOpenChange={(o) => (o ? null : setActiveVisit(null))}
+        />
+      ) : null}
+    </>
   );
 }

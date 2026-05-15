@@ -51,6 +51,31 @@ type VitalSigns = {
   on_arrival?: VitalSigns;
 };
 
+// Shape of incidents.medical_data — kept loose because it's a JSONB column
+// the create form populates. Keep field names in sync with medicalDataSchema.
+type IncidentMedicalData = {
+  patient_birthdate?: string;
+  patient_sex?: string;
+  patient_address?: string;
+  patient_contact_number?: string;
+  division?: string;
+  sports_event?: string;
+  chief_complaint?: string;
+  pe_findings?: string;
+  allergies?: string;
+  current_medications?: string;
+  past_medical_history?: string;
+  last_meal?: string;
+  vital_bp?: string;
+  vital_hr?: number;
+  vital_rr?: number;
+  vital_temp?: number;
+  vital_spo2?: number;
+  treatment?: string;
+  diagnosis?: string;
+  remarks?: string;
+};
+
 // Merge vital signs across the chain, preferring the latest non-empty value.
 function combineVitals(referrals: Referral[]): VitalSigns {
   const out: VitalSigns = {};
@@ -130,51 +155,89 @@ export function PatientReferralForm({
 }: Props) {
   // Choose the most recent referral as the primary source of clinical fields.
   const latest = referrals.length > 0 ? referrals[referrals.length - 1] : null;
-  const vitals = combineVitals(referrals);
+  const referralVitals = combineVitals(referrals);
+  const md = (incident.medical_data ?? null) as IncidentMedicalData | null;
+
+  // Vitals — incident-level fields fall back to combined referral vitals.
+  const vitals: VitalSigns = {
+    bp: md?.vital_bp ?? referralVitals.bp,
+    hr: md?.vital_hr ?? referralVitals.hr,
+    rr: md?.vital_rr ?? referralVitals.rr,
+    temp: md?.vital_temp ?? referralVitals.temp,
+    spo2: md?.vital_spo2 ?? referralVitals.spo2,
+  };
 
   const patientName =
     latest?.patient_name ??
     incident.affected_person_name ??
     "";
 
+  const sexRaw = md?.patient_sex ?? latest?.patient_gender ?? null;
   const ageSex = joinNonEmpty([
     incident.affected_person_age != null
       ? `${incident.affected_person_age} y/o`
       : latest?.patient_age != null
         ? `${latest.patient_age} y/o`
         : null,
-    latest?.patient_gender
-      ? latest.patient_gender.charAt(0).toUpperCase() +
-        latest.patient_gender.slice(1)
-      : null,
+    sexRaw ? sexRaw.charAt(0).toUpperCase() + sexRaw.slice(1) : null,
   ]);
 
   const delegationCheck = resolveDelegationCheck(incident.affected_person_role);
 
-  // Region/Division — we only have region. "Division" is DepEd-school-division and
-  // isn't part of our delegation model, so we leave it blank for manual fill-in.
   const region = delegation?.region_name ?? null;
+  const division = md?.division ?? null;
+  const addressLine = joinNonEmpty(
+    [md?.patient_address ?? null, md?.patient_contact_number ?? null],
+    " · ",
+  );
+  const sportsEvent = md?.sports_event ?? null;
   const placeOfIncident = joinNonEmpty(
     [site?.name ?? null, incident.location_details ?? null],
     " — ",
   );
 
-  // Treatment / diagnosis: prefer hospital-level data if present; fall back through chain.
-  const treatment = joinNonEmpty(
+  // Birthdate — display as MM/DD/YYYY when stored as ISO date.
+  const birthdate = md?.patient_birthdate
+    ? (() => {
+        const m = md.patient_birthdate!.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return m ? `${m[2]}/${m[3]}/${m[1]}` : md.patient_birthdate!;
+      })()
+    : "";
+
+  // Treatment / diagnosis: prefer hospital-level data if present; fall back to incident.
+  const treatmentFromReferrals = joinNonEmpty(
     referrals.map((r) =>
       joinNonEmpty([r.treatment_given, r.treatment_plan], " · "),
     ),
     "\n",
   );
-  const diagnosis = joinNonEmpty(
+  const treatment = joinNonEmpty(
+    [md?.treatment ?? null, treatmentFromReferrals || null],
+    "\n",
+  );
+  const diagnosisFromReferrals = joinNonEmpty(
     referrals.map((r) => r.final_diagnosis ?? r.initial_diagnosis ?? null),
     "\n",
   );
-  const chiefComplaint = latest?.chief_complaint ?? null;
-  const peFindings = joinNonEmpty(
+  const diagnosis = joinNonEmpty(
+    [md?.diagnosis ?? null, diagnosisFromReferrals || null],
+    "\n",
+  );
+  const chiefComplaint = md?.chief_complaint ?? latest?.chief_complaint ?? null;
+  const peFromReferrals = joinNonEmpty(
     referrals.map((r) => r.assessment_notes ?? null),
     "\n",
   );
+  const peFindings = joinNonEmpty(
+    [md?.pe_findings ?? null, peFromReferrals || null],
+    "\n",
+  );
+
+  // Other findings (Section IV left column) come only from the incident.
+  const allergies = md?.allergies ?? "";
+  const currentMedications = md?.current_medications ?? "";
+  const pastMedicalHistory = md?.past_medical_history ?? "";
+  const lastMeal = md?.last_meal ?? "";
 
   // Disposition.
   const wasReferred = referrals.length > 0;
@@ -189,6 +252,7 @@ export function PatientReferralForm({
     incident.status === "resolved" || incident.status === "closed";
   const remarks = joinNonEmpty(
     [
+      md?.remarks ?? null,
       ...referrals.map((r) => r.discharge_notes ?? null),
       incident.resolution_notes ?? null,
     ],
@@ -273,12 +337,16 @@ export function PatientReferralForm({
             </div>
             <div className="border-b border-black px-1.5 py-1 leading-tight">
               Division{" "}
-              <span className="italic">(N/A if from CO and Region)</span>:
+              <span className="italic">(N/A if from CO and Region)</span>:{" "}
+              <span className="font-medium">{division ?? ""}</span>
             </div>
             <div className="px-1.5 py-1 leading-tight">
               Complete Address and Contact Number:
               <div className="italic text-[7.5pt]">
                 (for Surveillance Purposes)
+              </div>
+              <div className="mt-0.5 whitespace-pre-wrap font-medium">
+                {addressLine}
               </div>
             </div>
           </div>
@@ -302,7 +370,7 @@ export function PatientReferralForm({
                 Birthdate <span className="italic">(mm/dd/yyyy)</span>:
               </>
             }
-            value=""
+            value={birthdate}
             className="border-r border-black"
           />
           <Cell label="Age/Sex:" value={ageSex} />
@@ -311,7 +379,8 @@ export function PatientReferralForm({
         {/* Sports Event */}
         <div className="border-t border-black px-1.5 py-1 leading-tight">
           Sports Event{" "}
-          <span className="italic">(for athletes and coaches only)</span>:
+          <span className="italic">(for athletes and coaches only)</span>:{" "}
+          <span className="font-medium">{sportsEvent ?? ""}</span>
         </div>
 
         {/* II / III headers */}
@@ -355,18 +424,22 @@ export function PatientReferralForm({
         <SectionHead>IV. OTHER FINDINGS</SectionHead>
         <div className="grid grid-cols-2">
           <div className="border-r border-black">
-            <Cell label="Allergies:" value="" className="border-b border-black" />
+            <Cell
+              label="Allergies:"
+              value={allergies}
+              className="border-b border-black"
+            />
             <Cell
               label="Current Medication/s:"
-              value=""
+              value={currentMedications}
               className="border-b border-black"
             />
             <Cell
               label="Past Medical History:"
-              value=""
+              value={pastMedicalHistory}
               className="border-b border-black"
             />
-            <Cell label="Last Meal Taken:" value="" />
+            <Cell label="Last Meal Taken:" value={lastMeal} />
           </div>
           <div>
             <Cell
@@ -422,8 +495,10 @@ export function PatientReferralForm({
           <Cell label="Remarks:" value={remarks} minHeight="min-h-[36px]" />
         </div>
 
-        {/* Signature line */}
-        <div className="grid grid-cols-2 border-t border-black">
+        {/* Signature line — kept on a single page via the signature-row class
+            (see print CSS) so the bottom border / signature labels are never
+            sliced by a page break. */}
+        <div className="signature-row grid grid-cols-2 border-t border-black">
           <div className="border-r border-black px-1.5 pt-6 pb-1 text-center text-[8.5pt]">
             <div className="border-t border-black pt-0.5">NOD/Signature</div>
           </div>

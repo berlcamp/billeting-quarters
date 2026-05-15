@@ -72,25 +72,25 @@ export default async function MedicalIncidentPrintPage({
         site={site}
         delegation={delegation}
       />
-      {/* Print rules: one A4 portrait page, no app chrome. The form is sized
-          to fit inside 297mm at our chosen padding/font sizes; any minor
-          overflow from long free-text fields is contained by clipping the
-          page-box, so we never spill to a second sheet. */}
+      {/* Print rules: A4 portrait, no app chrome. We let content flow to a
+          second page when the medical fields push past 297mm — the previous
+          rule height-clipped the box and chopped off the signature row. The
+          signature row itself uses break-inside: avoid so it always stays
+          intact on whichever page it lands on. */}
       <style>{`
         @media print {
-          @page { size: A4 portrait; margin: 0; }
+          @page { size: A4 portrait; margin: 8mm; }
           html, body { background: white !important; }
           .patient-referral-form {
-            width: 210mm !important;
-            height: 297mm !important;
-            padding: 6mm 8mm !important;
+            width: auto !important;
+            max-width: 194mm !important;
+            padding: 0 !important;
             margin: 0 auto !important;
-            overflow: hidden !important;
             box-sizing: border-box !important;
-            page-break-after: avoid;
-            page-break-inside: avoid;
-            break-after: avoid;
+          }
+          .patient-referral-form .signature-row {
             break-inside: avoid;
+            page-break-inside: avoid;
           }
         }
       `}</style>

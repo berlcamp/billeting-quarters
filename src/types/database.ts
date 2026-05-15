@@ -236,6 +236,7 @@ export type Database = {
           photo_urls: string[] | null;
           reporting_officer_name: string | null;
           reporting_officer_position: string | null;
+          medical_data: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -263,6 +264,7 @@ export type Database = {
           photo_urls?: string[] | null;
           reporting_officer_name?: string | null;
           reporting_officer_position?: string | null;
+          medical_data?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -290,6 +292,7 @@ export type Database = {
           photo_urls?: string[] | null;
           reporting_officer_name?: string | null;
           reporting_officer_position?: string | null;
+          medical_data?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

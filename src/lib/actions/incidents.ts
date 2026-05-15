@@ -8,7 +8,7 @@ import { hasPermission, isSuperAdmin } from "@/lib/permissions";
 import { createIncidentSchema } from "@/lib/schemas/incidents";
 import { recordAudit } from "./audit";
 import { fail, ok, type ActionResult } from "./types";
-import type { Database } from "@/types/database";
+import type { Database, Json } from "@/types/database";
 
 type Incident = Database["palaro"]["Tables"]["incidents"]["Row"];
 type IncidentCategory = Database["palaro"]["Enums"]["incident_category"];
@@ -183,6 +183,19 @@ export async function createIncident(
   }
   const data = parsed.data;
 
+  // Strip empty strings and undefineds from medical_data so we don't persist
+  // a noisy blob of blanks. Only attach when category === 'medical'.
+  let medicalDataToStore: Json | null = null;
+  if (data.category === "medical" && data.medical_data) {
+    const cleaned: { [k: string]: Json } = {};
+    for (const [k, v] of Object.entries(data.medical_data)) {
+      if (v === undefined || v === null) continue;
+      if (typeof v === "string" && v.trim() === "") continue;
+      cleaned[k] = v as Json;
+    }
+    if (Object.keys(cleaned).length > 0) medicalDataToStore = cleaned;
+  }
+
   const admin = createAdminClient();
   const { data: inserted, error } = await admin
     .schema("palaro")
@@ -203,6 +216,7 @@ export async function createIncident(
       reporting_officer_name: data.reporting_officer_name || null,
       reporting_officer_position: data.reporting_officer_position || null,
       photo_urls: data.photo_paths && data.photo_paths.length > 0 ? data.photo_paths : null,
+      medical_data: medicalDataToStore,
       reported_by: profile.id,
       reported_at: new Date().toISOString(),
     })

@@ -17,6 +17,9 @@ import {
   DISPATCH_STATUS_BADGE,
   DISPATCH_STATUS_LABELS,
   type DispatchStatus,
+  VEHICLE_TYPES,
+  VEHICLE_TYPE_LABELS,
+  type VehicleType,
 } from "@/lib/labels";
 import { formatManila } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
@@ -41,7 +44,7 @@ type Manifest = Pick<
 >;
 type Vehicle = Pick<
   Database["palaro"]["Tables"]["vehicles"]["Row"],
-  "id" | "vehicle_code"
+  "id" | "vehicle_code" | "vehicle_type"
 >;
 type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
@@ -68,9 +71,14 @@ export function DispatchTable({
   const [statusFilter, setStatusFilter] = useState<DispatchStatus | typeof ALL>(
     ALL,
   );
+  const [typeFilter, setTypeFilter] = useState<VehicleType | typeof ALL>(ALL);
 
   const vehicleMap = useMemo(
     () => new Map(vehicles.map((v) => [v.id, v.vehicle_code])),
+    [vehicles],
+  );
+  const vehicleTypeMap = useMemo(
+    () => new Map(vehicles.map((v) => [v.id, v.vehicle_type])),
     [vehicles],
   );
   const siteMap = useMemo(
@@ -104,9 +112,16 @@ export function DispatchTable({
   }, [manifest]);
 
   const filtered = useMemo(() => {
-    if (statusFilter === ALL) return dispatches;
-    return dispatches.filter((d) => d.status === statusFilter);
-  }, [dispatches, statusFilter]);
+    return dispatches.filter((d) => {
+      if (statusFilter !== ALL && d.status !== statusFilter) return false;
+      if (
+        typeFilter !== ALL &&
+        vehicleTypeMap.get(d.vehicle_id) !== typeFilter
+      )
+        return false;
+      return true;
+    });
+  }, [dispatches, statusFilter, typeFilter, vehicleTypeMap]);
 
   const columns: DataTableColumn<Dispatch>[] = [
     {
@@ -202,29 +217,52 @@ export function DispatchTable({
       rowKey={(d) => d.id}
       pageSize={20}
       filters={
-        <Select
-          value={statusFilter}
-          onValueChange={(v) =>
-            setStatusFilter(v as DispatchStatus | typeof ALL)
-          }
-        >
-          <SelectTrigger className="h-9 w-44">
-            <SelectValue>
-              {(v: string | null) => {
-                if (!v || v === ALL) return "All statuses";
-                return DISPATCH_STATUS_LABELS[v as DispatchStatus];
-              }}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All statuses</SelectItem>
-            {DISPATCH_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {DISPATCH_STATUS_LABELS[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <>
+          <Select
+            value={typeFilter}
+            onValueChange={(v) => setTypeFilter(v as VehicleType | typeof ALL)}
+          >
+            <SelectTrigger className="h-9 w-44">
+              <SelectValue>
+                {(v: string | null) => {
+                  if (!v || v === ALL) return "All vehicle types";
+                  return VEHICLE_TYPE_LABELS[v as VehicleType];
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All vehicle types</SelectItem>
+              {VEHICLE_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {VEHICLE_TYPE_LABELS[t]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) =>
+              setStatusFilter(v as DispatchStatus | typeof ALL)
+            }
+          >
+            <SelectTrigger className="h-9 w-44">
+              <SelectValue>
+                {(v: string | null) => {
+                  if (!v || v === ALL) return "All statuses";
+                  return DISPATCH_STATUS_LABELS[v as DispatchStatus];
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All statuses</SelectItem>
+              {DISPATCH_STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {DISPATCH_STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </>
       }
       empty={{
         title: "No trips yet",

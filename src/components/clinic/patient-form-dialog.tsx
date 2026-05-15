@@ -76,7 +76,6 @@ export function PatientFormDialog({ trigger, delegations, patient }: Props) {
       phone: patient?.phone ?? undefined,
       emergency_contact: patient?.emergency_contact ?? undefined,
       allergies: patient?.allergies ?? undefined,
-      medical_history: patient?.medical_history ?? undefined,
     },
   });
 
@@ -90,7 +89,6 @@ export function PatientFormDialog({ trigger, delegations, patient }: Props) {
         phone: patient?.phone ?? undefined,
         emergency_contact: patient?.emergency_contact ?? undefined,
         allergies: patient?.allergies ?? undefined,
-        medical_history: patient?.medical_history ?? undefined,
       });
     }
   }, [open, patient, form]);
@@ -295,24 +293,6 @@ export function PatientFormDialog({ trigger, delegations, patient }: Props) {
                     <Textarea
                       rows={2}
                       placeholder="Drug, food, environmental…"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="medical_history"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Medical history</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={3}
-                      placeholder="Chronic conditions, prior surgeries…"
                       {...field}
                       value={field.value ?? ""}
                     />

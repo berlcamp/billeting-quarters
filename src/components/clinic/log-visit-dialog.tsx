@@ -42,7 +42,7 @@ import type { Database } from "@/types/database";
 
 type Patient = Pick<
   Database["palaro"]["Tables"]["clinic_patients"]["Row"],
-  "id" | "full_name" | "patient_number"
+  "id" | "full_name" | "patient_number" | "medical_history"
 >;
 type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
@@ -61,6 +61,11 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
+  const initialHistory =
+    patientId
+      ? (patients.find((p) => p.id === patientId)?.medical_history ?? "")
+      : "";
+
   const form = useForm<CreateVisitInput>({
     resolver: zodResolver(createVisitSchema),
     defaultValues: {
@@ -71,6 +76,7 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
       diagnosis: undefined,
       prescription: undefined,
       notes: undefined,
+      medical_history: initialHistory,
     },
   });
 
@@ -92,6 +98,7 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
       diagnosis: undefined,
       prescription: undefined,
       notes: undefined,
+      medical_history: initialHistory,
     });
     setOpen(false);
     router.refresh();
@@ -131,7 +138,14 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
                     <FormLabel>Patient</FormLabel>
                     <Select
                       value={field.value}
-                      onValueChange={field.onChange}
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        const p = patients.find((x) => x.id === v);
+                        form.setValue(
+                          "medical_history",
+                          p?.medical_history ?? "",
+                        );
+                      }}
                       disabled={!!patientId}
                     >
                       <FormControl>
@@ -312,6 +326,24 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
                   <FormLabel>Prescription</FormLabel>
                   <FormControl>
                     <Textarea rows={2} {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="medical_history"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Medical history</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="Chronic conditions, prior surgeries…"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

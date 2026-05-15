@@ -90,7 +90,6 @@ export async function createPatient(
       phone: data.phone || null,
       emergency_contact: data.emergency_contact || null,
       allergies: data.allergies || null,
-      medical_history: data.medical_history || null,
     })
     .select("id, patient_number")
     .single();
@@ -136,7 +135,6 @@ export async function updatePatient(
       phone: data.phone || null,
       emergency_contact: data.emergency_contact || null,
       allergies: data.allergies || null,
-      medical_history: data.medical_history || null,
     })
     .eq("id", id);
   if (error) return fail(error.message);
@@ -245,6 +243,16 @@ export async function createVisit(
     .select("id")
     .single();
   if (error) return fail(error.message);
+
+  // Medical history is captured at visit time but persisted on the patient
+  // record so it stays current across future visits.
+  if (data.medical_history !== undefined) {
+    await admin
+      .schema("palaro")
+      .from("clinic_patients")
+      .update({ medical_history: data.medical_history || null })
+      .eq("id", data.patient_id);
+  }
 
   await recordAudit({
     action: "create",
