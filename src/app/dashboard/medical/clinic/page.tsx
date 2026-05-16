@@ -2,16 +2,9 @@ import { UserPlus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Forbidden } from "@/components/shared/forbidden";
 import { Button } from "@/components/ui/button";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { LogVisitDialog } from "@/components/clinic/log-visit-dialog";
 import { PatientFormDialog } from "@/components/clinic/patient-form-dialog";
 import { PatientsTable } from "@/components/clinic/patients-table";
-import { VisitsTable } from "@/components/clinic/visits-table";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
 import { getPatients, getVisits } from "@/lib/actions/clinic";
@@ -74,27 +67,12 @@ export default async function MedicalClinicPage() {
         </div>
       ) : null}
 
-      <Tabs defaultValue="visits">
-        <TabsList>
-          <TabsTrigger value="visits">Visits</TabsTrigger>
-          <TabsTrigger value="patients">
-            Patients ({patients.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="visits" className="mt-4">
-          <VisitsTable visits={visits} patients={patients} sites={sites} />
-        </TabsContent>
-
-        <TabsContent value="patients" className="mt-4">
-          <PatientsTable
-            patients={patients}
-            visits={visits}
-            delegations={delegations}
-            clinicSites={clinicSites}
-          />
-        </TabsContent>
-      </Tabs>
+      <PatientsTable
+        patients={patients}
+        visits={visits}
+        delegations={delegations}
+        clinicSites={clinicSites}
+      />
     </div>
   );
 }

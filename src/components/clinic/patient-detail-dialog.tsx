@@ -130,6 +130,7 @@ export function PatientDetailDialog({
                   full_name: patient.full_name,
                   patient_number: patient.patient_number,
                   medical_history: patient.medical_history,
+                  allergies: patient.allergies,
                 },
               ]}
               clinicSites={clinicSites}

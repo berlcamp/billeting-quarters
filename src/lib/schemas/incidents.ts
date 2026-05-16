@@ -46,6 +46,7 @@ export const medicalDataSchema = z.object({
   vital_rr: z.number().int().min(0).max(120).optional(),
   vital_temp: z.number().min(20).max(50).optional(),
   vital_spo2: z.number().int().min(0).max(100).optional(),
+  vital_notes: optionalText,
   treatment: optionalLongText,
   diagnosis: optionalLongText,
   remarks: optionalText,

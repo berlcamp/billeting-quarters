@@ -25,7 +25,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -75,7 +74,6 @@ export function PatientFormDialog({ trigger, delegations, patient }: Props) {
       delegation_id: patient?.delegation_id ?? null,
       phone: patient?.phone ?? undefined,
       emergency_contact: patient?.emergency_contact ?? undefined,
-      allergies: patient?.allergies ?? undefined,
     },
   });
 
@@ -88,7 +86,6 @@ export function PatientFormDialog({ trigger, delegations, patient }: Props) {
         delegation_id: patient?.delegation_id ?? null,
         phone: patient?.phone ?? undefined,
         emergency_contact: patient?.emergency_contact ?? undefined,
-        allergies: patient?.allergies ?? undefined,
       });
     }
   }, [open, patient, form]);
@@ -283,24 +280,6 @@ export function PatientFormDialog({ trigger, delegations, patient }: Props) {
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
-              name="allergies"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Allergies</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={2}
-                      placeholder="Drug, food, environmental…"
-                      {...field}
-                      value={field.value ?? ""}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <DialogFooter>
               <Button
                 type="button"

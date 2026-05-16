@@ -42,7 +42,7 @@ import type { Database } from "@/types/database";
 
 type Patient = Pick<
   Database["palaro"]["Tables"]["clinic_patients"]["Row"],
-  "id" | "full_name" | "patient_number" | "medical_history"
+  "id" | "full_name" | "patient_number" | "medical_history" | "allergies"
 >;
 type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
@@ -61,10 +61,11 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
-  const initialHistory =
-    patientId
-      ? (patients.find((p) => p.id === patientId)?.medical_history ?? "")
-      : "";
+  const initialPatient = patientId
+    ? patients.find((p) => p.id === patientId)
+    : undefined;
+  const initialHistory = initialPatient?.medical_history ?? "";
+  const initialAllergies = initialPatient?.allergies ?? "";
 
   const form = useForm<CreateVisitInput>({
     resolver: zodResolver(createVisitSchema),
@@ -77,6 +78,7 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
       prescription: undefined,
       notes: undefined,
       medical_history: initialHistory,
+      allergies: initialAllergies,
     },
   });
 
@@ -99,6 +101,7 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
       prescription: undefined,
       notes: undefined,
       medical_history: initialHistory,
+      allergies: initialAllergies,
     });
     setOpen(false);
     router.refresh();
@@ -145,6 +148,7 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
                           "medical_history",
                           p?.medical_history ?? "",
                         );
+                        form.setValue("allergies", p?.allergies ?? "");
                       }}
                       disabled={!!patientId}
                     >
@@ -341,6 +345,24 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
                     <Textarea
                       rows={3}
                       placeholder="Chronic conditions, prior surgeries…"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="allergies"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Allergies</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={2}
+                      placeholder="Drug, food, environmental…"
                       {...field}
                       value={field.value ?? ""}
                     />

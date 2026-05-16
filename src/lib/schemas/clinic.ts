@@ -13,7 +13,6 @@ export const createPatientSchema = z.object({
   delegation_id: z.string().uuid().nullable().optional(),
   phone: optionalShortText,
   emergency_contact: optionalShortText,
-  allergies: optionalText,
 });
 export type CreatePatientInput = z.infer<typeof createPatientSchema>;
 
@@ -44,5 +43,6 @@ export const createVisitSchema = z.object({
   prescription: optionalText,
   notes: optionalText,
   medical_history: optionalText,
+  allergies: optionalText,
 });
 export type CreateVisitInput = z.infer<typeof createVisitSchema>;

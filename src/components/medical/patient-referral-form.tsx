@@ -71,6 +71,7 @@ type IncidentMedicalData = {
   vital_rr?: number;
   vital_temp?: number;
   vital_spo2?: number;
+  vital_notes?: string;
   treatment?: string;
   diagnosis?: string;
   remarks?: string;

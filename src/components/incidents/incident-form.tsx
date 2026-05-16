@@ -91,6 +91,7 @@ const emptyValues: CreateIncidentInput = {
     vital_rr: undefined,
     vital_temp: undefined,
     vital_spo2: undefined,
+    vital_notes: undefined,
     treatment: undefined,
     diagnosis: undefined,
     remarks: undefined,
@@ -893,6 +894,24 @@ export function IncidentForm({ sites, delegations }: IncidentFormProps) {
                     )}
                   />
                 </div>
+                <FormField
+                  control={form.control}
+                  name="medical_data.vital_notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vital</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Additional vital info (e.g. GCS, pain scale, level of consciousness)"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </CardContent>
             </Card>
 
