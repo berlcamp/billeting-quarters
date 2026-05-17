@@ -85,6 +85,15 @@ export function PatientDetailDialog({
     ? delegations.find((d) => d.id === patient.delegation_id)?.region_code
     : null;
 
+  // Medical history is now captured per-visit on clinic_visits.history.
+  // List every visit that recorded one, newest first.
+  const historyEntries = [...visits]
+    .filter((v) => v.history && v.history.trim().length > 0)
+    .sort(
+      (a, b) =>
+        new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime(),
+    );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -111,11 +120,29 @@ export function PatientDetailDialog({
             value={patient.emergency_contact}
           />
           <Field label="Allergies" value={patient.allergies} wide />
-          <Field
-            label="Medical history"
-            value={patient.medical_history}
-            wide
-          />
+          <div className="sm:col-span-2">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Medical history ({historyEntries.length})
+            </div>
+            {historyEntries.length === 0 ? (
+              <div className="mt-1 text-sm text-muted-foreground">
+                No medical history recorded yet.
+              </div>
+            ) : (
+              <ul className="mt-1 space-y-1 text-sm">
+                {historyEntries.map((v) => (
+                  <li key={v.id} className="flex gap-2">
+                    <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                      {formatManila(v.visit_date, "MMM d, yyyy")}
+                    </span>
+                    <span className="whitespace-pre-wrap break-words">
+                      {v.history}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3">
@@ -129,12 +156,12 @@ export function PatientDetailDialog({
                   id: patient.id,
                   full_name: patient.full_name,
                   patient_number: patient.patient_number,
-                  medical_history: patient.medical_history,
                   allergies: patient.allergies,
                 },
               ]}
               clinicSites={clinicSites}
               patientId={patient.id}
+              visits={visits}
             />
           </div>
           {visits.length === 0 ? (
@@ -189,6 +216,3 @@ function Field({
   );
 }
 
-// formatManila reference kept implicit via TimelineLog's own formatter.
-// Imported here only to satisfy the build if relocated later.
-void formatManila;

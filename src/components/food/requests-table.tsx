@@ -31,9 +31,9 @@ type Supplier = Pick<
   Database["palaro"]["Tables"]["food_suppliers"]["Row"],
   "id" | "name"
 >;
-type Site = Pick<
-  Database["palaro"]["Tables"]["sites"]["Row"],
-  "id" | "name" | "site_type"
+type Delegation = Pick<
+  Database["palaro"]["Tables"]["delegations"]["Row"],
+  "id" | "region_code" | "region_name" | "short_name"
 >;
 
 const ALL_STATUS = "__all__";
@@ -45,8 +45,13 @@ function formatQuantity(q: number): string {
 interface Props {
   requests: Request[];
   suppliers: Supplier[];
-  bqs: Site[];
+  delegations: Delegation[];
   canManage: boolean;
+}
+
+function delegationLabel(d: Delegation): string {
+  const tag = d.short_name?.trim() || d.region_code;
+  return `${tag} — ${d.region_name}`;
 }
 
 function isKnownStatus(s: string): s is FoodRequestStatus {
@@ -56,7 +61,7 @@ function isKnownStatus(s: string): s is FoodRequestStatus {
 export function RequestsTable({
   requests,
   suppliers,
-  bqs,
+  delegations,
   canManage,
 }: Props) {
   const router = useRouter();
@@ -69,11 +74,11 @@ export function RequestsTable({
     for (const s of suppliers) m.set(s.id, s.name);
     return m;
   }, [suppliers]);
-  const bqMap = useMemo(() => {
+  const delegationMap = useMemo(() => {
     const m = new Map<string, string>();
-    for (const b of bqs) m.set(b.id, b.name);
+    for (const d of delegations) m.set(d.id, delegationLabel(d));
     return m;
-  }, [bqs]);
+  }, [delegations]);
 
   const filtered = useMemo(() => {
     if (statusFilter === ALL_STATUS) return requests;
@@ -112,9 +117,9 @@ export function RequestsTable({
       ),
     },
     {
-      id: "bq",
-      header: "BQ",
-      cell: (r) => bqMap.get(r.bq_id) ?? "—",
+      id: "delegation",
+      header: "Delegation",
+      cell: (r) => delegationMap.get(r.delegation_id) ?? "—",
     },
     {
       id: "item",
@@ -196,7 +201,7 @@ export function RequestsTable({
           {!finished ? (
             <RequestFormDialog
               request={r}
-              bqs={bqs}
+              delegations={delegations}
               suppliers={suppliers}
               trigger={
                 <Button size="icon-sm" variant="ghost" aria-label="Edit">
@@ -227,9 +232,10 @@ export function RequestsTable({
       rowKey={(r) => r.id}
       pageSize={20}
       searchable={{
-        placeholder: "Search BQ, item, supplier…",
+        placeholder: "Search delegation, item, supplier…",
         predicate: (r, q) =>
-          (bqMap.get(r.bq_id)?.toLowerCase().includes(q) ?? false) ||
+          (delegationMap.get(r.delegation_id)?.toLowerCase().includes(q) ??
+            false) ||
           (r.item_name?.toLowerCase().includes(q) ?? false) ||
           (r.unit?.toLowerCase().includes(q) ?? false) ||
           (r.supplier_id

@@ -29,7 +29,7 @@ export type UpdateSupplierInput = z.infer<typeof updateSupplierSchema>;
 export const deleteSupplierSchema = z.object({ id: z.string().uuid() });
 
 const requestFields = z.object({
-  bq_id: z.string().uuid("Pick a billeting quarter."),
+  delegation_id: z.string().uuid("Pick a delegation."),
   supplier_id: z.string().uuid().nullable().optional(),
   item_name: z
     .string()

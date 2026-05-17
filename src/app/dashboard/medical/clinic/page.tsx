@@ -54,6 +54,7 @@ export default async function MedicalClinicPage() {
             <LogVisitDialog
               patients={patients}
               clinicSites={clinicSites}
+              visits={visits}
             />
           </div>
         }

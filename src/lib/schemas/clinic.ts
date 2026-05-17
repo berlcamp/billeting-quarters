@@ -39,10 +39,11 @@ export const createVisitSchema = z.object({
   site_id: z.string().uuid("Pick a clinic site."),
   vital_signs: vitalSignsSchema,
   chief_complaint: optionalText,
+  history: optionalText,
+  physical_examination: optionalText,
   diagnosis: optionalText,
-  prescription: optionalText,
-  notes: optionalText,
-  medical_history: optionalText,
+  treatment_given: optionalText,
   allergies: optionalText,
+  notes: optionalText,
 });
 export type CreateVisitInput = z.infer<typeof createVisitSchema>;

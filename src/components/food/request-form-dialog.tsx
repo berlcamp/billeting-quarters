@@ -45,9 +45,9 @@ type Supplier = Pick<
   Database["palaro"]["Tables"]["food_suppliers"]["Row"],
   "id" | "name"
 >;
-type Site = Pick<
-  Database["palaro"]["Tables"]["sites"]["Row"],
-  "id" | "name" | "site_type"
+type Delegation = Pick<
+  Database["palaro"]["Tables"]["delegations"]["Row"],
+  "id" | "region_code" | "region_name" | "short_name"
 >;
 
 const NO_SUPPLIER = "__none__";
@@ -71,12 +71,22 @@ function plusHoursLocal(hours: number): string {
 
 interface Props {
   trigger: ReactNode;
-  bqs: Site[];
+  delegations: Delegation[];
   suppliers: Supplier[];
   request?: Request;
 }
 
-export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
+function delegationLabel(d: Delegation): string {
+  const tag = d.short_name?.trim() || d.region_code;
+  return `${tag} — ${d.region_name}`;
+}
+
+export function RequestFormDialog({
+  trigger,
+  delegations,
+  suppliers,
+  request,
+}: Props) {
   const isEdit = !!request;
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -85,7 +95,7 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
   const form = useForm<CreateRequestInput>({
     resolver: zodResolver(createRequestSchema),
     defaultValues: {
-      bq_id: request?.bq_id ?? "",
+      delegation_id: request?.delegation_id ?? "",
       supplier_id: request?.supplier_id ?? null,
       item_name: request?.item_name ?? "",
       unit: request?.unit ?? "kg",
@@ -100,7 +110,7 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
   useEffect(() => {
     if (open) {
       form.reset({
-        bq_id: request?.bq_id ?? "",
+        delegation_id: request?.delegation_id ?? "",
         supplier_id: request?.supplier_id ?? null,
         item_name: request?.item_name ?? "",
         unit: request?.unit ?? "kg",
@@ -141,29 +151,29 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
             {isEdit ? "Edit food request" : "Request food"}
           </DialogTitle>
           <DialogDescription>
-            BQs file requests; command center confirms a supplier and tracks
-            delivery.
+            Delegations file requests; command center confirms a supplier and
+            tracks delivery.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
               control={form.control}
-              name="bq_id"
+              name="delegation_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Billeting Quarter</FormLabel>
+                  <FormLabel>Delegation</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue>
                           {(v: string | null) => {
-                            const b = bqs.find((x) => x.id === v);
-                            return b ? (
-                              b.name
+                            const d = delegations.find((x) => x.id === v);
+                            return d ? (
+                              delegationLabel(d)
                             ) : (
                               <span className="text-muted-foreground">
-                                Pick a BQ
+                                Pick a delegation
                               </span>
                             );
                           }}
@@ -171,9 +181,9 @@ export function RequestFormDialog({ trigger, bqs, suppliers, request }: Props) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {bqs.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.name}
+                      {delegations.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {delegationLabel(d)}
                         </SelectItem>
                       ))}
                     </SelectContent>

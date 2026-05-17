@@ -90,9 +90,13 @@ export type Database = {
           patient_gender: string | null;
           delegation_id: string | null;
           chief_complaint: string | null;
+          history: string | null;
+          physical_examination: string | null;
           initial_diagnosis: string | null;
           vital_signs: Json | null;
           treatment_given: string | null;
+          allergies: string | null;
+          notes: string | null;
           referred_by: string | null;
           referred_at: string;
           received_by: string | null;
@@ -118,9 +122,13 @@ export type Database = {
           patient_gender?: string | null;
           delegation_id?: string | null;
           chief_complaint?: string | null;
+          history?: string | null;
+          physical_examination?: string | null;
           initial_diagnosis?: string | null;
           vital_signs?: Json | null;
           treatment_given?: string | null;
+          allergies?: string | null;
+          notes?: string | null;
           referred_by?: string | null;
           referred_at?: string;
           received_by?: string | null;
@@ -146,9 +154,13 @@ export type Database = {
           patient_gender?: string | null;
           delegation_id?: string | null;
           chief_complaint?: string | null;
+          history?: string | null;
+          physical_examination?: string | null;
           initial_diagnosis?: string | null;
           vital_signs?: Json | null;
           treatment_given?: string | null;
+          allergies?: string | null;
+          notes?: string | null;
           referred_by?: string | null;
           referred_at?: string;
           received_by?: string | null;
@@ -651,7 +663,10 @@ export type Database = {
           visit_date: string;
           vital_signs: Json | null;
           chief_complaint: string | null;
+          history: string | null;
+          physical_examination: string | null;
           diagnosis: string | null;
+          treatment_given: string | null;
           prescription: string | null;
           notes: string | null;
           attended_by: string | null;
@@ -664,7 +679,10 @@ export type Database = {
           visit_date?: string;
           vital_signs?: Json | null;
           chief_complaint?: string | null;
+          history?: string | null;
+          physical_examination?: string | null;
           diagnosis?: string | null;
+          treatment_given?: string | null;
           prescription?: string | null;
           notes?: string | null;
           attended_by?: string | null;
@@ -677,7 +695,10 @@ export type Database = {
           visit_date?: string;
           vital_signs?: Json | null;
           chief_complaint?: string | null;
+          history?: string | null;
+          physical_examination?: string | null;
           diagnosis?: string | null;
+          treatment_given?: string | null;
           prescription?: string | null;
           notes?: string | null;
           attended_by?: string | null;
@@ -1516,7 +1537,7 @@ export type Database = {
       food_requests: {
         Row: {
           id: string;
-          bq_id: string;
+          delegation_id: string;
           supplier_id: string | null;
           item_name: string;
           unit: string;
@@ -1529,7 +1550,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          bq_id: string;
+          delegation_id: string;
           supplier_id?: string | null;
           item_name: string;
           unit: string;
@@ -1542,7 +1563,7 @@ export type Database = {
         };
         Update: {
           id?: string;
-          bq_id?: string;
+          delegation_id?: string;
           supplier_id?: string | null;
           item_name?: string;
           unit?: string;
@@ -1762,7 +1783,8 @@ export type Database = {
       referral_level:
         | "field_to_ucf"
         | "ucf_to_hospital"
-        | "hospital_admit";
+        | "hospital_admit"
+        | "ucf_admit";
       site_type:
         | "billeting_quarter"
         | "playing_venue"

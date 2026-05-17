@@ -26,12 +26,14 @@ const STAGE_LABEL: Record<Referral["level"], string> = {
   field_to_ucf: "At UCF",
   ucf_to_hospital: "At Hospital",
   hospital_admit: "Direct admit",
+  ucf_admit: "Direct admit",
 };
 
 const DETAIL_PATH: Record<Referral["level"], string> = {
   field_to_ucf: "/dashboard/medical/ucf",
   ucf_to_hospital: "/dashboard/medical/hospital",
   hospital_admit: "/dashboard/medical/hospital",
+  ucf_admit: "/dashboard/medical/ucf",
 };
 
 export function ActiveReferralsTracker({

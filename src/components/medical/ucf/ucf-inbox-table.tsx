@@ -42,7 +42,7 @@ export function UcfInboxTable({
   const counts = useMemo(() => {
     const c: Record<TabKey, number> = { pending: 0, in_treatment: 0, discharged: 0 };
     for (const r of referrals) {
-      if (r.level !== "field_to_ucf") continue;
+      if (r.level !== "field_to_ucf" && r.level !== "ucf_admit") continue;
       for (const k of Object.keys(TAB_STATUS) as TabKey[]) {
         if ((TAB_STATUS[k] as readonly string[]).includes(r.status)) c[k]++;
       }
@@ -53,7 +53,9 @@ export function UcfInboxTable({
   const filtered = useMemo(() => {
     const allowed = TAB_STATUS[tab];
     const list = referrals.filter(
-      (r) => r.level === "field_to_ucf" && allowed.includes(r.status),
+      (r) =>
+        (r.level === "field_to_ucf" || r.level === "ucf_admit") &&
+        allowed.includes(r.status),
     );
     // Pending: oldest first (urgency). Others: most recent activity first.
     return tab === "pending"
@@ -106,11 +108,16 @@ export function UcfInboxTable({
     {
       id: "from",
       header: "Referring site",
-      cell: (row) => (
-        <span className="text-sm text-muted-foreground">
-          {row.from_site_id ? (siteLookup.get(row.from_site_id) ?? "—") : "—"}
-        </span>
-      ),
+      cell: (row) =>
+        row.level === "ucf_admit" ? (
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Direct admit
+          </span>
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            {row.from_site_id ? (siteLookup.get(row.from_site_id) ?? "—") : "—"}
+          </span>
+        ),
     },
     {
       id: "ucf",

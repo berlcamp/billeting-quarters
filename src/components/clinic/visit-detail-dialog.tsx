@@ -91,7 +91,14 @@ export function VisitDetailDialog({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Chief complaint" value={visit.chief_complaint} wide />
+          <Field label="History" value={visit.history} wide />
+          <Field
+            label="Physical examination"
+            value={visit.physical_examination}
+            wide
+          />
           <Field label="Diagnosis" value={visit.diagnosis} wide />
+          <Field label="Treatment given" value={visit.treatment_given} wide />
           <Field label="Prescription" value={visit.prescription} wide />
           <Field label="Notes" value={visit.notes} wide />
         </div>

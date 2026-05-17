@@ -55,6 +55,7 @@ const EMPTY_REFERRAL_LEVEL: Record<ReferralLevel, number> = {
   field_to_ucf: 0,
   ucf_to_hospital: 0,
   hospital_admit: 0,
+  ucf_admit: 0,
 };
 
 const EMPTY_REFERRAL_STATUS: Record<ReferralStatus, number> = {

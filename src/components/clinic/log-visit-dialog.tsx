@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,15 +38,20 @@ import {
   createVisitSchema,
   type CreateVisitInput,
 } from "@/lib/schemas/clinic";
+import { formatManila } from "@/lib/timezone";
 import type { Database } from "@/types/database";
 
 type Patient = Pick<
   Database["palaro"]["Tables"]["clinic_patients"]["Row"],
-  "id" | "full_name" | "patient_number" | "medical_history" | "allergies"
+  "id" | "full_name" | "patient_number" | "allergies"
 >;
 type Site = Pick<
   Database["palaro"]["Tables"]["sites"]["Row"],
   "id" | "name" | "site_type"
+>;
+type VisitHistoryEntry = Pick<
+  Database["palaro"]["Tables"]["clinic_visits"]["Row"],
+  "id" | "patient_id" | "visit_date" | "history" | "physical_examination"
 >;
 
 interface Props {
@@ -54,9 +59,20 @@ interface Props {
   clinicSites: Site[];
   /** Pre-fill patient_id (from row action). */
   patientId?: string;
+  /**
+   * Past visits for any patient that may be selected. The dialog filters by
+   * the currently selected patient_id to show their History and Physical
+   * Examination running record.
+   */
+  visits?: VisitHistoryEntry[];
 }
 
-export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
+export function LogVisitDialog({
+  patients,
+  clinicSites,
+  patientId,
+  visits = [],
+}: Props) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
@@ -64,7 +80,6 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
   const initialPatient = patientId
     ? patients.find((p) => p.id === patientId)
     : undefined;
-  const initialHistory = initialPatient?.medical_history ?? "";
   const initialAllergies = initialPatient?.allergies ?? "";
 
   const form = useForm<CreateVisitInput>({
@@ -74,13 +89,53 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
       site_id: clinicSites[0]?.id ?? "",
       vital_signs: {},
       chief_complaint: undefined,
+      history: undefined,
+      physical_examination: undefined,
       diagnosis: undefined,
-      prescription: undefined,
+      treatment_given: undefined,
       notes: undefined,
-      medical_history: initialHistory,
       allergies: initialAllergies,
     },
   });
+
+  const selectedPatientId = form.watch("patient_id");
+
+  const priorVisits = useMemo(() => {
+    if (!selectedPatientId) return [] as VisitHistoryEntry[];
+    return visits
+      .filter((v) => v.patient_id === selectedPatientId)
+      .sort(
+        (a, b) =>
+          new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime(),
+      );
+  }, [visits, selectedPatientId]);
+
+  const priorHistory = useMemo(
+    () =>
+      priorVisits
+        .filter((v) => v.history && v.history.trim().length > 0)
+        .map((v) => ({
+          id: v.id,
+          date: v.visit_date,
+          text: v.history as string,
+        })),
+    [priorVisits],
+  );
+  const priorPE = useMemo(
+    () =>
+      priorVisits
+        .filter(
+          (v) =>
+            v.physical_examination &&
+            v.physical_examination.trim().length > 0,
+        )
+        .map((v) => ({
+          id: v.id,
+          date: v.visit_date,
+          text: v.physical_examination as string,
+        })),
+    [priorVisits],
+  );
 
   async function onSubmit(values: CreateVisitInput) {
     setSubmitting(true);
@@ -97,10 +152,11 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
       site_id: clinicSites[0]?.id ?? "",
       vital_signs: {},
       chief_complaint: undefined,
+      history: undefined,
+      physical_examination: undefined,
       diagnosis: undefined,
-      prescription: undefined,
+      treatment_given: undefined,
       notes: undefined,
-      medical_history: initialHistory,
       allergies: initialAllergies,
     });
     setOpen(false);
@@ -122,7 +178,7 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={triggerNode} />
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Log clinic visit</DialogTitle>
           <DialogDescription>
@@ -144,10 +200,6 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
                       onValueChange={(v) => {
                         field.onChange(v);
                         const p = patients.find((x) => x.id === v);
-                        form.setValue(
-                          "medical_history",
-                          p?.medical_history ?? "",
-                        );
                         form.setValue("allergies", p?.allergies ?? "");
                       }}
                       disabled={!!patientId}
@@ -301,7 +353,7 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
               name="chief_complaint"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Chief complaint</FormLabel>
+                  <FormLabel>Chief complaint (current visit)</FormLabel>
                   <FormControl>
                     <Textarea rows={2} {...field} value={field.value ?? ""} />
                   </FormControl>
@@ -309,6 +361,51 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="history"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Medical history</FormLabel>
+                  {priorHistory.length > 0 ? (
+                    <PriorEntriesList entries={priorHistory} />
+                  ) : null}
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="Medical history for this visit…"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="physical_examination"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Physical examination</FormLabel>
+                  {priorPE.length > 0 ? (
+                    <PriorEntriesList entries={priorPE} />
+                  ) : null}
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="PE findings for this visit…"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="diagnosis"
@@ -324,27 +421,14 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
             />
             <FormField
               control={form.control}
-              name="prescription"
+              name="treatment_given"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Prescription</FormLabel>
-                  <FormControl>
-                    <Textarea rows={2} {...field} value={field.value ?? ""} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="medical_history"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Medical history</FormLabel>
+                  <FormLabel>Treatment given</FormLabel>
                   <FormControl>
                     <Textarea
-                      rows={3}
-                      placeholder="Chronic conditions, prior surgeries…"
+                      rows={2}
+                      placeholder="What was administered at the clinic…"
                       {...field}
                       value={field.value ?? ""}
                     />
@@ -402,5 +486,29 @@ export function LogVisitDialog({ patients, clinicSites, patientId }: Props) {
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PriorEntriesList({
+  entries,
+}: {
+  entries: { id: string; date: string; text: string }[];
+}) {
+  return (
+    <div className="rounded-md border bg-muted/30 p-2 text-xs">
+      <div className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        Prior visits ({entries.length})
+      </div>
+      <ul className="space-y-1">
+        {entries.map((e) => (
+          <li key={e.id} className="flex gap-2">
+            <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+              {formatManila(e.date, "MMM d")}
+            </span>
+            <span className="whitespace-pre-wrap break-words">{e.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

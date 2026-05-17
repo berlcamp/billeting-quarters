@@ -12,7 +12,13 @@ import {
 import { getSites } from "@/lib/actions/sites";
 import { manilaDayBoundsUtc, todayInManila } from "@/lib/timezone";
 
-export default async function AttendancePage() {
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+interface PageProps {
+  searchParams: Promise<{ date?: string }>;
+}
+
+export default async function AttendancePage({ searchParams }: PageProps) {
   const profile = await getCurrentProfile();
   if (
     !profile ||
@@ -23,8 +29,10 @@ export default async function AttendancePage() {
     );
   }
 
+  const { date: dateParam } = await searchParams;
   const today = todayInManila();
-  const { startUtc, endUtc } = manilaDayBoundsUtc(today);
+  const selectedDate = dateParam && YMD.test(dateParam) ? dateParam : today;
+  const { startUtc, endUtc } = manilaDayBoundsUtc(selectedDate);
 
   const [logsRes, personnelRes, sitesRes] = await Promise.all([
     getAttendanceLogs(startUtc, endUtc),
@@ -40,7 +48,7 @@ export default async function AttendancePage() {
     <div className="space-y-6">
       <PageHeader
         title="Attendance"
-        description={`Time-in / time-out logging for ${today} (Asia/Manila).`}
+        description="Time-in / time-out logging (Asia/Manila)."
         actions={
           <div className="flex items-center gap-2">
             <ManualAttendanceDialog personnel={personnel} sites={sites} />
@@ -48,7 +56,13 @@ export default async function AttendancePage() {
           </div>
         }
       />
-      <AttendanceTable logs={logs} personnel={personnel} sites={sites} />
+      <AttendanceTable
+        logs={logs}
+        personnel={personnel}
+        sites={sites}
+        selectedDate={selectedDate}
+        today={today}
+      />
     </div>
   );
 }

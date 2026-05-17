@@ -89,6 +89,7 @@ export const REFERRAL_LEVEL_LABELS: Record<ReferralLevel, string> = {
   field_to_ucf: "Field → UCF",
   ucf_to_hospital: "UCF → Hospital",
   hospital_admit: "Hospital admit",
+  ucf_admit: "UCF admit",
 };
 
 export const ACTIVE_REFERRAL_STATUSES: readonly ReferralStatus[] = [

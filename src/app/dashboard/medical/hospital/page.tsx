@@ -69,6 +69,13 @@ export default async function HospitalPage() {
               hospitalSites={hospitalSites}
               delegations={delegationOptions}
               defaultHospitalId={defaultHospitalId}
+              priorReferrals={referrals.map((r) => ({
+                id: r.id,
+                patient_name: r.patient_name,
+                referred_at: r.referred_at,
+                history: r.history,
+                physical_examination: r.physical_examination,
+              }))}
             />
           ) : null
         }

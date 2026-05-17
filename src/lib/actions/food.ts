@@ -215,42 +215,29 @@ export async function createRequest(
 
   const admin = createAdminClient();
 
-  // BQ must be a billeting quarter — meal deliveries don't fit other site types.
-  const { data: site } = await admin
+  // Delegation must exist and be active.
+  const { data: delegation } = await admin
     .schema("palaro")
-    .from("sites")
-    .select("id, site_type")
-    .eq("id", data.bq_id)
+    .from("delegations")
+    .select("id, is_active")
+    .eq("id", data.delegation_id)
     .single();
-  if (!site) return fail("BQ not found.");
-  if (site.site_type !== "billeting_quarter") {
-    return fail("Selected site is not a billeting quarter.");
-  }
+  if (!delegation) return fail("Delegation not found.");
+  if (!delegation.is_active) return fail("Delegation is inactive.");
 
-  // Auto-pick a supplier from the BQ's delegation's roster when the caller
-  // didn't pick one explicitly. The delegation → BQ link is on
-  // delegations.assigned_bq_id (delegations point at their BQ), so we look
-  // up the delegation that owns this BQ first.
+  // Auto-pick a supplier from the delegation's roster when the caller
+  // didn't pick one explicitly.
   let supplierId = data.supplier_id || null;
   if (!supplierId) {
-    const { data: delegationRow } = await admin
+    const { data: rosters } = await admin
       .schema("palaro")
-      .from("delegations")
-      .select("id")
-      .eq("assigned_bq_id", data.bq_id)
-      .limit(1)
-      .maybeSingle();
-    if (delegationRow?.id) {
-      const { data: rosters } = await admin
-        .schema("palaro")
-        .from("food_supplier_delegations")
-        .select("supplier_id, priority")
-        .eq("delegation_id", delegationRow.id)
-        .order("priority", { ascending: true })
-        .limit(1);
-      if (rosters && rosters.length > 0) {
-        supplierId = rosters[0].supplier_id;
-      }
+      .from("food_supplier_delegations")
+      .select("supplier_id, priority")
+      .eq("delegation_id", data.delegation_id)
+      .order("priority", { ascending: true })
+      .limit(1);
+    if (rosters && rosters.length > 0) {
+      supplierId = rosters[0].supplier_id;
     }
   }
 
@@ -258,7 +245,7 @@ export async function createRequest(
     .schema("palaro")
     .from("food_requests")
     .insert({
-      bq_id: data.bq_id,
+      delegation_id: data.delegation_id,
       supplier_id: supplierId,
       item_name: data.item_name,
       unit: data.unit,
@@ -277,7 +264,7 @@ export async function createRequest(
     entity_type: "food_request",
     entity_id: inserted.id,
     changes: {
-      bq_id: data.bq_id,
+      delegation_id: data.delegation_id,
       item_name: data.item_name,
       unit: data.unit,
       quantity: data.quantity,
@@ -308,7 +295,7 @@ export async function updateRequest(
     .schema("palaro")
     .from("food_requests")
     .update({
-      bq_id: data.bq_id,
+      delegation_id: data.delegation_id,
       supplier_id: data.supplier_id || null,
       item_name: data.item_name,
       unit: data.unit,

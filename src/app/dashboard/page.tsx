@@ -9,6 +9,7 @@ import { getIncidents } from "@/lib/actions/incidents";
 import { getAllReferrals } from "@/lib/actions/referrals";
 import { getSites } from "@/lib/actions/sites";
 import { getDashboardSnapshot } from "@/lib/actions/dashboard";
+import { getDelegations } from "@/lib/actions/delegations";
 import { getVips } from "@/lib/actions/vip";
 
 export default async function CommandCenterPage() {
@@ -35,18 +36,23 @@ export default async function CommandCenterPage() {
     sitesResult,
     snapshotResult,
     vipsResult,
+    delegationsResult,
   ] = await Promise.all([
     getIncidents(),
     getAllReferrals(),
     getSites(true),
     getDashboardSnapshot(),
     getVips(true),
+    getDelegations(true),
   ]);
   const incidents = incidentsResult.error ? [] : (incidentsResult.data ?? []);
   const referrals = referralsResult.error ? [] : (referralsResult.data ?? []);
   const sites = sitesResult.error ? [] : (sitesResult.data ?? []);
   const snapshot = snapshotResult.error ? null : snapshotResult.data ?? null;
   const vips = vipsResult.error ? [] : (vipsResult.data ?? []);
+  const delegations = delegationsResult.error
+    ? []
+    : (delegationsResult.data ?? []);
 
   return (
     <div className="space-y-6">
@@ -67,6 +73,12 @@ export default async function CommandCenterPage() {
           snapshot={snapshot}
           sites={sites.map((s) => ({ id: s.id, name: s.name }))}
           vips={vips.map((v) => ({ id: v.id, full_name: v.full_name }))}
+          delegations={delegations.map((d) => ({
+            id: d.id,
+            region_code: d.region_code,
+            region_name: d.region_name,
+            short_name: d.short_name,
+          }))}
         />
       ) : null}
     </div>

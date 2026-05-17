@@ -33,10 +33,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createHospitalAdmit } from "@/lib/actions/referrals";
+import { createUcfAdmit } from "@/lib/actions/referrals";
 import {
-  createHospitalAdmitSchema,
-  type CreateHospitalAdmitInput,
+  createUcfAdmitSchema,
+  type CreateUcfAdmitInput,
 } from "@/lib/schemas/referrals";
 import {
   PATIENT_GENDERS,
@@ -58,20 +58,19 @@ type PriorReferral = Pick<
 
 const NO_DELEGATION = "__none__";
 
-interface DirectAdmitDialogProps {
-  hospitalSites: Site[];
+interface UcfDirectAdmitDialogProps {
+  ucfSites: Site[];
   delegations: Delegation[];
-  /** If hospital staff have a primary assignment, default to it. */
-  defaultHospitalId?: string;
+  /** If UCF staff have a primary assignment, default to it. */
+  defaultUcfId?: string;
   /**
-   * Past referrals at hospitals. The dialog filters by the typed patient_name
-   * (case-insensitive, trimmed) to show a running list of prior History and
-   * Physical Examination entries for that patient.
+   * Past referrals visible to the caller. Filtered client-side by typed
+   * patient_name to show a running History / Physical Examination list.
    */
   priorReferrals?: PriorReferral[];
 }
 
-const emptyValues: CreateHospitalAdmitInput = {
+const emptyValues: CreateUcfAdmitInput = {
   to_site_id: "",
   patient_name: "",
   patient_age: undefined,
@@ -91,22 +90,22 @@ function normalizeName(s: string | null | undefined): string {
   return (s ?? "").trim().toLowerCase();
 }
 
-export function DirectAdmitDialog({
-  hospitalSites,
+export function UcfDirectAdmitDialog({
+  ucfSites,
   delegations,
-  defaultHospitalId,
+  defaultUcfId,
   priorReferrals = [],
-}: DirectAdmitDialogProps) {
+}: UcfDirectAdmitDialogProps) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showVitals, setShowVitals] = useState(false);
   const router = useRouter();
 
-  const form = useForm<CreateHospitalAdmitInput>({
-    resolver: zodResolver(createHospitalAdmitSchema),
+  const form = useForm<CreateUcfAdmitInput>({
+    resolver: zodResolver(createUcfAdmitSchema),
     defaultValues: {
       ...emptyValues,
-      to_site_id: defaultHospitalId ?? "",
+      to_site_id: defaultUcfId ?? "",
     },
   });
 
@@ -149,16 +148,16 @@ export function DirectAdmitDialog({
     [priorForPatient],
   );
 
-  async function onSubmit(values: CreateHospitalAdmitInput) {
+  async function onSubmit(values: CreateUcfAdmitInput) {
     setSubmitting(true);
-    const result = await createHospitalAdmit(values);
+    const result = await createUcfAdmit(values);
     setSubmitting(false);
     if (result.error) {
       toast.error("Direct admit failed", { description: result.error });
       return;
     }
     toast.success(`Direct admit logged: ${result.data!.referral_number}`);
-    form.reset({ ...emptyValues, to_site_id: defaultHospitalId ?? "" });
+    form.reset({ ...emptyValues, to_site_id: defaultUcfId ?? "" });
     setOpen(false);
     router.refresh();
   }
@@ -171,10 +170,10 @@ export function DirectAdmitDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Direct hospital admission</DialogTitle>
+          <DialogTitle>Direct UCF admission</DialogTitle>
           <DialogDescription>
-            Log a Palaro-related case that arrived at the hospital outside the
-            field → UCF chain.
+            Log a Palaro-related case that arrived at the UCF without coming
+            through the field referral chain.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -184,7 +183,7 @@ export function DirectAdmitDialog({
               name="to_site_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Hospital</FormLabel>
+                  <FormLabel>UCF site</FormLabel>
                   <Select
                     value={field.value ?? ""}
                     onValueChange={field.onChange}
@@ -196,22 +195,28 @@ export function DirectAdmitDialog({
                             if (!v) {
                               return (
                                 <span className="text-muted-foreground">
-                                  Pick a hospital
+                                  Pick a UCF
                                 </span>
                               );
                             }
-                            const site = hospitalSites.find((s) => s.id === v);
+                            const site = ucfSites.find((s) => s.id === v);
                             return site ? site.name : v;
                           }}
                         </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {hospitalSites.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
-                      ))}
+                      {ucfSites.length === 0 ? (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          No UCFs configured. Add one in Admin → Sites.
+                        </div>
+                      ) : (
+                        ucfSites.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />

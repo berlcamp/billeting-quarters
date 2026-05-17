@@ -233,8 +233,10 @@ export async function createVisit(
       site_id: data.site_id,
       vital_signs: vitals,
       chief_complaint: data.chief_complaint || null,
+      history: data.history || null,
+      physical_examination: data.physical_examination || null,
       diagnosis: data.diagnosis || null,
-      prescription: data.prescription || null,
+      treatment_given: data.treatment_given || null,
       notes: data.notes || null,
       attended_by: auth.profile.id,
     })
@@ -242,23 +244,15 @@ export async function createVisit(
     .single();
   if (error) return fail(error.message);
 
-  // Medical history and allergies are captured at visit time but persisted
-  // on the patient record so they stay current across future visits.
-  const patientUpdate: Partial<{
-    medical_history: string | null;
-    allergies: string | null;
-  }> = {};
-  if (data.medical_history !== undefined) {
-    patientUpdate.medical_history = data.medical_history || null;
-  }
+  // Allergies are captured at visit time but persisted on the patient
+  // record so they stay current across future visits. Medical history is
+  // now captured per-visit on clinic_visits.history (with the running list
+  // shown back in the Log Visit form), so it isn't synced here.
   if (data.allergies !== undefined) {
-    patientUpdate.allergies = data.allergies || null;
-  }
-  if (Object.keys(patientUpdate).length > 0) {
     await admin
       .schema("palaro")
       .from("clinic_patients")
-      .update(patientUpdate)
+      .update({ allergies: data.allergies || null })
       .eq("id", data.patient_id);
   }
 

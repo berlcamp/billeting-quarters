@@ -29,16 +29,28 @@ type Vip = Pick<
   Database["palaro"]["Tables"]["vip_persons"]["Row"],
   "id" | "full_name"
 >;
+type Delegation = Pick<
+  Database["palaro"]["Tables"]["delegations"]["Row"],
+  "id" | "region_code" | "region_name" | "short_name"
+>;
 
 interface Props {
   snapshot: DashboardSnapshot;
   sites: Site[];
   vips: Vip[];
+  delegations: Delegation[];
 }
 
-export function DashboardExtras({ snapshot, sites, vips }: Props) {
+function delegationDisplayName(d: Delegation): string {
+  return d.short_name?.trim() || d.region_code || d.region_name;
+}
+
+export function DashboardExtras({ snapshot, sites, vips, delegations }: Props) {
   const siteName = new Map(sites.map((s) => [s.id, s.name]));
   const vipName = new Map(vips.map((v) => [v.id, v.full_name]));
+  const delegationName = new Map(
+    delegations.map((d) => [d.id, delegationDisplayName(d)]),
+  );
 
   return (
     <div className="space-y-6">
@@ -247,7 +259,7 @@ export function DashboardExtras({ snapshot, sites, vips }: Props) {
           <CardContent>
             <FoodSummary
               today={snapshot.foodRequestsToday}
-              siteName={siteName}
+              delegationName={delegationName}
             />
           </CardContent>
         </Card>
@@ -488,10 +500,10 @@ function GarbageSummary({
 
 function FoodSummary({
   today,
-  siteName,
+  delegationName,
 }: {
   today: Database["palaro"]["Tables"]["food_requests"]["Row"][];
-  siteName: Map<string, string>;
+  delegationName: Map<string, string>;
 }) {
   const pending = today.filter((r) => r.status === "pending").length;
   const confirmed = today.filter((r) => r.status === "confirmed").length;
@@ -511,7 +523,7 @@ function FoodSummary({
               className="flex items-center justify-between rounded border px-2 py-1"
             >
               <span className="truncate">
-                {siteName.get(r.bq_id) ?? "—"} · {r.item_name}
+                {delegationName.get(r.delegation_id) ?? "—"} · {r.item_name}
               </span>
               <span className="ml-2 shrink-0 text-muted-foreground">
                 {r.quantity} {r.unit}

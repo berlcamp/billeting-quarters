@@ -13,7 +13,6 @@ import {
   getSuppliers,
 } from "@/lib/actions/food";
 import { getDelegations } from "@/lib/actions/delegations";
-import { getSites } from "@/lib/actions/sites";
 import { getCurrentProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
 
@@ -34,24 +33,20 @@ export default async function FoodSupplyPage() {
   const [
     suppliersRes,
     requestsRes,
-    sitesRes,
     delegationsRes,
     assignmentsRes,
   ] = await Promise.all([
     getSuppliers(false),
     getRequests(),
-    getSites(false),
     getDelegations(false),
     getSupplierDelegations(),
   ]);
   const suppliers = suppliersRes.error ? [] : (suppliersRes.data ?? []);
   const requests = requestsRes.error ? [] : (requestsRes.data ?? []);
-  const sites = sitesRes.error ? [] : (sitesRes.data ?? []);
   const delegations = delegationsRes.error ? [] : (delegationsRes.data ?? []);
   const assignments = assignmentsRes.error
     ? []
     : (assignmentsRes.data ?? []);
-  const bqs = sites.filter((s) => s.site_type === "billeting_quarter");
 
   const pending = requests.filter((r) => r.status === "pending").length;
   const confirmed = requests.filter((r) => r.status === "confirmed").length;
@@ -65,11 +60,11 @@ export default async function FoodSupplyPage() {
     <div className="space-y-6">
       <PageHeader
         title="Food Supply"
-        description="Caterer roster and BQ food requests."
+        description="Caterer roster and delegation food requests."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <RequestFormDialog
-              bqs={bqs}
+              delegations={delegations}
               suppliers={suppliers}
               trigger={
                 <Button variant="outline">
@@ -108,7 +103,7 @@ export default async function FoodSupplyPage() {
           <RequestsTable
             requests={requests}
             suppliers={suppliers}
-            bqs={bqs}
+            delegations={delegations}
             canManage={canManage}
           />
         </TabsContent>

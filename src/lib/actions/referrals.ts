@@ -9,6 +9,7 @@ import {
   admitReferralSchema,
   createFieldReferralSchema,
   createHospitalAdmitSchema,
+  createUcfAdmitSchema,
   createUcfToHospitalReferralSchema,
   dischargeReferralSchema,
   rejectReferralSchema,
@@ -138,7 +139,7 @@ export async function getUcfInbox(): Promise<ActionResult<Referral[]>> {
     .schema("palaro")
     .from("referrals")
     .select("*")
-    .eq("level", "field_to_ucf")
+    .in("level", ["field_to_ucf", "ucf_admit"])
     .order("referred_at", { ascending: false })
     .limit(500);
   if (error) return fail(error.message);
@@ -903,8 +904,12 @@ export async function createHospitalAdmit(
       patient_gender: data.patient_gender || null,
       delegation_id: data.delegation_id || null,
       chief_complaint: data.chief_complaint || null,
+      history: data.history || null,
+      physical_examination: data.physical_examination || null,
       initial_diagnosis: data.initial_diagnosis || null,
       treatment_given: data.treatment_given || null,
+      allergies: data.allergies || null,
+      notes: data.notes || null,
       vital_signs: vitals,
       referred_by: profile.id,
       referred_at: new Date().toISOString(),
@@ -927,5 +932,90 @@ export async function createHospitalAdmit(
   });
 
   revalidatePath(HOSPITAL_PATH);
+  return ok({ id: inserted.id, referral_number: inserted.referral_number });
+}
+
+export async function createUcfAdmit(
+  input: unknown,
+): Promise<ActionResult<{ id: string; referral_number: string }>> {
+  const profile = await getCurrentProfile();
+  if (!profile) return fail("Not authenticated.");
+  // UCF staff who can accept referrals can also create direct admits.
+  if (!hasPermission(profile, "referral.accept")) {
+    return fail("You don't have permission to create UCF admissions.");
+  }
+
+  const parsed = createUcfAdmitSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+  }
+  const data = parsed.data;
+
+  const admin = createAdminClient();
+
+  const { data: target } = await admin
+    .schema("palaro")
+    .from("sites")
+    .select("id, site_type")
+    .eq("id", data.to_site_id)
+    .single();
+  if (!target) return fail("UCF site not found.");
+  if (target.site_type !== "urgent_care_facility") {
+    return fail("Target site must be a UCF.");
+  }
+
+  const cleanedVitals = data.vital_signs
+    ? Object.fromEntries(
+        Object.entries(data.vital_signs).filter(
+          ([, v]) => v !== undefined && v !== "",
+        ),
+      )
+    : null;
+  const vitals: Json | null =
+    cleanedVitals && Object.keys(cleanedVitals).length > 0
+      ? (cleanedVitals as Json)
+      : null;
+
+  const { data: inserted, error } = await admin
+    .schema("palaro")
+    .from("referrals")
+    .insert({
+      level: "ucf_admit",
+      status: "pending",
+      to_site_id: data.to_site_id,
+      from_site_id: profile.primary_assignment_site_id || null,
+      patient_name: data.patient_name,
+      patient_age: data.patient_age ?? null,
+      patient_gender: data.patient_gender || null,
+      delegation_id: data.delegation_id || null,
+      chief_complaint: data.chief_complaint || null,
+      history: data.history || null,
+      physical_examination: data.physical_examination || null,
+      initial_diagnosis: data.initial_diagnosis || null,
+      treatment_given: data.treatment_given || null,
+      allergies: data.allergies || null,
+      notes: data.notes || null,
+      vital_signs: vitals,
+      referred_by: profile.id,
+      referred_at: new Date().toISOString(),
+    })
+    .select("id, referral_number")
+    .single();
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "create",
+    entity_type: "referral",
+    entity_id: inserted.id,
+    changes: {
+      referral_number: inserted.referral_number,
+      level: "ucf_admit",
+      to_site_id: data.to_site_id,
+      patient_name: data.patient_name,
+    },
+    user_id: profile.id,
+  });
+
+  revalidatePath(UCF_PATH);
   return ok({ id: inserted.id, referral_number: inserted.referral_number });
 }

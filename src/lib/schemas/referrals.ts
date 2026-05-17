@@ -72,13 +72,38 @@ export const createHospitalAdmitSchema = z.object({
   patient_gender: patientGenderSchema,
   delegation_id: z.string().uuid().nullable().optional(),
   chief_complaint: z.string().trim().max(2000).optional(),
+  history: z.string().trim().max(2000).optional(),
+  physical_examination: z.string().trim().max(2000).optional(),
   initial_diagnosis: z.string().trim().max(2000).optional(),
   treatment_given: z.string().trim().max(2000).optional(),
+  allergies: z.string().trim().max(2000).optional(),
+  notes: z.string().trim().max(2000).optional(),
   vital_signs: vitalsSchema,
 });
 export type CreateHospitalAdmitInput = z.infer<
   typeof createHospitalAdmitSchema
 >;
+
+export const createUcfAdmitSchema = z.object({
+  to_site_id: z.string().uuid({ message: "Pick a UCF" }),
+  patient_name: z
+    .string()
+    .trim()
+    .min(1, "Patient name is required")
+    .max(200),
+  patient_age: z.number().int().min(0).max(150).optional(),
+  patient_gender: patientGenderSchema,
+  delegation_id: z.string().uuid().nullable().optional(),
+  chief_complaint: z.string().trim().max(2000).optional(),
+  history: z.string().trim().max(2000).optional(),
+  physical_examination: z.string().trim().max(2000).optional(),
+  initial_diagnosis: z.string().trim().max(2000).optional(),
+  treatment_given: z.string().trim().max(2000).optional(),
+  allergies: z.string().trim().max(2000).optional(),
+  notes: z.string().trim().max(2000).optional(),
+  vital_signs: vitalsSchema,
+});
+export type CreateUcfAdmitInput = z.infer<typeof createUcfAdmitSchema>;
 
 export const createUcfToHospitalReferralSchema = z.object({
   source_ucf_referral_id: z.string().uuid(),
