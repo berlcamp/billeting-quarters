@@ -45,6 +45,7 @@ export const updateUserDetailsSchema = z.object({
   agency: optionalNonEmpty,
   designation: optionalNonEmpty,
   primary_assignment_site_id: z.string().uuid().nullable().optional(),
+  delegation_id: z.string().uuid().nullable().optional(),
 });
 export type UpdateUserDetailsInput = z.infer<typeof updateUserDetailsSchema>;
 

@@ -26,6 +26,7 @@ export type Database = {
           designation: string | null;
           rank: string | null;
           primary_assignment_site_id: string | null;
+          delegation_id: string | null;
           is_active: boolean;
           avatar_url: string | null;
           invited_by: string | null;
@@ -46,6 +47,7 @@ export type Database = {
           designation?: string | null;
           rank?: string | null;
           primary_assignment_site_id?: string | null;
+          delegation_id?: string | null;
           is_active?: boolean;
           avatar_url?: string | null;
           invited_by?: string | null;
@@ -66,6 +68,7 @@ export type Database = {
           designation?: string | null;
           rank?: string | null;
           primary_assignment_site_id?: string | null;
+          delegation_id?: string | null;
           is_active?: boolean;
           avatar_url?: string | null;
           invited_by?: string | null;
@@ -817,6 +820,42 @@ export type Database = {
           scanned_at?: string;
           scanned_by?: string | null;
           notes?: string | null;
+        };
+        Relationships: [];
+      };
+      head_counter_cells: {
+        Row: {
+          id: string;
+          delegation_id: string;
+          count_date: string;
+          direction: Database["palaro"]["Enums"]["head_counter_direction"];
+          row_index: number;
+          role: Database["palaro"]["Enums"]["head_counter_role"];
+          count: number;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          delegation_id: string;
+          count_date: string;
+          direction: Database["palaro"]["Enums"]["head_counter_direction"];
+          row_index: number;
+          role: Database["palaro"]["Enums"]["head_counter_role"];
+          count?: number;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          delegation_id?: string;
+          count_date?: string;
+          direction?: Database["palaro"]["Enums"]["head_counter_direction"];
+          row_index?: number;
+          role?: Database["palaro"]["Enums"]["head_counter_role"];
+          count?: number;
+          updated_by?: string | null;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -1735,6 +1774,126 @@ export type Database = {
         };
         Relationships: [];
       };
+      raffles: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      raffle_departments: {
+        Row: {
+          id: string;
+          raffle_id: string;
+          name: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          raffle_id: string;
+          name: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          raffle_id?: string;
+          name?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      raffle_entries: {
+        Row: {
+          id: string;
+          raffle_id: string;
+          department_id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          raffle_id: string;
+          department_id: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          raffle_id?: string;
+          department_id?: string;
+          name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      raffle_winners: {
+        Row: {
+          id: string;
+          raffle_id: string;
+          department_id: string;
+          entry_id: string;
+          entry_name: string;
+          department_name: string;
+          prize_label: string | null;
+          session_id: string;
+          draw_index: number;
+          drawn_by: string | null;
+          drawn_at: string;
+        };
+        Insert: {
+          id?: string;
+          raffle_id: string;
+          department_id: string;
+          entry_id: string;
+          entry_name: string;
+          department_name: string;
+          prize_label?: string | null;
+          session_id: string;
+          draw_index: number;
+          drawn_by?: string | null;
+          drawn_at?: string;
+        };
+        Update: {
+          id?: string;
+          raffle_id?: string;
+          department_id?: string;
+          entry_id?: string;
+          entry_name?: string;
+          department_name?: string;
+          prize_label?: string | null;
+          session_id?: string;
+          draw_index?: number;
+          drawn_by?: string | null;
+          drawn_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
@@ -1804,6 +1963,16 @@ export type Database = {
         | "completed"
         | "denied";
       attendance_type: "time_in" | "time_out";
+      head_counter_direction: "in" | "out";
+      head_counter_role:
+        | "athlete"
+        | "chaperon"
+        | "coach"
+        | "delegation_twg"
+        | "rd"
+        | "ard"
+        | "sds"
+        | "asds";
       vehicle_type:
         | "bus"
         | "van"

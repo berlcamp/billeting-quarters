@@ -30,10 +30,17 @@ import type { Database } from "@/types/database";
 
 type Profile = Database["palaro"]["Tables"]["profiles"]["Row"];
 
+export interface DelegationOption {
+  id: string;
+  region_code: string;
+  region_name: string;
+}
+
 interface UsersTableProps {
   users: Profile[];
   currentProfileId: string;
   currentRoles: readonly UserRole[];
+  delegations: DelegationOption[];
 }
 
 function initialsOf(profile: Profile): string {
@@ -49,6 +56,7 @@ export function UsersTable({
   users,
   currentProfileId,
   currentRoles,
+  delegations,
 }: UsersTableProps) {
   const [editing, setEditing] = useState<Profile | null>(null);
   const [roleFilter, setRoleFilter] = useState<UserRole | "all">("all");
@@ -259,6 +267,7 @@ export function UsersTable({
         user={editing}
         currentProfileId={currentProfileId}
         currentRoles={currentRoles}
+        delegations={delegations}
         onClose={() => setEditing(null)}
       />
     </>

@@ -33,4 +33,21 @@ export function manilaDateLabel(dateIsoYmd: string): string {
   return formatInTimeZone(noonUtc, PALARO_TZ, "EEEE, MMMM d, yyyy");
 }
 
+// Inclusive list of YYYY-MM-DD strings between `startYmd` and `endYmd`.
+// Stable against DST since we anchor on Manila noon and step by 24h.
+export function dateRangeManilaYmd(
+  startYmd: string,
+  endYmd: string,
+): string[] {
+  const result: string[] = [];
+  const [sy, sm, sd] = startYmd.split("-").map(Number);
+  const [ey, em, ed] = endYmd.split("-").map(Number);
+  const startMs = Date.UTC(sy, sm - 1, sd, 12);
+  const endMs = Date.UTC(ey, em - 1, ed, 12);
+  for (let ms = startMs; ms <= endMs; ms += 24 * 60 * 60 * 1000) {
+    result.push(formatInTimeZone(new Date(ms), PALARO_TZ, "yyyy-MM-dd"));
+  }
+  return result;
+}
+
 export { toZonedTime };

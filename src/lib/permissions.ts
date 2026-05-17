@@ -89,6 +89,11 @@ export const PERMISSIONS = [
   "site_monitoring.manage",
   "external_personnel.log",
   "end_of_day.log",
+  "head_count.encode_own",
+  "head_count.view_all",
+  "raffle.view",
+  "raffle.manage",
+  "raffle.draw",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -116,6 +121,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "site_monitoring.manage",
     "external_personnel.log",
     "end_of_day.log",
+    "head_count.view_all",
+    "raffle.view",
+    "raffle.manage",
+    "raffle.draw",
   ],
   medical_field: [
     "incident.create",
@@ -146,7 +155,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "clinic.manage",
     "supplies.manage",
   ],
-  protocol_officer: ["incident.create", "incident.view", "vip.manage"],
+  protocol_officer: [
+    "incident.create",
+    "incident.view",
+    "vip.manage",
+    "raffle.view",
+    "raffle.draw",
+  ],
   logistics_officer: [
     "incident.create",
     "incident.view",
@@ -156,7 +171,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "garbage.manage",
     "food.manage",
   ],
-  personnel_admin: ["personnel.manage", "attendance.record"],
+  personnel_admin: [
+    "personnel.manage",
+    "attendance.record",
+    "head_count.view_all",
+  ],
   venue_manager: [
     "incident.create",
     "incident.view",
@@ -165,7 +184,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "heat_index.record",
     "food.request",
   ],
-  delegation_head: ["incident.create", "incident.view", "food.request"],
+  delegation_head: [
+    "incident.create",
+    "incident.view",
+    "food.request",
+    "head_count.encode_own",
+  ],
   // Transportation Head — Committee leadership. Manages vehicles/routes,
   // creates dispatches, scans, logs fuel, and views reports. (~3 users)
   transportation_head: [
@@ -194,15 +218,17 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   ],
   food_supplier_admin: ["incident.create", "incident.view", "food.manage"],
   // Access to the Command Center dashboard and the Incidents module.
-  // Can view and create incidents; cannot update, resolve, or refer.
-  incident_monitoring: ["incident.create", "incident.view"],
+  // Can view, create, and change status on incidents; cannot refer.
+  incident_monitoring: ["incident.create", "incident.view", "incident.update"],
   // Information Hub Officer — stationed at a billeting quarter. Requests
   // garbage pickup, logs site visits / external personnel / end-of-day
-  // headcount, and reports incidents. Also manages the recurring weekly
-  // garbage schedule and collectors at their hub.
+  // headcount, and reports incidents (including moving them through the
+  // status flow). Also manages the recurring weekly garbage schedule and
+  // collectors at their hub.
   information_hub_officer: [
     "incident.create",
     "incident.view",
+    "incident.update",
     "garbage.log",
     "garbage.manage",
     "site_monitoring.log",

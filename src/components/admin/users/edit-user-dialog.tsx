@@ -52,6 +52,8 @@ import type { Database } from "@/types/database";
 
 type Profile = Database["palaro"]["Tables"]["profiles"]["Row"];
 
+const NO_DELEGATION = "__none__";
+
 const editFormSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email"),
   full_name: z.string().trim().max(200).optional(),
@@ -59,13 +61,21 @@ const editFormSchema = z.object({
   designation: z.string().trim().max(200).optional(),
   roles: z.array(userRoleSchema).min(1, "Pick at least one role"),
   status: profileStatusSchema,
+  delegation_id: z.string().uuid().nullable().optional(),
 });
 type EditFormValues = z.infer<typeof editFormSchema>;
+
+interface DelegationOption {
+  id: string;
+  region_code: string;
+  region_name: string;
+}
 
 interface EditUserDialogProps {
   user: Profile | null;
   currentRoles: readonly UserRole[];
   currentProfileId: string;
+  delegations: DelegationOption[];
   onClose: () => void;
 }
 
@@ -79,6 +89,7 @@ export function EditUserDialog({
   user,
   currentRoles,
   currentProfileId,
+  delegations,
   onClose,
 }: EditUserDialogProps) {
   const [submitting, setSubmitting] = useState(false);
@@ -93,6 +104,7 @@ export function EditUserDialog({
       designation: user?.designation ?? "",
       roles: (user?.roles ?? []) as UserRole[],
       status: user?.status === "suspended" ? "suspended" : "active",
+      delegation_id: user?.delegation_id ?? null,
     },
   });
 
@@ -105,8 +117,13 @@ export function EditUserDialog({
       designation: user.designation ?? "",
       roles: (user.roles ?? []) as UserRole[],
       status: user.status === "suspended" ? "suspended" : "active",
+      delegation_id: user.delegation_id ?? null,
     });
   }, [user, form]);
+
+  const watchedRoles = (form.watch("roles") ?? []) as UserRole[];
+  const showDelegation =
+    watchedRoles.includes("delegation_head") || !!user?.delegation_id;
 
   if (!user) return null;
 
@@ -142,6 +159,7 @@ export function EditUserDialog({
       full_name: values.full_name || undefined,
       agency: values.agency || undefined,
       designation: values.designation || undefined,
+      delegation_id: values.delegation_id ?? null,
     });
     if (detailsResult.error) {
       setSubmitting(false);
@@ -306,6 +324,57 @@ export function EditUserDialog({
                 );
               }}
             />
+            {showDelegation ? (
+              <FormField
+                control={form.control}
+                name="delegation_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Delegation</FormLabel>
+                    <Select
+                      value={field.value ?? NO_DELEGATION}
+                      onValueChange={(v) =>
+                        field.onChange(v === NO_DELEGATION ? null : v)
+                      }
+                      disabled={!canEditTarget}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue>
+                            {(v: string | null) => {
+                              if (!v || v === NO_DELEGATION) {
+                                return (
+                                  <span className="text-muted-foreground">
+                                    — None —
+                                  </span>
+                                );
+                              }
+                              const d = delegations.find((dd) => dd.id === v);
+                              return d
+                                ? `${d.region_code} — ${d.region_name}`
+                                : v;
+                            }}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_DELEGATION}>— None —</SelectItem>
+                        {delegations.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.region_code} — {d.region_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Used by Head Counter to scope a delegation head to one
+                      delegation.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
             <FormField
               control={form.control}
               name="status"
