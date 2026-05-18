@@ -1,6 +1,5 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { Forbidden } from "@/components/shared/forbidden";
-import { ManualAttendanceDialog } from "@/components/personnel/manual-attendance-dialog";
 import { ScanAttendanceDialog } from "@/components/personnel/scan-attendance-dialog";
 import { AttendanceTable } from "@/components/personnel/attendance-table";
 import { getCurrentProfile } from "@/lib/auth/session";
@@ -49,12 +48,7 @@ export default async function AttendancePage({ searchParams }: PageProps) {
       <PageHeader
         title="Attendance"
         description="Time-in / time-out logging (Asia/Manila)."
-        actions={
-          <div className="flex items-center gap-2">
-            <ManualAttendanceDialog personnel={personnel} sites={sites} />
-            <ScanAttendanceDialog sites={sites} />
-          </div>
-        }
+        actions={<ScanAttendanceDialog sites={sites} />}
       />
       <AttendanceTable
         logs={logs}

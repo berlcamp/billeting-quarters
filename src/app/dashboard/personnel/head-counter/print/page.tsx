@@ -33,6 +33,9 @@ export default async function HeadCounterPrintPage({ searchParams }: PageProps) 
   const sp = await searchParams;
   const autoPrint = sp.auto !== "0";
 
+  // Date range resolution: explicit from/to wins; otherwise `date` collapses
+  // to a single-day range; otherwise default to the full event window so the
+  // printable matches the source form's "May 16 → May 31" matrix shape.
   const fromYmd =
     (sp.from && isInHeadCountWindow(sp.from) && sp.from) ||
     (sp.date && isInHeadCountWindow(sp.date) && sp.date) ||
@@ -40,7 +43,7 @@ export default async function HeadCounterPrintPage({ searchParams }: PageProps) 
   const toYmd =
     (sp.to && isInHeadCountWindow(sp.to) && sp.to) ||
     (sp.date && isInHeadCountWindow(sp.date) && sp.date) ||
-    fromYmd;
+    HEAD_COUNT_WINDOW_END;
 
   const delegationsRes = await getDelegations(false);
   let delegations = delegationsRes.error ? [] : (delegationsRes.data ?? []);
@@ -58,14 +61,6 @@ export default async function HeadCounterPrintPage({ searchParams }: PageProps) 
 
   const dates = dateRangeManilaYmd(fromYmd, toYmd);
 
-  // (date, delegation) pairs in chronological-then-region order.
-  const pairs: { date: string; delegation: (typeof delegations)[number] }[] = [];
-  for (const date of dates) {
-    for (const d of delegations) {
-      pairs.push({ date, delegation: d });
-    }
-  }
-
   return (
     <div className="space-y-4 print:space-y-0">
       <div className="mx-auto w-[297mm] max-w-full print:hidden">
@@ -81,25 +76,22 @@ export default async function HeadCounterPrintPage({ searchParams }: PageProps) 
         </div>
       ) : null}
 
-      {pairs.length === 0 ? (
+      {delegations.length === 0 ? (
         <div className="mx-auto w-[297mm] max-w-full rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground print:hidden">
-          No (date, delegation) pairs in range {fromYmd} → {toYmd}.
+          No delegations in scope.
         </div>
       ) : (
-        pairs.map((p, i) => (
+        delegations.map((d, i) => (
           <HeadCounterPrintSheet
-            key={`${p.date}:${p.delegation.id}`}
-            dateYmd={p.date}
+            key={d.id}
             delegation={{
-              id: p.delegation.id,
-              region_code: p.delegation.region_code,
-              region_name: p.delegation.region_name,
+              id: d.id,
+              region_code: d.region_code,
+              region_name: d.region_name,
             }}
-            cells={allCells.filter(
-              (c) =>
-                c.count_date === p.date && c.delegation_id === p.delegation.id,
-            )}
-            isLast={i === pairs.length - 1}
+            dates={dates}
+            cells={allCells.filter((c) => c.delegation_id === d.id)}
+            isLast={i === delegations.length - 1}
           />
         ))
       )}
@@ -108,9 +100,9 @@ export default async function HeadCounterPrintPage({ searchParams }: PageProps) 
         Event window {HEAD_COUNT_WINDOW_START} → {HEAD_COUNT_WINDOW_END}
       </div>
 
-      {/* Print rules: A4 landscape (so the IN/OUT tables sit comfortably
-          side-by-side), strip app chrome, fit each sheet inside the @page
-          margins. A4 landscape usable width = 297mm − 2 × 8mm = 281mm. */}
+      {/* Print rules: A4 landscape so the IN/OUT matrices sit side-by-side
+          across the full date range; strip app chrome; fit each block inside
+          the @page margins. */}
       <style>{`
         @media print {
           @page { size: A4 landscape; margin: 8mm; }

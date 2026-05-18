@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -24,6 +25,7 @@ import {
   type AttendanceType,
 } from "@/lib/labels";
 import { formatManila, manilaDateLabel } from "@/lib/timezone";
+import { AttendanceEditDialog } from "./attendance-edit-dialog";
 import type { Database } from "@/types/database";
 
 type AttendanceLog = Database["palaro"]["Tables"]["attendance_logs"]["Row"];
@@ -168,6 +170,32 @@ export function AttendanceTable({
           <span className="text-muted-foreground">—</span>
         ),
     },
+    {
+      id: "actions",
+      header: "",
+      className: "w-[1%] whitespace-nowrap text-right",
+      cell: (l) => {
+        const p = personnelMap.get(l.personnel_id);
+        return (
+          <AttendanceEditDialog
+            log={l}
+            sites={sites}
+            personnelName={p?.full_name ?? null}
+            trigger={
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Pencil className="size-3.5" />
+                Edit
+              </Button>
+            }
+          />
+        );
+      },
+    },
   ];
 
   return (
@@ -234,7 +262,7 @@ export function AttendanceTable({
         empty={{
           title: "No attendance recorded for this date",
           description:
-            "Scan a Palaro Bayugan Command QR code, use Manual entry, or pick another date.",
+            "Scan a Palaro Bayugan Command QR code, or pick another date.",
         }}
       />
 

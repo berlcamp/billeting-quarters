@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -32,10 +33,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { recordAttendance } from "@/lib/actions/personnel";
+import { updateAttendanceLog } from "@/lib/actions/personnel";
 import {
-  recordAttendanceSchema,
-  type RecordAttendanceInput,
+  updateAttendanceLogSchema,
+  type UpdateAttendanceLogInput,
 } from "@/lib/schemas/personnel";
 import {
   ATTENDANCE_TYPE_LABELS,
@@ -43,112 +44,118 @@ import {
 } from "@/lib/labels";
 import type { Database } from "@/types/database";
 
-type Personnel = Pick<
-  Database["palaro"]["Tables"]["personnel"]["Row"],
-  "id" | "full_name" | "committee" | "designation" | "agency"
->;
-type Site = Pick<
-  Database["palaro"]["Tables"]["sites"]["Row"],
-  "id" | "name" | "site_type"
->;
+type AttendanceLog = Database["palaro"]["Tables"]["attendance_logs"]["Row"];
+type Site = Pick<Database["palaro"]["Tables"]["sites"]["Row"], "id" | "name">;
 
 const NO_SITE = "__none__";
-
-interface Props {
-  personnel: Personnel[];
-  sites: Site[];
-}
-
 const TYPES: AttendanceType[] = ["time_in", "time_out"];
 
-export function ManualAttendanceDialog({ personnel, sites }: Props) {
+// `datetime-local` inputs render whatever string we give them as a naive
+// wall-clock value. We want editors to see PHT regardless of their browser
+// timezone, so we project the stored UTC instant into Asia/Manila parts.
+function utcToManilaLocal(iso: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+function manilaLocalToUtc(local: string): string {
+  // PHT is UTC+8 with no DST — append the offset and let Date parse it.
+  return new Date(`${local}:00+08:00`).toISOString();
+}
+
+interface Props {
+  trigger: ReactNode;
+  log: AttendanceLog;
+  sites: Site[];
+  personnelName?: string | null;
+}
+
+export function AttendanceEditDialog({
+  trigger,
+  log,
+  sites,
+  personnelName,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
-  const form = useForm<RecordAttendanceInput>({
-    resolver: zodResolver(recordAttendanceSchema),
+  const form = useForm<UpdateAttendanceLogInput>({
+    resolver: zodResolver(updateAttendanceLogSchema),
     defaultValues: {
-      personnel_id: "",
-      site_id: null,
-      type: "time_in",
-      notes: undefined,
+      id: log.id,
+      scanned_at: log.scanned_at,
+      type: log.type as AttendanceType,
+      site_id: log.site_id ?? null,
+      notes: log.notes ?? undefined,
     },
   });
 
-  async function onSubmit(values: RecordAttendanceInput) {
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        id: log.id,
+        scanned_at: log.scanned_at,
+        type: log.type as AttendanceType,
+        site_id: log.site_id ?? null,
+        notes: log.notes ?? undefined,
+      });
+    }
+  }, [open, log, form]);
+
+  async function onSubmit(values: UpdateAttendanceLogInput) {
     setSubmitting(true);
-    const result = await recordAttendance(values);
+    const result = await updateAttendanceLog(values);
     setSubmitting(false);
 
     if (result.error) {
-      toast.error("Failed to record", { description: result.error });
+      toast.error("Update failed", { description: result.error });
       return;
     }
-    toast.success(`${ATTENDANCE_TYPE_LABELS[result.data!.type]} recorded`);
-    form.reset({
-      personnel_id: "",
-      site_id: null,
-      type: "time_in",
-      notes: undefined,
-    });
+    toast.success("Attendance log updated");
     setOpen(false);
     router.refresh();
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" />}>
-        <UserPlus className="size-4" />
-        Manual entry
-      </DialogTrigger>
+      <DialogTrigger render={trigger as React.ReactElement} />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Record attendance</DialogTitle>
+          <DialogTitle>Edit attendance entry</DialogTitle>
           <DialogDescription>
-            Use when QR scanning isn&apos;t available. Logged with your account
-            as the recorder.
+            {personnelName ? `${personnelName} · ` : ""}Times are entered in PHT
+            and stored in UTC.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
               control={form.control}
-              name="personnel_id"
+              name="scanned_at"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Personnel</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue>
-                          {(v: string | null) => {
-                            const p = personnel.find((x) => x.id === v);
-                            return p ? (
-                              p.full_name
-                            ) : (
-                              <span className="text-muted-foreground">
-                                Select personnel
-                              </span>
-                            );
-                          }}
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {personnel.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.full_name}
-                          {p.committee ? (
-                            <span className="text-muted-foreground">
-                              {" "}
-                              · {p.committee}
-                            </span>
-                          ) : null}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Time (PHT)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="datetime-local"
+                      value={field.value ? utcToManilaLocal(field.value) : ""}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value ? manilaLocalToUtc(e.target.value) : "",
+                        )
+                      }
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -161,9 +168,7 @@ export function ManualAttendanceDialog({ personnel, sites }: Props) {
                   <FormLabel>Type</FormLabel>
                   <Select
                     value={field.value}
-                    onValueChange={(v) =>
-                      field.onChange(v as AttendanceType)
-                    }
+                    onValueChange={(v) => field.onChange(v as AttendanceType)}
                   >
                     <FormControl>
                       <SelectTrigger className="w-full">
@@ -252,7 +257,7 @@ export function ManualAttendanceDialog({ personnel, sites }: Props) {
               </Button>
               <Button type="submit" disabled={submitting}>
                 {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-                Record
+                Save
               </Button>
             </DialogFooter>
           </form>

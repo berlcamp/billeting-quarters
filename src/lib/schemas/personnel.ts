@@ -90,13 +90,17 @@ export const deleteDutySchema = z.object({
   id: z.string().uuid(),
 });
 
-export const recordAttendanceSchema = z.object({
-  personnel_id: z.string().uuid("Select personnel."),
-  site_id: z.string().uuid().nullable().optional(),
+export const updateAttendanceLogSchema = z.object({
+  id: z.string().uuid(),
+  scanned_at: z
+    .string()
+    .min(1, "Time is required")
+    .refine((s) => !isNaN(Date.parse(s)), "Invalid time"),
   type: z.enum(["time_in", "time_out"]),
+  site_id: z.string().uuid().nullable().optional(),
   notes: optionalText,
 });
-export type RecordAttendanceInput = z.infer<typeof recordAttendanceSchema>;
+export type UpdateAttendanceLogInput = z.infer<typeof updateAttendanceLogSchema>;
 
 // QR scan: a single personnel id (UUID); type is auto-decided server-side
 // based on the personnel's most recent attendance log for the day.

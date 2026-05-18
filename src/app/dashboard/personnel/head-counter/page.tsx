@@ -88,7 +88,10 @@ export default async function HeadCounterPage({ searchParams }: PageProps) {
     );
   }
 
-  const printQuery = new URLSearchParams({ date: dateParam });
+  // The printable is a per-delegation date matrix across the full event
+  // window — passing `date` would collapse it to a single column, so we leave
+  // it off and only carry the delegation filter when one is selected.
+  const printQuery = new URLSearchParams();
   if (
     isAdmin &&
     selectedDelegationId &&
@@ -96,7 +99,8 @@ export default async function HeadCounterPage({ searchParams }: PageProps) {
   ) {
     printQuery.set("delegation", selectedDelegationId);
   }
-  const printHref = `/dashboard/personnel/head-counter/print?${printQuery.toString()}`;
+  const printQs = printQuery.toString();
+  const printHref = `/dashboard/personnel/head-counter/print${printQs ? `?${printQs}` : ""}`;
 
   // ---- Data fetching ----
   let consolidatedCells: Awaited<

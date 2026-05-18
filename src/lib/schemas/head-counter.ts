@@ -2,8 +2,8 @@ import { z } from "zod";
 
 // Hard-coded Palaro 2026 event window. If the event window ever moves these
 // shift in one place. The same constants gate the action's window check.
-export const HEAD_COUNT_WINDOW_START = "2026-05-16";
-export const HEAD_COUNT_WINDOW_END = "2026-06-15";
+export const HEAD_COUNT_WINDOW_START = "2026-05-18";
+export const HEAD_COUNT_WINDOW_END = "2026-05-31";
 
 export const HEAD_COUNT_ROLES = [
   "athlete",

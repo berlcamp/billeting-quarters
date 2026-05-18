@@ -9,8 +9,8 @@ import {
   createPersonnelSchema,
   deleteDutySchema,
   deletePersonnelSchema,
-  recordAttendanceSchema,
   scanAttendanceSchema,
+  updateAttendanceLogSchema,
   updateDutySchema,
   updatePersonnelSchema,
 } from "@/lib/schemas/personnel";
@@ -456,47 +456,57 @@ export async function getAttendanceLogs(
   return ok(data ?? []);
 }
 
-export async function recordAttendance(
+export async function updateAttendanceLog(
   input: unknown,
-): Promise<ActionResult<{ id: string; type: AttendanceType }>> {
+): Promise<ActionResult<void>> {
   const auth = await requireAttendanceRecorder();
   if (!auth.ok) return fail(auth.error);
 
-  const parsed = recordAttendanceSchema.safeParse(input);
+  const parsed = updateAttendanceLogSchema.safeParse(input);
   if (!parsed.success) {
     return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
   }
   const data = parsed.data;
 
   const admin = createAdminClient();
-  const { data: inserted, error } = await admin
+  const { data: before } = await admin
     .schema("palaro")
     .from("attendance_logs")
-    .insert({
-      personnel_id: data.personnel_id,
-      site_id: data.site_id || null,
+    .select("scanned_at, type, site_id, notes")
+    .eq("id", data.id)
+    .maybeSingle();
+  if (!before) return fail("Attendance log not found.");
+
+  const { error } = await admin
+    .schema("palaro")
+    .from("attendance_logs")
+    .update({
+      scanned_at: data.scanned_at,
       type: data.type,
-      scanned_by: auth.profile.id,
+      site_id: data.site_id || null,
       notes: data.notes || null,
     })
-    .select("id, type")
-    .single();
+    .eq("id", data.id);
   if (error) return fail(error.message);
 
   await recordAudit({
-    action: "create",
+    action: "update",
     entity_type: "attendance_log",
-    entity_id: inserted.id,
+    entity_id: data.id,
     changes: {
-      personnel_id: data.personnel_id,
-      type: data.type,
-      site_id: data.site_id ?? null,
+      before,
+      after: {
+        scanned_at: data.scanned_at,
+        type: data.type,
+        site_id: data.site_id ?? null,
+        notes: data.notes ?? null,
+      },
     },
     user_id: auth.profile.id,
   });
 
   revalidatePath(ATTENDANCE_PATH);
-  return ok({ id: inserted.id, type: inserted.type });
+  return ok(undefined);
 }
 
 // QR scan path:
