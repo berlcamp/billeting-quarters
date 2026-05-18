@@ -129,13 +129,16 @@
   }
 }
 
-html:fullscreen aside,
-html:fullscreen header,
-html:fullscreen footer {
+/* In fullscreen, hide only elements explicitly marked as app chrome (the
+   dashboard sidebar / topbar / footer). Pages like the raffle draw render
+   their own <header>/<aside> as content and must remain visible. */
+html:fullscreen [data-chrome="sidebar"],
+html:fullscreen [data-chrome="topbar"],
+html:fullscreen [data-chrome="footer"] {
   display: none !important;
 }
 
-html:fullscreen main {
+html:fullscreen [data-chrome="main"] {
   padding: 1.5rem;
   overflow-y: auto;
   height: 100vh;
