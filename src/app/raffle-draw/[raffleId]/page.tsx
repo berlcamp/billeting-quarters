@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
 import { Fraunces } from "next/font/google";
 import { DrawBoard } from "@/components/raffle/draw/draw-board";
-import { getRaffle, getRaffleEntries } from "@/lib/actions/raffle";
+import {
+  getRaffle,
+  getRaffleEntries,
+  getRaffleWinners,
+  type DrawWinnerResult,
+} from "@/lib/actions/raffle";
 import { requireActiveProfile } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/permissions";
 
@@ -31,9 +36,10 @@ export default async function RaffleDrawPage({
     );
   }
 
-  const [detail, entries] = await Promise.all([
+  const [detail, entries, winners] = await Promise.all([
     getRaffle(raffleId),
     getRaffleEntries(raffleId),
+    getRaffleWinners(raffleId),
   ]);
 
   if (detail.error || !detail.data) {
@@ -46,6 +52,23 @@ export default async function RaffleDrawPage({
     entry_count: d.entry_count,
   }));
 
+  // Persist winners across page refreshes — already-drawn entries stay
+  // excluded from the eligible pool until an admin clears all winners.
+  const initialWinners: DrawWinnerResult[] = (
+    winners.error || !winners.data ? [] : winners.data
+  )
+    .slice()
+    .sort((a, b) => a.draw_index - b.draw_index)
+    .map((w) => ({
+      id: w.id,
+      entry_id: w.entry_id,
+      entry_name: w.entry_name,
+      department_id: w.department_id,
+      department_name: w.department_name,
+      draw_index: w.draw_index,
+      session_id: w.session_id,
+    }));
+
   return (
     <div className={`${fraunces.variable} min-h-screen bg-[#0a1740]`}>
       <DrawBoard
@@ -55,6 +78,7 @@ export default async function RaffleDrawPage({
         }}
         departments={departments}
         entries={entries.error ? [] : entries.data ?? []}
+        initialWinners={initialWinners}
       />
     </div>
   );

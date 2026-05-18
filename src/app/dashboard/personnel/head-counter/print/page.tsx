@@ -31,7 +31,9 @@ export default async function HeadCounterPrintPage({ searchParams }: PageProps) 
   }
 
   const sp = await searchParams;
-  const autoPrint = sp.auto !== "0";
+  // Head-counter consolidated report is review-first: never pop the print
+  // dialog automatically — the user clicks the Print button when ready.
+  const autoPrint = false;
 
   // Date range resolution: explicit from/to wins; otherwise `date` collapses
   // to a single-day range; otherwise default to the full event window so the

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Maximize2, Minimize2, Play, Settings, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Maximize2, Minimize2, Play, Settings, Square, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { WaterwheelSpinner } from "./waterwheel-spinner";
@@ -17,6 +17,7 @@ interface Props {
   raffle: { id: string; name: string };
   departments: Department[];
   entries: Entry[];
+  initialWinners?: DrawWinnerResult[];
 }
 
 const DEFAULT_SETTINGS: DrawSettings = {
@@ -24,21 +25,48 @@ const DEFAULT_SETTINGS: DrawSettings = {
   spinDurationSeconds: 5,
   departmentId: "ALL",
   prizeLabel: "",
+  autoSpin: false,
+  autoSpinIntervalSeconds: 3,
 };
 
-export function DrawBoard({ raffle, departments, entries }: Props) {
+export function DrawBoard({
+  raffle,
+  departments,
+  entries,
+  initialWinners = [],
+}: Props) {
   // Lazy init — runs once on first render. Stable across re-renders, and
   // since the id is only used in server-action callbacks (never rendered as
   // text), a different SSR vs CSR value can't cause a hydration mismatch.
   const [sessionId] = useState<string>(() => crypto.randomUUID());
   const [settings, setSettings] = useState<DrawSettings>(DEFAULT_SETTINGS);
-  const [winners, setWinners] = useState<DrawWinnerResult[]>([]);
+  // Seed with persisted winners so they remain excluded from the pool across
+  // page refreshes. Cleared server-side via "Clear winners".
+  const [winners, setWinners] = useState<DrawWinnerResult[]>(initialWinners);
   const [winnerNameForWheel, setWinnerNameForWheel] = useState<string | null>(
     null,
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [autoSpinPending, setAutoSpinPending] = useState(false);
+  const autoSpinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { state: engine, spin } = useSpinEngine();
+
+  const clearAutoSpinTimer = useCallback(() => {
+    if (autoSpinTimerRef.current !== null) {
+      clearTimeout(autoSpinTimerRef.current);
+      autoSpinTimerRef.current = null;
+    }
+    setAutoSpinPending(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (autoSpinTimerRef.current !== null) {
+        clearTimeout(autoSpinTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -68,6 +96,12 @@ export function DrawBoard({ raffle, departments, entries }: Props) {
   const onSpin = useCallback(async () => {
     if (!canSpin) return;
 
+    setAutoSpinPending(false);
+    if (autoSpinTimerRef.current !== null) {
+      clearTimeout(autoSpinTimerRef.current);
+      autoSpinTimerRef.current = null;
+    }
+
     // Clear the previous winner-on-wheel so the new spin streams names again.
     setWinnerNameForWheel(null);
 
@@ -93,6 +127,24 @@ export function DrawBoard({ raffle, departments, entries }: Props) {
 
     setWinnerNameForWheel(result.winner.entry_name);
     setWinners((prev) => [...prev, result.winner]);
+
+    const nextCount = winners.length + 1;
+    const moreNeeded = nextCount < settings.totalWinners;
+    const poolHasMore = eligibleEntries.length - 1 > 0;
+    if (
+      settings.autoSpin &&
+      settings.totalWinners > 1 &&
+      moreNeeded &&
+      poolHasMore
+    ) {
+      setAutoSpinPending(true);
+      const delayMs = Math.max(1, settings.autoSpinIntervalSeconds) * 1000;
+      autoSpinTimerRef.current = setTimeout(() => {
+        autoSpinTimerRef.current = null;
+        setAutoSpinPending(false);
+        void onSpinRef.current?.();
+      }, delayMs);
+    }
   }, [
     canSpin,
     spin,
@@ -100,7 +152,21 @@ export function DrawBoard({ raffle, departments, entries }: Props) {
     sessionId,
     settings,
     winners,
+    eligibleEntries.length,
   ]);
+
+  const onSpinRef = useRef<typeof onSpin | null>(null);
+  useEffect(() => {
+    onSpinRef.current = onSpin;
+  }, [onSpin]);
+
+  // If auto-spin gets disabled (or other settings make next spin invalid)
+  // while a timer is pending, cancel the queued spin.
+  useEffect(() => {
+    if (!settings.autoSpin && autoSpinPending) {
+      clearAutoSpinTimer();
+    }
+  }, [settings.autoSpin, autoSpinPending, clearAutoSpinTimer]);
 
   function toggleFullscreen() {
     if (document.fullscreenElement) {
@@ -241,22 +307,37 @@ export function DrawBoard({ raffle, departments, entries }: Props) {
 
           {/* SPIN button */}
           <div className="flex w-full flex-col items-center gap-3">
-            <Button
-              onClick={onSpin}
-              disabled={!canSpin}
-              className="group h-16 min-w-[260px] gap-3 rounded-full border-2 border-amber-300/60 bg-gradient-to-r from-amber-400 to-amber-500 text-xl font-semibold text-[#0a1740] shadow-[0_0_40px_rgba(245,197,38,0.45)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:shadow-none"
-              style={{ fontFamily: "var(--font-fraunces), serif" }}
-            >
-              <Play className="size-6 fill-current" />
-              {engine.spinning ? "Spinning…" : "Spin"}
-            </Button>
+            {autoSpinPending ? (
+              <Button
+                onClick={clearAutoSpinTimer}
+                className="group h-16 min-w-[260px] gap-3 rounded-full border-2 border-red-300/60 bg-gradient-to-r from-red-500 to-red-600 text-xl font-semibold text-white shadow-[0_0_40px_rgba(239,68,68,0.45)] transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                style={{ fontFamily: "var(--font-fraunces), serif" }}
+              >
+                <Square className="size-5 fill-current" />
+                Stop auto-spin
+              </Button>
+            ) : (
+              <Button
+                onClick={onSpin}
+                disabled={!canSpin}
+                className="group h-16 min-w-[260px] gap-3 rounded-full border-2 border-amber-300/60 bg-gradient-to-r from-amber-400 to-amber-500 text-xl font-semibold text-[#0a1740] shadow-[0_0_40px_rgba(245,197,38,0.45)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:shadow-none"
+                style={{ fontFamily: "var(--font-fraunces), serif" }}
+              >
+                <Play className="size-6 fill-current" />
+                {engine.spinning ? "Spinning…" : "Spin"}
+              </Button>
+            )}
 
             <p className="text-xs text-white/45">
               {poolEmpty
                 ? "No eligible entries left in the pool."
                 : goalReached
                   ? `All ${settings.totalWinners} winners drawn. Change settings to draw more.`
-                  : `${winners.length} of ${settings.totalWinners} winners drawn.`}
+                  : autoSpinPending
+                    ? `Next spin in ~${settings.autoSpinIntervalSeconds.toFixed(1)}s · ${winners.length} of ${settings.totalWinners} drawn.`
+                    : settings.autoSpin && settings.totalWinners > 1
+                      ? `Auto-spin on · ${winners.length} of ${settings.totalWinners} winners drawn.`
+                      : `${winners.length} of ${settings.totalWinners} winners drawn.`}
             </p>
           </div>
         </section>

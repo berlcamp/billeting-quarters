@@ -12,6 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,6 +28,8 @@ export type DrawSettings = {
   spinDurationSeconds: number;
   departmentId: "ALL" | string;
   prizeLabel: string;
+  autoSpin: boolean;
+  autoSpinIntervalSeconds: number;
 };
 
 interface Props {
@@ -162,6 +165,55 @@ export function SettingsSheet({
             <p className="text-xs text-muted-foreground">
               Saved with each winner record.
             </p>
+          </div>
+
+          <div className="space-y-3 rounded-md border border-border/60 bg-muted/30 p-3">
+            <div className="flex items-start gap-2.5">
+              <Checkbox
+                id="auto-spin"
+                checked={draft.autoSpin}
+                onCheckedChange={(v) =>
+                  setDraft((d) => ({ ...d, autoSpin: v === true }))
+                }
+                className="mt-0.5"
+              />
+              <div className="flex flex-col">
+                <Label htmlFor="auto-spin" className="cursor-pointer">
+                  Auto-spin for multi-winner draws
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  When more than 1 winner is configured, the next spin
+                  triggers automatically after the interval below.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="auto-spin-interval">
+                Interval between spins (seconds)
+              </Label>
+              <Input
+                id="auto-spin-interval"
+                type="number"
+                min={1}
+                max={60}
+                step={0.5}
+                disabled={!draft.autoSpin}
+                value={draft.autoSpinIntervalSeconds}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    autoSpinIntervalSeconds: Math.max(
+                      1,
+                      Math.min(60, Number(e.target.value) || 3),
+                    ),
+                  }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Pause after a winner lands before the next spin starts.
+              </p>
+            </div>
           </div>
         </div>
 
