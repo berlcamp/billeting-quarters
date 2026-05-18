@@ -15,6 +15,7 @@ export const USER_ROLES: readonly UserRole[] = [
   "personnel_admin",
   "venue_manager",
   "delegation_head",
+  "bq_head",
   "transportation_head",
   "transportation_dispatcher",
   "transportation_driver",
@@ -22,6 +23,7 @@ export const USER_ROLES: readonly UserRole[] = [
   "food_supplier_admin",
   "incident_monitoring",
   "information_hub_officer",
+  "attendance_checker",
 ] as const;
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -36,6 +38,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   personnel_admin: "Personnel Admin",
   venue_manager: "Venue Manager",
   delegation_head: "Delegation Head",
+  bq_head: "BQ Head",
   transportation_head: "Transportation Head",
   transportation_dispatcher: "Transportation Dispatcher",
   transportation_driver: "Transportation Driver",
@@ -43,6 +46,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   food_supplier_admin: "Food Supplier Admin",
   incident_monitoring: "Incident Monitoring",
   information_hub_officer: "Information Hub Officer",
+  attendance_checker: "Attendance Checker",
 };
 
 export const PROFILE_STATUS_LABELS: Record<ProfileStatus, string> = {
@@ -188,8 +192,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "incident.create",
     "incident.view",
     "food.request",
-    "head_count.encode_own",
   ],
+  // BQ Head — Billeting-Quarter Head, assigned to one delegation. The only
+  // role that can encode the daily Head Counter for its delegation, and the
+  // only module they can access.
+  bq_head: ["head_count.encode_own"],
   // Transportation Head — Committee leadership. Manages vehicles/routes,
   // creates dispatches, scans, logs fuel, and views reports. (~3 users)
   transportation_head: [
@@ -236,6 +243,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "end_of_day.log",
     "food.request",
   ],
+  // Attendance Checker — kiosk-style role for personnel manning the
+  // time-in/time-out station. Can only access the Attendance module
+  // (manual + QR scan logging); no personnel CRUD, no other modules.
+  attendance_checker: ["attendance.record"],
 };
 
 type ProfileLike =

@@ -829,7 +829,6 @@ export type Database = {
           delegation_id: string;
           count_date: string;
           direction: Database["palaro"]["Enums"]["head_counter_direction"];
-          row_index: number;
           role: Database["palaro"]["Enums"]["head_counter_role"];
           count: number;
           updated_by: string | null;
@@ -840,7 +839,6 @@ export type Database = {
           delegation_id: string;
           count_date: string;
           direction: Database["palaro"]["Enums"]["head_counter_direction"];
-          row_index: number;
           role: Database["palaro"]["Enums"]["head_counter_role"];
           count?: number;
           updated_by?: string | null;
@@ -851,7 +849,6 @@ export type Database = {
           delegation_id?: string;
           count_date?: string;
           direction?: Database["palaro"]["Enums"]["head_counter_direction"];
-          row_index?: number;
           role?: Database["palaro"]["Enums"]["head_counter_role"];
           count?: number;
           updated_by?: string | null;
@@ -1910,13 +1907,15 @@ export type Database = {
         | "personnel_admin"
         | "venue_manager"
         | "delegation_head"
+        | "bq_head"
         | "transportation_head"
         | "transportation_dispatcher"
         | "transportation_driver"
         | "garbage_logger"
         | "food_supplier_admin"
         | "incident_monitoring"
-        | "information_hub_officer";
+        | "information_hub_officer"
+        | "attendance_checker";
       profile_status: "pending" | "active" | "suspended";
       incident_category:
         | "medical"

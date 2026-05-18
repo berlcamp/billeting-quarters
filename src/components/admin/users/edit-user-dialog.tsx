@@ -123,7 +123,9 @@ export function EditUserDialog({
 
   const watchedRoles = (form.watch("roles") ?? []) as UserRole[];
   const showDelegation =
-    watchedRoles.includes("delegation_head") || !!user?.delegation_id;
+    watchedRoles.includes("delegation_head") ||
+    watchedRoles.includes("bq_head") ||
+    !!user?.delegation_id;
 
   if (!user) return null;
 
@@ -367,7 +369,7 @@ export function EditUserDialog({
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      Used by Head Counter to scope a delegation head to one
+                      Used by Head Counter to scope a BQ Head to one
                       delegation.
                     </p>
                     <FormMessage />

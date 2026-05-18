@@ -57,6 +57,24 @@ async function requireAttendanceRecorder() {
   return { ok: true as const, profile };
 }
 
+// Read-only access to the personnel roster and attendance history for
+// the DTR generator. Granted to personnel managers and attendance
+// checkers (who staff the time-in/out station and print DTRs).
+async function requireDtrReader() {
+  const profile = await getCurrentProfile();
+  if (!profile) return { ok: false as const, error: "Not authenticated." };
+  if (
+    !hasPermission(profile, "personnel.manage") &&
+    !hasPermission(profile, "attendance.record")
+  ) {
+    return {
+      ok: false as const,
+      error: "You don't have permission to view DTR data.",
+    };
+  }
+  return { ok: true as const, profile };
+}
+
 // Lightweight projection for selectors and tables — avoids over-fetching when
 // the consumer only needs the label/lookup columns.
 export type PersonnelSummary = Pick<
@@ -483,8 +501,11 @@ export async function recordAttendance(
 
 // QR scan path:
 //  - Scanned value is interpreted as a personnel UUID (envelope or raw)
-//  - Looks up the personnel's most recent log today; if none → time_in,
-//    if last is time_in → time_out, else → time_in
+//  - Looks up the personnel's most recent log overall (not restricted to
+//    today's Asia/Manila day). If last is time_in → time_out, else → time_in.
+//    Using "today only" broke overnight shifts: a time_in at 11 PM and a
+//    time_out at 1 AM the next morning would otherwise both be recorded as
+//    time_in because the prior log fell outside today's window.
 //  - Used by `/dashboard/personnel/attendance` scan dialog
 export async function scanAttendance(
   input: unknown,
@@ -540,26 +561,24 @@ export async function scanAttendance(
     return fail("That personnel record is inactive.");
   }
 
-  // Decide direction by checking the last log today (Asia/Manila day).
+  // Decide direction by toggling off the personnel's most recent log,
+  // regardless of which calendar day it falls on. This preserves the
+  // time_in → time_out pairing across the midnight rollover.
   const nowMs = Date.now();
-  const startOfDayUtcMs =
-    nowMs - ((nowMs + 8 * 60 * 60 * 1000) % (24 * 60 * 60 * 1000));
-  const startOfDay = new Date(startOfDayUtcMs).toISOString();
 
-  const { data: lastToday } = await admin
+  const { data: lastLog } = await admin
     .schema("palaro")
     .from("attendance_logs")
     .select("type, scanned_at")
     .eq("personnel_id", personnelId)
-    .gte("scanned_at", startOfDay)
     .order("scanned_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   // Enforce 5-minute cooldown between scans of the same QR.
   const COOLDOWN_MS = 5 * 60 * 1000;
-  if (lastToday) {
-    const elapsed = nowMs - new Date(lastToday.scanned_at).getTime();
+  if (lastLog) {
+    const elapsed = nowMs - new Date(lastLog.scanned_at).getTime();
     if (elapsed < COOLDOWN_MS) {
       const secsLeft = Math.ceil((COOLDOWN_MS - elapsed) / 1000);
       const m = Math.floor(secsLeft / 60);
@@ -572,7 +591,7 @@ export async function scanAttendance(
   }
 
   const nextType: AttendanceType =
-    lastToday?.type === "time_in" ? "time_out" : "time_in";
+    lastLog?.type === "time_in" ? "time_out" : "time_in";
 
   const { data: inserted, error } = await admin
     .schema("palaro")
@@ -621,7 +640,7 @@ export async function getAttendanceLogsForDtr(
   fromIso: string,
   toIso: string,
 ): Promise<ActionResult<AttendanceLog[]>> {
-  const auth = await requirePersonnelManager();
+  const auth = await requireDtrReader();
   if (!auth.ok) return fail(auth.error);
 
   const admin = createAdminClient();
@@ -643,7 +662,9 @@ export async function getAttendanceLogsForDtr(
 // =============================================================================
 
 export async function getPersonnelForIds(): Promise<ActionResult<Personnel[]>> {
-  const auth = await requirePersonnelManager();
+  // Used by both the ID generator (personnel.manage) and the DTR generator
+  // (attendance.record also allowed so attendance checkers can print DTRs).
+  const auth = await requireDtrReader();
   if (!auth.ok) return fail(auth.error);
 
   const admin = createAdminClient();

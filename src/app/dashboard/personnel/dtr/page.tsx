@@ -2,7 +2,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Forbidden } from "@/components/shared/forbidden";
 import { DtrRoster } from "@/components/personnel/dtr-roster";
 import { getCurrentProfile } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/permissions";
+import { hasAnyPermission } from "@/lib/permissions";
 import {
   getAttendanceLogsForDtr,
   getPersonnelForIds,
@@ -27,9 +27,12 @@ function defaultRange(today: string): { from: string; to: string } {
 
 export default async function DtrPage({ searchParams }: PageProps) {
   const profile = await getCurrentProfile();
-  if (!profile || !hasPermission(profile, "personnel.manage")) {
+  if (
+    !profile ||
+    !hasAnyPermission(profile, ["personnel.manage", "attendance.record"])
+  ) {
     return (
-      <Forbidden message="DTR generator requires the personnel.manage permission." />
+      <Forbidden message="DTR generator requires the personnel.manage or attendance.record permission." />
     );
   }
 

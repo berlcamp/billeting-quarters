@@ -146,7 +146,6 @@ export async function saveHeadCounter(
       delegation_id: data.delegation_id,
       count_date: data.count_date,
       direction: c.direction,
-      row_index: c.row_index,
       role: c.role,
       count: c.count,
       updated_by: profile.id,
@@ -156,13 +155,12 @@ export async function saveHeadCounter(
       .schema("palaro")
       .from("head_counter_cells")
       .upsert(rows, {
-        onConflict: "delegation_id,count_date,direction,row_index,role",
+        onConflict: "delegation_id,count_date,direction,role",
       });
     if (error) return fail(error.message);
   }
 
-  // Cells the user blanked out — delete in one batch grouped by (direction,
-  // row_index) to keep the .or() expression short.
+  // Cells the user blanked out — delete one per (direction, role).
   for (const z of zeros) {
     const { error } = await admin
       .schema("palaro")
@@ -171,7 +169,6 @@ export async function saveHeadCounter(
       .eq("delegation_id", data.delegation_id)
       .eq("count_date", data.count_date)
       .eq("direction", z.direction)
-      .eq("row_index", z.row_index)
       .eq("role", z.role);
     if (error) return fail(error.message);
   }

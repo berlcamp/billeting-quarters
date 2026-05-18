@@ -12,7 +12,6 @@ import {
   HEAD_COUNT_DIRECTION_LABELS,
   HEAD_COUNT_ROLES,
   HEAD_COUNT_ROLE_LABELS,
-  HEAD_COUNT_ROW_LABELS,
   type HeadCountDirection,
   type HeadCountRole,
 } from "@/lib/schemas/head-counter";
@@ -30,21 +29,17 @@ interface Props {
   readOnly?: boolean;
 }
 
-type CellKey = `${HeadCountDirection}:${number}:${HeadCountRole}`;
+type CellKey = `${HeadCountDirection}:${HeadCountRole}`;
 type CellMap = Record<CellKey, number>;
 
-function cellKey(
-  direction: HeadCountDirection,
-  rowIndex: number,
-  role: HeadCountRole,
-): CellKey {
-  return `${direction}:${rowIndex}:${role}`;
+function cellKey(direction: HeadCountDirection, role: HeadCountRole): CellKey {
+  return `${direction}:${role}`;
 }
 
 function buildInitial(cells: HeadCounterCell[]): CellMap {
   const map: CellMap = {} as CellMap;
   for (const c of cells) {
-    map[cellKey(c.direction, c.row_index, c.role)] = c.count;
+    map[cellKey(c.direction, c.role)] = c.count;
   }
   return map;
 }
@@ -67,12 +62,11 @@ export function HeadCounterGrid({
 
   function setCell(
     direction: HeadCountDirection,
-    rowIndex: number,
     role: HeadCountRole,
     raw: string,
   ) {
     if (readOnly) return;
-    const key = cellKey(direction, rowIndex, role);
+    const key = cellKey(direction, role);
     if (raw === "") {
       setValues((prev) => {
         const next = { ...prev };
@@ -87,45 +81,16 @@ export function HeadCounterGrid({
     setValues((prev) => ({ ...prev, [key]: clamped }));
   }
 
-  function getCell(
-    direction: HeadCountDirection,
-    rowIndex: number,
-    role: HeadCountRole,
-  ): number {
-    return values[cellKey(direction, rowIndex, role)] ?? 0;
+  function getCell(direction: HeadCountDirection, role: HeadCountRole): number {
+    return values[cellKey(direction, role)] ?? 0;
   }
 
-  // Live totals per direction.
   const totals = useMemo(() => {
-    const out: Record<
-      HeadCountDirection,
-      {
-        rowTotals: number[];
-        colTotals: Record<HeadCountRole, number>;
-        grand: number;
-      }
-    > = {
-      in: {
-        rowTotals: HEAD_COUNT_ROW_LABELS.map(() => 0),
-        colTotals: {} as Record<HeadCountRole, number>,
-        grand: 0,
-      },
-      out: {
-        rowTotals: HEAD_COUNT_ROW_LABELS.map(() => 0),
-        colTotals: {} as Record<HeadCountRole, number>,
-        grand: 0,
-      },
-    };
+    const out: Record<HeadCountDirection, number> = { in: 0, out: 0 };
     for (const dir of HEAD_COUNT_DIRECTIONS) {
-      for (const role of HEAD_COUNT_ROLES) out[dir].colTotals[role] = 0;
-      HEAD_COUNT_ROW_LABELS.forEach((_, rowIdx) => {
-        for (const role of HEAD_COUNT_ROLES) {
-          const v = getCell(dir, rowIdx, role);
-          out[dir].rowTotals[rowIdx] += v;
-          out[dir].colTotals[role] += v;
-          out[dir].grand += v;
-        }
-      });
+      for (const role of HEAD_COUNT_ROLES) {
+        out[dir] += getCell(dir, role);
+      }
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,29 +100,20 @@ export function HeadCounterGrid({
     if (readOnly) return;
     setSubmitting(true);
 
-    // Build the diff: every (dir, row, role) where current vs original differs.
     const changedCells: {
       direction: HeadCountDirection;
-      row_index: number;
       role: HeadCountRole;
       count: number;
     }[] = [];
     for (const dir of HEAD_COUNT_DIRECTIONS) {
-      HEAD_COUNT_ROW_LABELS.forEach((_, rowIdx) => {
-        for (const role of HEAD_COUNT_ROLES) {
-          const key = cellKey(dir, rowIdx, role);
-          const curr = values[key] ?? 0;
-          const prev = originalValues[key] ?? 0;
-          if (curr !== prev) {
-            changedCells.push({
-              direction: dir,
-              row_index: rowIdx,
-              role,
-              count: curr,
-            });
-          }
+      for (const role of HEAD_COUNT_ROLES) {
+        const key = cellKey(dir, role);
+        const curr = values[key] ?? 0;
+        const prev = originalValues[key] ?? 0;
+        if (curr !== prev) {
+          changedCells.push({ direction: dir, role, count: curr });
         }
-      });
+      }
     }
 
     if (changedCells.length === 0) {
@@ -177,19 +133,16 @@ export function HeadCounterGrid({
       toast.error("Save failed", { description: result.error });
       return;
     }
-    toast.success(`Saved ${changedCells.length} cell(s)`);
+    toast.success(`Saved ${changedCells.length} row(s)`);
     router.refresh();
   }
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <SummaryCard label="Total IN" value={totals.in.grand} />
-        <SummaryCard label="Total OUT" value={totals.out.grand} />
-        <SummaryCard
-          label="Net (IN − OUT)"
-          value={totals.in.grand - totals.out.grand}
-        />
+        <SummaryCard label="Total IN" value={totals.in} />
+        <SummaryCard label="Total OUT" value={totals.out} />
+        <SummaryCard label="Net (IN − OUT)" value={totals.in - totals.out} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -199,9 +152,7 @@ export function HeadCounterGrid({
             direction={dir}
             getCell={getCell}
             setCell={setCell}
-            rowTotals={totals[dir].rowTotals}
-            colTotals={totals[dir].colTotals}
-            grand={totals[dir].grand}
+            total={totals[dir]}
             readOnly={readOnly}
           />
         ))}
@@ -230,26 +181,17 @@ function SectionTable({
   direction,
   getCell,
   setCell,
-  rowTotals,
-  colTotals,
-  grand,
+  total,
   readOnly,
 }: {
   direction: HeadCountDirection;
-  getCell: (
-    direction: HeadCountDirection,
-    rowIndex: number,
-    role: HeadCountRole,
-  ) => number;
+  getCell: (direction: HeadCountDirection, role: HeadCountRole) => number;
   setCell: (
     direction: HeadCountDirection,
-    rowIndex: number,
     role: HeadCountRole,
     raw: string,
   ) => void;
-  rowTotals: number[];
-  colTotals: Record<HeadCountRole, number>;
-  grand: number;
+  total: number;
   readOnly: boolean;
 }) {
   const tone =
@@ -261,72 +203,44 @@ function SectionTable({
       <div className="border-b bg-background px-3 py-1.5 text-sm font-semibold uppercase tracking-wider">
         {HEAD_COUNT_DIRECTION_LABELS[direction]}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-xs">
-          <thead>
-            <tr className="bg-muted/50">
-              <th className="border px-1.5 py-1 text-left">Row</th>
-              {HEAD_COUNT_ROLES.map((r) => (
-                <th key={r} className="border px-1 py-1 text-center font-medium">
-                  {HEAD_COUNT_ROLE_LABELS[r]}
-                </th>
-              ))}
-              <th className="border px-1 py-1 text-center font-semibold">
-                Total
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {HEAD_COUNT_ROW_LABELS.map((label, rowIdx) => {
-              const isDelegationRow = rowIdx === 0;
-              return (
-                <tr
-                  key={label}
-                  className={cn(isDelegationRow && "bg-muted/30 font-medium")}
-                >
-                  <td className="border px-1.5 py-0.5 text-left">{label}</td>
-                  {HEAD_COUNT_ROLES.map((role) => {
-                    const v = getCell(direction, rowIdx, role);
-                    return (
-                      <td key={role} className="border p-0">
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          min={0}
-                          max={99999}
-                          value={v === 0 ? "" : v}
-                          onChange={(e) =>
-                            setCell(direction, rowIdx, role, e.target.value)
-                          }
-                          disabled={readOnly}
-                          className="h-7 w-full bg-transparent px-1 text-right tabular-nums outline-none focus:bg-background focus:ring-1 focus:ring-ring disabled:opacity-60"
-                        />
-                      </td>
-                    );
-                  })}
-                  <td className="border px-1 py-0.5 text-right font-medium tabular-nums">
-                    {rowTotals[rowIdx] || ""}
-                  </td>
-                </tr>
-              );
-            })}
-            <tr className="bg-muted/60 font-semibold">
-              <td className="border px-1.5 py-0.5 text-left">Total</td>
-              {HEAD_COUNT_ROLES.map((role) => (
-                <td
-                  key={role}
-                  className="border px-1 py-0.5 text-right tabular-nums"
-                >
-                  {colTotals[role] || ""}
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="bg-muted/50">
+            <th className="border px-2 py-1.5 text-left font-medium">Type</th>
+            <th className="border px-2 py-1.5 text-right font-medium">Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {HEAD_COUNT_ROLES.map((role) => {
+            const v = getCell(direction, role);
+            return (
+              <tr key={role}>
+                <td className="border px-2 py-1 text-left">
+                  {HEAD_COUNT_ROLE_LABELS[role]}
                 </td>
-              ))}
-              <td className="border px-1 py-0.5 text-right tabular-nums">
-                {grand || ""}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                <td className="border p-0">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={99999}
+                    value={v === 0 ? "" : v}
+                    onChange={(e) => setCell(direction, role, e.target.value)}
+                    disabled={readOnly}
+                    className="h-8 w-full bg-transparent px-2 text-right tabular-nums outline-none focus:bg-background focus:ring-1 focus:ring-ring disabled:opacity-60"
+                  />
+                </td>
+              </tr>
+            );
+          })}
+          <tr className="bg-muted/60 font-semibold">
+            <td className="border px-2 py-1 text-left">Total</td>
+            <td className="border px-2 py-1 text-right tabular-nums">
+              {total || ""}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

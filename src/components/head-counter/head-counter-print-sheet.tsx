@@ -3,7 +3,6 @@ import {
   HEAD_COUNT_DIRECTION_LABELS,
   HEAD_COUNT_ROLES,
   HEAD_COUNT_ROLE_LABELS,
-  HEAD_COUNT_ROW_LABELS,
   type HeadCountDirection,
   type HeadCountRole,
 } from "@/lib/schemas/head-counter";
@@ -25,7 +24,7 @@ type CellMap = Record<string, number>;
 function buildMap(cells: HeadCounterCell[]): CellMap {
   const m: CellMap = {};
   for (const c of cells) {
-    m[`${c.direction}:${c.row_index}:${c.role}`] = c.count;
+    m[`${c.direction}:${c.role}`] = c.count;
   }
   return m;
 }
@@ -33,10 +32,9 @@ function buildMap(cells: HeadCounterCell[]): CellMap {
 function cellValue(
   m: CellMap,
   direction: HeadCountDirection,
-  rowIndex: number,
   role: HeadCountRole,
 ): number {
-  return m[`${direction}:${rowIndex}:${role}`] ?? 0;
+  return m[`${direction}:${role}`] ?? 0;
 }
 
 export function HeadCounterPrintSheet({
@@ -88,81 +86,45 @@ function SectionTable({
   direction: HeadCountDirection;
   map: CellMap;
 }) {
-  // Per-row, per-col, and grand totals.
-  const rowTotals = HEAD_COUNT_ROW_LABELS.map((_, rowIdx) =>
-    HEAD_COUNT_ROLES.reduce(
-      (acc, role) => acc + cellValue(map, direction, rowIdx, role),
-      0,
-    ),
+  const total = HEAD_COUNT_ROLES.reduce(
+    (acc, role) => acc + cellValue(map, direction, role),
+    0,
   );
-  const colTotals: Record<HeadCountRole, number> = {} as Record<
-    HeadCountRole,
-    number
-  >;
-  for (const role of HEAD_COUNT_ROLES) {
-    colTotals[role] = HEAD_COUNT_ROW_LABELS.reduce(
-      (acc, _, rowIdx) => acc + cellValue(map, direction, rowIdx, role),
-      0,
-    );
-  }
-  const grand = rowTotals.reduce((a, b) => a + b, 0);
 
   return (
     <div className="border border-black">
       <div className="border-b border-black bg-[#eee] px-1 py-0.5 text-center text-[10pt] font-bold">
         {HEAD_COUNT_DIRECTION_LABELS[direction]}
       </div>
-      <table className="w-full border-collapse text-[8.5pt]">
+      <table className="w-full border-collapse text-[9.5pt]">
         <thead>
           <tr className="bg-[#f5f5f5]">
-            <th className="border border-black px-1 py-0.5 text-left">Row</th>
-            {HEAD_COUNT_ROLES.map((role) => (
-              <th
-                key={role}
-                className="border border-black px-0.5 py-0.5 text-center"
-              >
-                {HEAD_COUNT_ROLE_LABELS[role]}
-              </th>
-            ))}
-            <th className="border border-black px-0.5 py-0.5 text-right">Σ</th>
+            <th className="border border-black px-1 py-0.5 text-left">Type</th>
+            <th className="border border-black px-1 py-0.5 text-right">
+              Count
+            </th>
           </tr>
         </thead>
         <tbody>
-          {HEAD_COUNT_ROW_LABELS.map((label, rowIdx) => (
-            <tr key={label} className={rowIdx === 0 ? "bg-[#f5f5f5]" : ""}>
-              <td className="border border-black px-1 py-0.5 text-left">
-                {label}
-              </td>
-              {HEAD_COUNT_ROLES.map((role) => {
-                const v = cellValue(map, direction, rowIdx, role);
-                return (
-                  <td
-                    key={role}
-                    className="border border-black px-0.5 py-0.5 text-right tabular-nums"
-                  >
-                    {v || ""}
-                  </td>
-                );
-              })}
-              <td className="border border-black px-0.5 py-0.5 text-right font-semibold tabular-nums">
-                {rowTotals[rowIdx] || ""}
-              </td>
-            </tr>
-          ))}
+          {HEAD_COUNT_ROLES.map((role) => {
+            const v = cellValue(map, direction, role);
+            return (
+              <tr key={role}>
+                <td className="border border-black px-1 py-0.5 text-left">
+                  {HEAD_COUNT_ROLE_LABELS[role]}
+                </td>
+                <td className="border border-black px-1 py-0.5 text-right tabular-nums">
+                  {v || ""}
+                </td>
+              </tr>
+            );
+          })}
           <tr className="bg-[#eee] font-bold">
             <td className="border border-black px-1 py-0.5 text-left">
               Total
             </td>
-            {HEAD_COUNT_ROLES.map((role) => (
-              <td
-                key={role}
-                className="border border-black px-0.5 py-0.5 text-right tabular-nums"
-              >
-                {colTotals[role] || ""}
-              </td>
-            ))}
-            <td className="border border-black px-0.5 py-0.5 text-right tabular-nums">
-              {grand || ""}
+            <td className="border border-black px-1 py-0.5 text-right tabular-nums">
+              {total || ""}
             </td>
           </tr>
         </tbody>

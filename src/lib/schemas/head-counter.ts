@@ -36,28 +36,12 @@ export const HEAD_COUNT_DIRECTION_LABELS: Record<HeadCountDirection, string> = {
   out: "OUT",
 };
 
-// row_index 0 is the DELEGATION (total) row; 1..9 are Delegate 1..9.
-export const HEAD_COUNT_ROW_LABELS = [
-  "DELEGATION",
-  "Delegate 1",
-  "Delegate 2",
-  "Delegate 3",
-  "Delegate 4",
-  "Delegate 5",
-  "Delegate 6",
-  "Delegate 7",
-  "Delegate 8",
-  "Delegate 9",
-] as const;
-export const HEAD_COUNT_ROW_COUNT = HEAD_COUNT_ROW_LABELS.length;
-
 const ymd = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD");
 
 export const headCounterCellInputSchema = z.object({
   direction: z.enum(HEAD_COUNT_DIRECTIONS),
-  row_index: z.number().int().min(0).max(HEAD_COUNT_ROW_COUNT - 1),
   role: z.enum(HEAD_COUNT_ROLES),
   count: z.number().int().min(0).max(99999),
 });
@@ -68,7 +52,7 @@ export const saveHeadCounterSchema = z.object({
   count_date: ymd,
   cells: z
     .array(headCounterCellInputSchema)
-    .max(HEAD_COUNT_DIRECTIONS.length * HEAD_COUNT_ROW_COUNT * HEAD_COUNT_ROLES.length),
+    .max(HEAD_COUNT_DIRECTIONS.length * HEAD_COUNT_ROLES.length),
 });
 export type SaveHeadCounterInput = z.infer<typeof saveHeadCounterSchema>;
 
