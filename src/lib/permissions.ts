@@ -25,6 +25,7 @@ export const USER_ROLES: readonly UserRole[] = [
   "information_hub_officer",
   "attendance_checker",
   "head_counter_viewer",
+  "command_center_viewer",
 ] as const;
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -49,6 +50,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   information_hub_officer: "Information Hub Officer",
   attendance_checker: "Attendance Checker",
   head_counter_viewer: "Head Counter Viewer",
+  command_center_viewer: "Command Center Viewer",
 };
 
 export const PROFILE_STATUS_LABELS: Record<ProfileStatus, string> = {
@@ -262,6 +264,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   // button); grids are read-only because this role lacks the encode
   // permissions.
   head_counter_viewer: ["head_count.view_all", "head_count.venue_view_all"],
+  // Command Center Viewer — view-only access to the Command Center dashboard
+  // and nothing else. Granting zero permissions is intentional: the
+  // dashboard page is open to every signed-in user, and every outbound link
+  // on it is permission-gated, so an empty grant produces a fully read-only
+  // view with no clickable navigation.
+  command_center_viewer: [],
 };
 
 type ProfileLike =

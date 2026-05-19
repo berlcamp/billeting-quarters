@@ -21,6 +21,12 @@ export default async function CommandCenterPage() {
     return <Forbidden message="Sign in to access the Command Center." />;
   }
 
+  // Each dashboard card / map popup that points at a module gets a
+  // permission flag here. Components render those targets as plain (non-link)
+  // markup when the flag is false — that makes the `command_center_viewer`
+  // role's empty permission set produce a fully view-only dashboard with no
+  // clickable navigation, while ordinary roles see links to anything they
+  // can actually open.
   const canOpenIncidents = hasPermission(profile, "incident.view");
   const canOpenReferrals = hasAnyPermission(profile, [
     "referral.accept",
@@ -29,6 +35,24 @@ export default async function CommandCenterPage() {
     "referral.create_field_to_ucf",
     "referral.create_ucf_to_hospital",
   ]);
+  const linkPerms = {
+    incidents: canOpenIncidents,
+    vip: hasPermission(profile, "vip.manage"),
+    venues: hasAnyPermission(profile, ["venue.book", "venue.approve_special"]),
+    garbage: hasAnyPermission(profile, ["garbage.log", "garbage.manage"]),
+    food: hasAnyPermission(profile, ["food.request", "food.manage"]),
+    siteMonitoring: hasAnyPermission(profile, [
+      "site_monitoring.log",
+      "site_monitoring.manage",
+    ]),
+    transportation: hasAnyPermission(profile, [
+      "vehicle.manage",
+      "vehicle.scan",
+      "vehicle.dispatch",
+      "vehicle.fuel",
+      "vehicle.drive",
+    ]),
+  };
 
   const [
     incidentsResult,
@@ -79,6 +103,7 @@ export default async function CommandCenterPage() {
             region_name: d.region_name,
             short_name: d.short_name,
           }))}
+          linkPerms={linkPerms}
         />
       ) : null}
     </div>

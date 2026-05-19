@@ -30,9 +30,10 @@ const CATEGORY_ICON: Record<
 
 interface Props {
   byCategory: Record<IncidentCategory, number>;
+  canOpen?: boolean;
 }
 
-export function IncidentsByCategoryCard({ byCategory }: Props) {
+export function IncidentsByCategoryCard({ byCategory, canOpen = true }: Props) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -43,15 +44,13 @@ export function IncidentsByCategoryCard({ byCategory }: Props) {
           {INCIDENT_CATEGORIES.map((c) => {
             const Icon = CATEGORY_ICON[c];
             const count = byCategory[c] ?? 0;
-            return (
-              <Link
-                key={c}
-                href={`/dashboard/incidents?category=${c}`}
-                className={cn(
-                  "rounded-md border p-3 transition hover:bg-muted/40",
-                  count > 0 && "border-foreground/30",
-                )}
-              >
+            const cardClass = cn(
+              "rounded-md border p-3",
+              canOpen && "transition hover:bg-muted/40",
+              count > 0 && "border-foreground/30",
+            );
+            const inner = (
+              <>
                 <div className="flex items-center justify-between">
                   <Icon className="size-4 text-muted-foreground" />
                   <span className="text-2xl font-bold tabular-nums">
@@ -61,7 +60,20 @@ export function IncidentsByCategoryCard({ byCategory }: Props) {
                 <div className="mt-1 text-xs font-medium">
                   {INCIDENT_CATEGORY_LABELS[c]}
                 </div>
+              </>
+            );
+            return canOpen ? (
+              <Link
+                key={c}
+                href={`/dashboard/incidents?category=${c}`}
+                className={cardClass}
+              >
+                {inner}
               </Link>
+            ) : (
+              <div key={c} className={cardClass}>
+                {inner}
+              </div>
             );
           })}
         </div>

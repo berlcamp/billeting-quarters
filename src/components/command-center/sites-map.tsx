@@ -25,6 +25,9 @@ type IncidentSeverity = Database["palaro"]["Enums"]["incident_severity"];
 interface SitesMapProps {
   sites: Site[];
   incidents: Incident[];
+  // When false, the incident popup omits the "Open incident →" link so users
+  // without `incident.view` can still see the marker but cannot navigate.
+  canOpenIncidents?: boolean;
 }
 
 const SITE_COLOR: Record<SiteType, string> = {
@@ -91,7 +94,11 @@ function FitToBounds({ points }: { points: LatLngExpression[] }) {
   return null;
 }
 
-export function SitesMap({ sites, incidents }: SitesMapProps) {
+export function SitesMap({
+  sites,
+  incidents,
+  canOpenIncidents = true,
+}: SitesMapProps) {
   const sitesWithCoords = useMemo(
     () =>
       sites.filter(
@@ -199,12 +206,14 @@ export function SitesMap({ sites, incidents }: SitesMapProps) {
                 <div className="text-xs text-muted-foreground capitalize">
                   {incident.severity} · {incident.status.replace("_", " ")}
                 </div>
-                <Link
-                  href={`/dashboard/incidents/${incident.id}`}
-                  className="block text-xs underline-offset-2 hover:underline"
-                >
-                  Open incident →
-                </Link>
+                {canOpenIncidents ? (
+                  <Link
+                    href={`/dashboard/incidents/${incident.id}`}
+                    className="block text-xs underline-offset-2 hover:underline"
+                  >
+                    Open incident →
+                  </Link>
+                ) : null}
               </div>
             </Popup>
           </Marker>

@@ -1949,7 +1949,8 @@ export type Database = {
         | "incident_monitoring"
         | "information_hub_officer"
         | "attendance_checker"
-        | "head_counter_viewer";
+        | "head_counter_viewer"
+        | "command_center_viewer";
       profile_status: "pending" | "active" | "suspended";
       incident_category:
         | "medical"

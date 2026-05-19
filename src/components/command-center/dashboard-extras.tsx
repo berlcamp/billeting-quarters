@@ -34,18 +34,60 @@ type Delegation = Pick<
   "id" | "region_code" | "region_name" | "short_name"
 >;
 
+// Per-module link gating. When a flag is false the corresponding card
+// renders its target as plain content (no `<Link>` wrapper), so users
+// without the matching permission can still see the data but cannot
+// navigate into a page they wouldn't be allowed to open.
+export interface DashboardExtrasLinkPerms {
+  incidents: boolean;
+  vip: boolean;
+  venues: boolean;
+  garbage: boolean;
+  food: boolean;
+  siteMonitoring: boolean;
+  transportation: boolean;
+}
+
 interface Props {
   snapshot: DashboardSnapshot;
   sites: Site[];
   vips: Vip[];
   delegations: Delegation[];
+  linkPerms: DashboardExtrasLinkPerms;
+}
+
+function MaybeLink({
+  canOpen,
+  href,
+  className,
+  children,
+}: {
+  canOpen: boolean;
+  href: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  if (canOpen) {
+    return (
+      <Link href={href} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return <div className={className}>{children}</div>;
 }
 
 function delegationDisplayName(d: Delegation): string {
   return d.short_name?.trim() || d.region_code || d.region_name;
 }
 
-export function DashboardExtras({ snapshot, sites, vips, delegations }: Props) {
+export function DashboardExtras({
+  snapshot,
+  sites,
+  vips,
+  delegations,
+  linkPerms,
+}: Props) {
   const siteName = new Map(sites.map((s) => [s.id, s.name]));
   const vipName = new Map(vips.map((v) => [v.id, v.full_name]));
   const delegationName = new Map(
@@ -141,19 +183,25 @@ export function DashboardExtras({ snapshot, sites, vips, delegations }: Props) {
               <Crown className="size-4 text-muted-foreground" />
               VIP latest logs
             </CardTitle>
-            <Link href="/dashboard/vip" className="text-xs underline">
-              View all
-            </Link>
+            {linkPerms.vip ? (
+              <Link href="/dashboard/vip" className="text-xs underline">
+                View all
+              </Link>
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-2">
             {snapshot.recentVipMovements.length === 0 ? (
               <p className="text-sm text-muted-foreground">No movements yet.</p>
             ) : (
               snapshot.recentVipMovements.slice(0, 15).map((m) => (
-                <Link
+                <MaybeLink
                   key={m.id}
+                  canOpen={linkPerms.vip}
                   href={`/dashboard/vip?vip=${m.vip_id}`}
-                  className="flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-sm hover:bg-muted/40"
+                  className={cn(
+                    "flex items-start justify-between gap-3 rounded-md border px-3 py-2 text-sm",
+                    linkPerms.vip && "hover:bg-muted/40",
+                  )}
                 >
                   <div className="min-w-0">
                     <div className="truncate font-medium">
@@ -174,7 +222,7 @@ export function DashboardExtras({ snapshot, sites, vips, delegations }: Props) {
                       <Badge variant="default">Request</Badge>
                     ) : null}
                   </div>
-                </Link>
+                </MaybeLink>
               ))
             )}
           </CardContent>
@@ -184,9 +232,11 @@ export function DashboardExtras({ snapshot, sites, vips, delegations }: Props) {
         <Card>
           <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base">Today&apos;s venue schedules</CardTitle>
-            <Link href="/dashboard/venues" className="text-xs underline">
-              Venues
-            </Link>
+            {linkPerms.venues ? (
+              <Link href="/dashboard/venues" className="text-xs underline">
+                Venues
+              </Link>
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-2">
             {snapshot.venueSchedulesToday.length === 0 ? (
@@ -227,12 +277,14 @@ export function DashboardExtras({ snapshot, sites, vips, delegations }: Props) {
               <Trash2 className="size-4 text-muted-foreground" />
               Garbage — today
             </CardTitle>
-            <Link
-              href="/dashboard/logistics/garbage"
-              className="text-xs underline"
-            >
-              View
-            </Link>
+            {linkPerms.garbage ? (
+              <Link
+                href="/dashboard/logistics/garbage"
+                className="text-xs underline"
+              >
+                View
+              </Link>
+            ) : null}
           </CardHeader>
           <CardContent>
             <GarbageSummary
@@ -249,12 +301,14 @@ export function DashboardExtras({ snapshot, sites, vips, delegations }: Props) {
               <UtensilsCrossed className="size-4 text-muted-foreground" />
               Food requests — today
             </CardTitle>
-            <Link
-              href="/dashboard/logistics/food"
-              className="text-xs underline"
-            >
-              View
-            </Link>
+            {linkPerms.food ? (
+              <Link
+                href="/dashboard/logistics/food"
+                className="text-xs underline"
+              >
+                View
+              </Link>
+            ) : null}
           </CardHeader>
           <CardContent>
             <FoodSummary
@@ -272,12 +326,14 @@ export function DashboardExtras({ snapshot, sites, vips, delegations }: Props) {
             <ClipboardList className="size-4 text-muted-foreground" />
             Site monitoring — today
           </CardTitle>
-          <Link
-            href="/dashboard/site-monitoring"
-            className="text-xs underline"
-          >
-            View
-          </Link>
+          {linkPerms.siteMonitoring ? (
+            <Link
+              href="/dashboard/site-monitoring"
+              className="text-xs underline"
+            >
+              View
+            </Link>
+          ) : null}
         </CardHeader>
         <CardContent>
           <SiteMonitoringSummary
@@ -296,9 +352,11 @@ export function DashboardExtras({ snapshot, sites, vips, delegations }: Props) {
             <Truck className="size-4 text-muted-foreground" />
             Transportation
           </CardTitle>
-          <Link href="/dashboard/transportation" className="text-xs underline">
-            Open module
-          </Link>
+          {linkPerms.transportation ? (
+            <Link href="/dashboard/transportation" className="text-xs underline">
+              Open module
+            </Link>
+          ) : null}
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
