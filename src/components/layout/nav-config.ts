@@ -212,6 +212,7 @@ export const NAV_SECTIONS: NavSection[] = [
           "command_center",
           "personnel_admin",
           "head_counter_viewer",
+          "venue_manager",
         ],
       },
     ],

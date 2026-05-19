@@ -856,6 +856,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      head_counter_venue_cells: {
+        Row: {
+          id: string;
+          site_id: string;
+          count_date: string;
+          direction: Database["palaro"]["Enums"]["head_counter_direction"];
+          role: Database["palaro"]["Enums"]["head_counter_role"];
+          count: number;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          site_id: string;
+          count_date: string;
+          direction: Database["palaro"]["Enums"]["head_counter_direction"];
+          role: Database["palaro"]["Enums"]["head_counter_role"];
+          count?: number;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          site_id?: string;
+          count_date?: string;
+          direction?: Database["palaro"]["Enums"]["head_counter_direction"];
+          role?: Database["palaro"]["Enums"]["head_counter_role"];
+          count?: number;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       vehicles: {
         Row: {
           id: string;

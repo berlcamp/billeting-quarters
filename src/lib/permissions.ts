@@ -97,6 +97,8 @@ export const PERMISSIONS = [
   "end_of_day.log",
   "head_count.encode_own",
   "head_count.view_all",
+  "head_count.venue_encode",
+  "head_count.venue_view_all",
   "raffle.view",
   "raffle.manage",
   "raffle.draw",
@@ -128,6 +130,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "external_personnel.log",
     "end_of_day.log",
     "head_count.view_all",
+    "head_count.venue_view_all",
     "raffle.view",
     "raffle.manage",
     "raffle.draw",
@@ -181,6 +184,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "personnel.manage",
     "attendance.record",
     "head_count.view_all",
+    "head_count.venue_view_all",
   ],
   venue_manager: [
     "incident.create",
@@ -189,6 +193,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "venue.approve_special",
     "heat_index.record",
     "food.request",
+    "head_count.venue_encode",
+    "head_count.venue_view_all",
   ],
   delegation_head: [
     "incident.create",
@@ -249,12 +255,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   // time-in/time-out station. Can only access the Attendance module
   // (manual + QR scan logging); no personnel CRUD, no other modules.
   attendance_checker: ["attendance.record"],
-  // Head Counter Viewer — read-only access to the Head Counter module
-  // across all delegations, including the consolidated print sheet. No
-  // encoding, no other modules. The page treats `head_count.view_all`
-  // as admin (shows delegation switcher + Print button); the grid is
-  // read-only because this role lacks `head_count.encode_own`.
-  head_counter_viewer: ["head_count.view_all"],
+  // Head Counter Viewer — read-only access to both Head Counter tabs (BQ +
+  // Venue) across all delegations and venues, including the consolidated
+  // print sheets. No encoding, no other modules. The page treats the
+  // *_view_all permissions as admin (shows the entity switcher + Print
+  // button); grids are read-only because this role lacks the encode
+  // permissions.
+  head_counter_viewer: ["head_count.view_all", "head_count.venue_view_all"],
 };
 
 type ProfileLike =

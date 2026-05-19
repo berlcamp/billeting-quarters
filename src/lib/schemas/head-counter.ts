@@ -56,6 +56,19 @@ export const saveHeadCounterSchema = z.object({
 });
 export type SaveHeadCounterInput = z.infer<typeof saveHeadCounterSchema>;
 
+// Mirror of saveHeadCounterSchema for the Venue tab — keyed on site_id
+// (playing venue) instead of delegation_id.
+export const saveHeadCounterVenueSchema = z.object({
+  site_id: z.string().uuid(),
+  count_date: ymd,
+  cells: z
+    .array(headCounterCellInputSchema)
+    .max(HEAD_COUNT_DIRECTIONS.length * HEAD_COUNT_ROLES.length),
+});
+export type SaveHeadCounterVenueInput = z.infer<
+  typeof saveHeadCounterVenueSchema
+>;
+
 export function isInHeadCountWindow(dateYmd: string): boolean {
   return dateYmd >= HEAD_COUNT_WINDOW_START && dateYmd <= HEAD_COUNT_WINDOW_END;
 }
