@@ -2006,7 +2006,8 @@ export type Database = {
         | "rd"
         | "ard"
         | "sds"
-        | "asds";
+        | "asds"
+        | "technical_officials";
       vehicle_type:
         | "bus"
         | "van"

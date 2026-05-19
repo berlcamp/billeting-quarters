@@ -2,10 +2,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   HEAD_COUNT_DIRECTIONS,
   HEAD_COUNT_DIRECTION_LABELS,
-  HEAD_COUNT_ROLES,
-  HEAD_COUNT_ROLE_LABELS,
+  HEAD_COUNT_VENUE_ROLES,
+  HEAD_COUNT_VENUE_ROLE_LABELS,
   type HeadCountDirection,
-  type HeadCountRole,
+  type HeadCountVenueRole,
 } from "@/lib/schemas/head-counter";
 import { manilaDateLabel } from "@/lib/timezone";
 import type { Database } from "@/types/database";
@@ -24,12 +24,12 @@ interface Props {
   cells: HeadCounterVenueCell[];
 }
 
-type RoleTotals = Record<HeadCountRole, number>;
+type RoleTotals = Record<HeadCountVenueRole, number>;
 type DirectionTotals = Record<HeadCountDirection, RoleTotals>;
 
 function emptyRoleTotals(): RoleTotals {
   const r: Partial<RoleTotals> = {};
-  for (const role of HEAD_COUNT_ROLES) r[role] = 0;
+  for (const role of HEAD_COUNT_VENUE_ROLES) r[role] = 0;
   return r as RoleTotals;
 }
 
@@ -42,6 +42,7 @@ function totalsBySite(
 ): Map<string, DirectionTotals> {
   const map = new Map<string, DirectionTotals>();
   for (const c of cells) {
+    if (c.role !== "technical_officials") continue;
     let bucket = map.get(c.site_id);
     if (!bucket) {
       bucket = emptyDirectionTotals();
@@ -53,7 +54,7 @@ function totalsBySite(
 }
 
 function sumRole(totals: RoleTotals): number {
-  return HEAD_COUNT_ROLES.reduce((acc, r) => acc + totals[r], 0);
+  return HEAD_COUNT_VENUE_ROLES.reduce((acc, r) => acc + totals[r], 0);
 }
 
 export function HeadCounterVenueConsolidated({ dateYmd, sites, cells }: Props) {
@@ -62,7 +63,7 @@ export function HeadCounterVenueConsolidated({ dateYmd, sites, cells }: Props) {
   const grand: DirectionTotals = emptyDirectionTotals();
   for (const [, t] of perSite) {
     for (const dir of HEAD_COUNT_DIRECTIONS) {
-      for (const role of HEAD_COUNT_ROLES) {
+      for (const role of HEAD_COUNT_VENUE_ROLES) {
         grand[dir][role] += t[dir][role];
       }
     }
@@ -86,13 +87,13 @@ export function HeadCounterVenueConsolidated({ dateYmd, sites, cells }: Props) {
                 Venue
               </th>
               <th
-                colSpan={HEAD_COUNT_ROLES.length + 1}
+                colSpan={HEAD_COUNT_VENUE_ROLES.length + 1}
                 className="border px-2 py-1 text-center text-emerald-700 dark:text-emerald-300"
               >
                 IN
               </th>
               <th
-                colSpan={HEAD_COUNT_ROLES.length + 1}
+                colSpan={HEAD_COUNT_VENUE_ROLES.length + 1}
                 className="border px-2 py-1 text-center text-blue-700 dark:text-blue-300"
               >
                 OUT
@@ -158,13 +159,13 @@ export function HeadCounterVenueConsolidated({ dateYmd, sites, cells }: Props) {
 function DirectionHeaderCells({ direction }: { direction: HeadCountDirection }) {
   return (
     <>
-      {HEAD_COUNT_ROLES.map((role) => (
+      {HEAD_COUNT_VENUE_ROLES.map((role) => (
         <th
           key={`${direction}-${role}`}
           className="border px-1 py-0.5 text-center font-medium"
-          title={`${HEAD_COUNT_DIRECTION_LABELS[direction]} · ${HEAD_COUNT_ROLE_LABELS[role]}`}
+          title={`${HEAD_COUNT_DIRECTION_LABELS[direction]} · ${HEAD_COUNT_VENUE_ROLE_LABELS[role]}`}
         >
-          {HEAD_COUNT_ROLE_LABELS[role]}
+          {HEAD_COUNT_VENUE_ROLE_LABELS[role]}
         </th>
       ))}
       <th className="border px-1 py-0.5 text-right font-semibold">Σ</th>
@@ -181,7 +182,7 @@ function DirectionDataCells({
 }) {
   return (
     <>
-      {HEAD_COUNT_ROLES.map((role) => (
+      {HEAD_COUNT_VENUE_ROLES.map((role) => (
         <td key={role} className="border px-1 py-0.5 text-right tabular-nums">
           {totals[role] || ""}
         </td>

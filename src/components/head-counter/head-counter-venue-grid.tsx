@@ -10,10 +10,10 @@ import { saveHeadCounterVenue } from "@/lib/actions/head-counter-venue";
 import {
   HEAD_COUNT_DIRECTIONS,
   HEAD_COUNT_DIRECTION_LABELS,
-  HEAD_COUNT_ROLES,
-  HEAD_COUNT_ROLE_LABELS,
+  HEAD_COUNT_VENUE_ROLES,
+  HEAD_COUNT_VENUE_ROLE_LABELS,
   type HeadCountDirection,
-  type HeadCountRole,
+  type HeadCountVenueRole,
 } from "@/lib/schemas/head-counter";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/types/database";
@@ -29,16 +29,20 @@ interface Props {
   readOnly?: boolean;
 }
 
-type CellKey = `${HeadCountDirection}:${HeadCountRole}`;
+type CellKey = `${HeadCountDirection}:${HeadCountVenueRole}`;
 type CellMap = Record<CellKey, number>;
 
-function cellKey(direction: HeadCountDirection, role: HeadCountRole): CellKey {
+function cellKey(direction: HeadCountDirection, role: HeadCountVenueRole): CellKey {
   return `${direction}:${role}`;
 }
 
 function buildInitial(cells: HeadCounterVenueCell[]): CellMap {
   const map: CellMap = {} as CellMap;
   for (const c of cells) {
+    // Venue tab only renders the technical_officials bucket. The DB enum is
+    // shared with the BQ tab, so older rows with other role values (if any)
+    // are silently ignored here.
+    if (c.role !== "technical_officials") continue;
     map[cellKey(c.direction, c.role)] = c.count;
   }
   return map;
@@ -62,7 +66,7 @@ export function HeadCounterVenueGrid({
 
   function setCell(
     direction: HeadCountDirection,
-    role: HeadCountRole,
+    role: HeadCountVenueRole,
     raw: string,
   ) {
     if (readOnly) return;
@@ -81,14 +85,14 @@ export function HeadCounterVenueGrid({
     setValues((prev) => ({ ...prev, [key]: clamped }));
   }
 
-  function getCell(direction: HeadCountDirection, role: HeadCountRole): number {
+  function getCell(direction: HeadCountDirection, role: HeadCountVenueRole): number {
     return values[cellKey(direction, role)] ?? 0;
   }
 
   const totals = useMemo(() => {
     const out: Record<HeadCountDirection, number> = { in: 0, out: 0 };
     for (const dir of HEAD_COUNT_DIRECTIONS) {
-      for (const role of HEAD_COUNT_ROLES) {
+      for (const role of HEAD_COUNT_VENUE_ROLES) {
         out[dir] += getCell(dir, role);
       }
     }
@@ -102,11 +106,11 @@ export function HeadCounterVenueGrid({
 
     const changedCells: {
       direction: HeadCountDirection;
-      role: HeadCountRole;
+      role: HeadCountVenueRole;
       count: number;
     }[] = [];
     for (const dir of HEAD_COUNT_DIRECTIONS) {
-      for (const role of HEAD_COUNT_ROLES) {
+      for (const role of HEAD_COUNT_VENUE_ROLES) {
         const key = cellKey(dir, role);
         const curr = values[key] ?? 0;
         const prev = originalValues[key] ?? 0;
@@ -185,10 +189,10 @@ function SectionTable({
   readOnly,
 }: {
   direction: HeadCountDirection;
-  getCell: (direction: HeadCountDirection, role: HeadCountRole) => number;
+  getCell: (direction: HeadCountDirection, role: HeadCountVenueRole) => number;
   setCell: (
     direction: HeadCountDirection,
-    role: HeadCountRole,
+    role: HeadCountVenueRole,
     raw: string,
   ) => void;
   total: number;
@@ -211,12 +215,12 @@ function SectionTable({
           </tr>
         </thead>
         <tbody>
-          {HEAD_COUNT_ROLES.map((role) => {
+          {HEAD_COUNT_VENUE_ROLES.map((role) => {
             const v = getCell(direction, role);
             return (
               <tr key={role}>
                 <td className="border px-2 py-1 text-left">
-                  {HEAD_COUNT_ROLE_LABELS[role]}
+                  {HEAD_COUNT_VENUE_ROLE_LABELS[role]}
                 </td>
                 <td className="border p-0">
                   <input

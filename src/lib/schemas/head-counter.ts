@@ -28,6 +28,17 @@ export const HEAD_COUNT_ROLE_LABELS: Record<HeadCountRole, string> = {
   asds: "ASDS",
 };
 
+// The Venue tab uses a single bucket — playing-venue counts aren't broken
+// out by delegate role. The value reuses the shared palaro.head_counter_role
+// enum (see migration 41), so the same head_counter_venue_cells table works
+// for both tabs without a schema fork.
+export const HEAD_COUNT_VENUE_ROLES = ["technical_officials"] as const;
+export type HeadCountVenueRole = (typeof HEAD_COUNT_VENUE_ROLES)[number];
+
+export const HEAD_COUNT_VENUE_ROLE_LABELS: Record<HeadCountVenueRole, string> = {
+  technical_officials: "Technical Officials",
+};
+
 export const HEAD_COUNT_DIRECTIONS = ["in", "out"] as const;
 export type HeadCountDirection = (typeof HEAD_COUNT_DIRECTIONS)[number];
 
@@ -56,14 +67,25 @@ export const saveHeadCounterSchema = z.object({
 });
 export type SaveHeadCounterInput = z.infer<typeof saveHeadCounterSchema>;
 
+// Venue-tab cell input — restricts `role` to the single venue bucket so
+// stray BQ role values can't sneak into head_counter_venue_cells.
+export const headCounterVenueCellInputSchema = z.object({
+  direction: z.enum(HEAD_COUNT_DIRECTIONS),
+  role: z.enum(HEAD_COUNT_VENUE_ROLES),
+  count: z.number().int().min(0).max(99999),
+});
+export type HeadCounterVenueCellInput = z.infer<
+  typeof headCounterVenueCellInputSchema
+>;
+
 // Mirror of saveHeadCounterSchema for the Venue tab — keyed on site_id
 // (playing venue) instead of delegation_id.
 export const saveHeadCounterVenueSchema = z.object({
   site_id: z.string().uuid(),
   count_date: ymd,
   cells: z
-    .array(headCounterCellInputSchema)
-    .max(HEAD_COUNT_DIRECTIONS.length * HEAD_COUNT_ROLES.length),
+    .array(headCounterVenueCellInputSchema)
+    .max(HEAD_COUNT_DIRECTIONS.length * HEAD_COUNT_VENUE_ROLES.length),
 });
 export type SaveHeadCounterVenueInput = z.infer<
   typeof saveHeadCounterVenueSchema

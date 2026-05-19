@@ -43,6 +43,7 @@ function totalsByDelegation(
 ): Map<string, DirectionTotals> {
   const map = new Map<string, DirectionTotals>();
   for (const c of cells) {
+    if (c.role === "technical_officials") continue;
     let bucket = map.get(c.delegation_id);
     if (!bucket) {
       bucket = emptyDirectionTotals();

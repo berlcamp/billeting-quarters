@@ -1,25 +1,15 @@
 import {
   HEAD_COUNT_DIRECTIONS,
   HEAD_COUNT_DIRECTION_LABELS,
-  HEAD_COUNT_ROLES,
+  HEAD_COUNT_VENUE_ROLES,
+  HEAD_COUNT_VENUE_ROLE_LABELS,
   type HeadCountDirection,
-  type HeadCountRole,
+  type HeadCountVenueRole,
 } from "@/lib/schemas/head-counter";
 import type { Database } from "@/types/database";
 
 type HeadCounterVenueCell =
   Database["palaro"]["Tables"]["head_counter_venue_cells"]["Row"];
-
-const PRINT_ROLE_LABELS: Record<HeadCountRole, string> = {
-  athlete: "Athlete",
-  chaperon: "Chaperons",
-  coach: "Coach",
-  delegation_twg: "TWG",
-  rd: "RD",
-  ard: "ARD",
-  sds: "SDS",
-  asds: "ASDS",
-};
 
 interface Props {
   site: { id: string; name: string };
@@ -31,7 +21,7 @@ interface Props {
 function cellKey(
   dateYmd: string,
   direction: HeadCountDirection,
-  role: HeadCountRole,
+  role: HeadCountVenueRole,
 ): string {
   return `${dateYmd}:${direction}:${role}`;
 }
@@ -39,6 +29,7 @@ function cellKey(
 function buildMap(cells: HeadCounterVenueCell[]): Record<string, number> {
   const m: Record<string, number> = {};
   for (const c of cells) {
+    if (c.role !== "technical_officials") continue;
     m[cellKey(c.count_date, c.direction, c.role)] = c.count;
   }
   return m;
@@ -118,10 +109,10 @@ export function HeadCounterVenuePrintSheet({
           </tr>
         </thead>
         <tbody>
-          {HEAD_COUNT_ROLES.map((role) => (
+          {HEAD_COUNT_VENUE_ROLES.map((role) => (
             <tr key={role}>
               <td className="border border-black px-1 py-0.5 text-left">
-                {PRINT_ROLE_LABELS[role]}
+                {HEAD_COUNT_VENUE_ROLE_LABELS[role]}
               </td>
               {HEAD_COUNT_DIRECTIONS.flatMap((dir) =>
                 dates.map((d) => {

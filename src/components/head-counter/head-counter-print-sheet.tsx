@@ -42,6 +42,7 @@ function cellKey(
 function buildMap(cells: HeadCounterCell[]): Record<string, number> {
   const m: Record<string, number> = {};
   for (const c of cells) {
+    if (c.role === "technical_officials") continue;
     m[cellKey(c.count_date, c.direction, c.role)] = c.count;
   }
   return m;

@@ -39,6 +39,9 @@ function cellKey(direction: HeadCountDirection, role: HeadCountRole): CellKey {
 function buildInitial(cells: HeadCounterCell[]): CellMap {
   const map: CellMap = {} as CellMap;
   for (const c of cells) {
+    // Skip values from the venue-only bucket — they can't appear in BQ data,
+    // but the DB enum is shared so TS keeps the wider union here.
+    if (c.role === "technical_officials") continue;
     map[cellKey(c.direction, c.role)] = c.count;
   }
   return map;
