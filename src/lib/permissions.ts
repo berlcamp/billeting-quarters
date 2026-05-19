@@ -24,6 +24,7 @@ export const USER_ROLES: readonly UserRole[] = [
   "incident_monitoring",
   "information_hub_officer",
   "attendance_checker",
+  "head_counter_viewer",
 ] as const;
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -47,6 +48,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   incident_monitoring: "Incident Monitoring",
   information_hub_officer: "Information Hub Officer",
   attendance_checker: "Attendance Checker",
+  head_counter_viewer: "Head Counter Viewer",
 };
 
 export const PROFILE_STATUS_LABELS: Record<ProfileStatus, string> = {
@@ -247,6 +249,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   // time-in/time-out station. Can only access the Attendance module
   // (manual + QR scan logging); no personnel CRUD, no other modules.
   attendance_checker: ["attendance.record"],
+  // Head Counter Viewer — read-only access to the Head Counter module
+  // across all delegations, including the consolidated print sheet. No
+  // encoding, no other modules. The page treats `head_count.view_all`
+  // as admin (shows delegation switcher + Print button); the grid is
+  // read-only because this role lacks `head_count.encode_own`.
+  head_counter_viewer: ["head_count.view_all"],
 };
 
 type ProfileLike =

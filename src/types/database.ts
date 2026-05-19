@@ -1915,7 +1915,8 @@ export type Database = {
         | "food_supplier_admin"
         | "incident_monitoring"
         | "information_hub_officer"
-        | "attendance_checker";
+        | "attendance_checker"
+        | "head_counter_viewer";
       profile_status: "pending" | "active" | "suspended";
       incident_category:
         | "medical"

@@ -21,6 +21,7 @@ export const userRoleSchema = z.enum([
   "incident_monitoring",
   "information_hub_officer",
   "attendance_checker",
+  "head_counter_viewer",
 ]);
 
 export const profileStatusSchema = z.enum(["active", "suspended"]);

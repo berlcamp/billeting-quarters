@@ -207,7 +207,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Head Counter",
         href: "/dashboard/personnel/head-counter",
         icon: ListChecks,
-        roles: ["bq_head", "command_center", "personnel_admin"],
+        roles: [
+          "bq_head",
+          "command_center",
+          "personnel_admin",
+          "head_counter_viewer",
+        ],
       },
     ],
   },
