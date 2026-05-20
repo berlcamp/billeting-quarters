@@ -85,6 +85,7 @@ export function HeadCounterConsolidated({
   // delegation, every role. Independent of the selected `dateYmd`.
   const overall: DirectionTotals = emptyDirectionTotals();
   for (const c of overallCells) {
+    if (c.role === "technical_officials") continue;
     overall[c.direction][c.role] += c.count;
   }
   const overallIn = sumRole(overall.in);
