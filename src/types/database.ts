@@ -1950,7 +1950,8 @@ export type Database = {
         | "information_hub_officer"
         | "attendance_checker"
         | "head_counter_viewer"
-        | "command_center_viewer";
+        | "command_center_viewer"
+        | "raffle_manager";
       profile_status: "pending" | "active" | "suspended";
       incident_category:
         | "medical"

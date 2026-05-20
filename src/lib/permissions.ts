@@ -26,6 +26,7 @@ export const USER_ROLES: readonly UserRole[] = [
   "attendance_checker",
   "head_counter_viewer",
   "command_center_viewer",
+  "raffle_manager",
 ] as const;
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -51,6 +52,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   attendance_checker: "Attendance Checker",
   head_counter_viewer: "Head Counter Viewer",
   command_center_viewer: "Command Center Viewer",
+  raffle_manager: "Raffle Manager",
 };
 
 export const PROFILE_STATUS_LABELS: Record<ProfileStatus, string> = {
@@ -133,9 +135,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "end_of_day.log",
     "head_count.view_all",
     "head_count.venue_view_all",
-    "raffle.view",
-    "raffle.manage",
-    "raffle.draw",
   ],
   medical_field: [
     "incident.create",
@@ -170,8 +169,6 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
     "incident.create",
     "incident.view",
     "vip.manage",
-    "raffle.view",
-    "raffle.draw",
   ],
   logistics_officer: [
     "incident.create",
@@ -270,6 +267,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   // on it is permission-gated, so an empty grant produces a fully read-only
   // view with no clickable navigation.
   command_center_viewer: [],
+  // Raffle Manager — full Raffle module access (view, manage, draw). Holds
+  // no other module permissions, so the only nav item that surfaces is
+  // Raffle (plus the always-public Command Center root and User Guide).
+  raffle_manager: ["raffle.view", "raffle.manage", "raffle.draw"],
 };
 
 type ProfileLike =
