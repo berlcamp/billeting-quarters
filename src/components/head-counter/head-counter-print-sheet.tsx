@@ -96,24 +96,25 @@ export function HeadCounterPrintSheet({
           <col className="w-[18mm]" />
         </colgroup>
         <thead>
-          {/* Row 1 — IN / OUT band labels centered above their date columns. */}
+          {/* Row 1 — IN / OUT band labels centered above their date columns
+              (plus a trailing "Total" column per band for the all-dates sum). */}
           <tr>
             <th className="border border-black bg-white px-1 py-0.5" />
             {HEAD_COUNT_DIRECTIONS.map((dir) => (
               <th
                 key={`band-${dir}`}
-                colSpan={dates.length}
+                colSpan={dates.length + 1}
                 className="border border-black bg-white px-1 py-0.5 text-center font-bold"
               >
                 {HEAD_COUNT_DIRECTION_LABELS[dir]}
               </th>
             ))}
           </tr>
-          {/* Row 2 — date column headers per direction. */}
+          {/* Row 2 — date column headers per direction, then "Total". */}
           <tr>
             <th className="border border-black bg-white px-1 py-0.5" />
-            {HEAD_COUNT_DIRECTIONS.flatMap((dir) =>
-              dates.map((d) => (
+            {HEAD_COUNT_DIRECTIONS.flatMap((dir) => [
+              ...dates.map((d) => (
                 <th
                   key={`${dir}-${d}`}
                   className="border border-black bg-[#f5f5f5] px-0.5 py-0.5 text-center font-medium"
@@ -121,7 +122,13 @@ export function HeadCounterPrintSheet({
                   {dayMon(d)}
                 </th>
               )),
-            )}
+              <th
+                key={`${dir}-total-h`}
+                className="border border-black bg-[#e5e5e5] px-0.5 py-0.5 text-center font-bold"
+              >
+                Total
+              </th>,
+            ])}
           </tr>
         </thead>
         <tbody>
@@ -130,21 +137,73 @@ export function HeadCounterPrintSheet({
               <td className="border border-black px-1 py-0.5 text-left">
                 {PRINT_ROLE_LABELS[role]}
               </td>
-              {HEAD_COUNT_DIRECTIONS.flatMap((dir) =>
-                dates.map((d) => {
-                  const v = map[cellKey(d, dir, role)] ?? 0;
+              {HEAD_COUNT_DIRECTIONS.flatMap((dir) => {
+                const roleTotal = dates.reduce(
+                  (acc, d) => acc + (map[cellKey(d, dir, role)] ?? 0),
+                  0,
+                );
+                return [
+                  ...dates.map((d) => {
+                    const v = map[cellKey(d, dir, role)] ?? 0;
+                    return (
+                      <td
+                        key={`${dir}-${d}-${role}`}
+                        className="border border-black px-0.5 py-0.5 text-right tabular-nums"
+                      >
+                        {v || ""}
+                      </td>
+                    );
+                  }),
+                  <td
+                    key={`${dir}-total-${role}`}
+                    className="border border-black bg-[#f5f5f5] px-0.5 py-0.5 text-right font-semibold tabular-nums"
+                  >
+                    {roleTotal || ""}
+                  </td>,
+                ];
+              })}
+            </tr>
+          ))}
+          {/* Bottom TOTAL row — per-date sum across roles, plus the overall
+              all-dates × all-roles total in the rightmost cell of each band. */}
+          <tr className="font-bold">
+            <td className="border border-black bg-[#e5e5e5] px-1 py-0.5 text-left">
+              TOTAL
+            </td>
+            {HEAD_COUNT_DIRECTIONS.flatMap((dir) => {
+              const overall = dates.reduce(
+                (acc, d) =>
+                  acc +
+                  HEAD_COUNT_ROLES.reduce(
+                    (a, r) => a + (map[cellKey(d, dir, r)] ?? 0),
+                    0,
+                  ),
+                0,
+              );
+              return [
+                ...dates.map((d) => {
+                  const v = HEAD_COUNT_ROLES.reduce(
+                    (acc, r) => acc + (map[cellKey(d, dir, r)] ?? 0),
+                    0,
+                  );
                   return (
                     <td
-                      key={`${dir}-${d}-${role}`}
-                      className="border border-black px-0.5 py-0.5 text-right tabular-nums"
+                      key={`total-${dir}-${d}`}
+                      className="border border-black bg-[#f5f5f5] px-0.5 py-0.5 text-right tabular-nums"
                     >
                       {v || ""}
                     </td>
                   );
                 }),
-              )}
-            </tr>
-          ))}
+                <td
+                  key={`total-${dir}-overall`}
+                  className="border border-black bg-[#d9d9d9] px-0.5 py-0.5 text-right tabular-nums"
+                >
+                  {overall || ""}
+                </td>,
+              ];
+            })}
+          </tr>
         </tbody>
       </table>
     </div>

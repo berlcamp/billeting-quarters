@@ -23,6 +23,9 @@ interface Props {
   dateYmd: string;
   delegations: DelegationOption[];
   cells: HeadCounterCell[];
+  // All cells across the head-count window, used to compute the
+  // "Overall total (all dates)" footer row.
+  overallCells: HeadCounterCell[];
 }
 
 type RoleTotals = Record<HeadCountRole, number>;
@@ -62,6 +65,7 @@ export function HeadCounterConsolidated({
   dateYmd,
   delegations,
   cells,
+  overallCells,
 }: Props) {
   const perDelegation = totalsByDelegation(cells);
 
@@ -76,6 +80,15 @@ export function HeadCounterConsolidated({
   }
   const grandIn = sumRole(grand.in);
   const grandOut = sumRole(grand.out);
+
+  // Overall totals — sum across every date in the head-count window, every
+  // delegation, every role. Independent of the selected `dateYmd`.
+  const overall: DirectionTotals = emptyDirectionTotals();
+  for (const c of overallCells) {
+    overall[c.direction][c.role] += c.count;
+  }
+  const overallIn = sumRole(overall.in);
+  const overallOut = sumRole(overall.out);
 
   return (
     <div className="space-y-4">
@@ -152,6 +165,21 @@ export function HeadCounterConsolidated({
               ))}
               <td className="border px-2 py-0.5 text-right tabular-nums">
                 {grandIn - grandOut}
+              </td>
+            </tr>
+            <tr className="bg-muted/80 font-semibold">
+              <td className="border px-2 py-0.5 text-left">
+                Overall total (all dates)
+              </td>
+              {HEAD_COUNT_DIRECTIONS.map((dir) => (
+                <DirectionDataCells
+                  key={dir}
+                  totals={overall[dir]}
+                  total={dir === "in" ? overallIn : overallOut}
+                />
+              ))}
+              <td className="border px-2 py-0.5 text-right tabular-nums">
+                {overallIn - overallOut}
               </td>
             </tr>
           </tbody>

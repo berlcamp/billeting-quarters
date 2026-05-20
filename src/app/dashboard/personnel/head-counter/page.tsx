@@ -20,6 +20,7 @@ import { getDelegations } from "@/lib/actions/delegations";
 import {
   getConsolidatedHeadCounter,
   getHeadCounterCells,
+  getHeadCounterCellsForRange,
 } from "@/lib/actions/head-counter";
 import {
   getConsolidatedHeadCounterVenue,
@@ -157,10 +158,19 @@ async function BqTab({ profile, dateParam, delegationParam }: BqTabProps) {
   let consolidatedCells: Awaited<
     ReturnType<typeof getConsolidatedHeadCounter>
   > | null = null;
+  let overallCells: Awaited<
+    ReturnType<typeof getHeadCounterCellsForRange>
+  > | null = null;
   let singleCells: Awaited<ReturnType<typeof getHeadCounterCells>> | null = null;
 
   if (isAdmin && selectedDelegationId === ALL_DELEGATIONS) {
-    consolidatedCells = await getConsolidatedHeadCounter(dateParam);
+    [consolidatedCells, overallCells] = await Promise.all([
+      getConsolidatedHeadCounter(dateParam),
+      getHeadCounterCellsForRange({
+        fromYmd: HEAD_COUNT_WINDOW_START,
+        toYmd: HEAD_COUNT_WINDOW_END,
+      }),
+    ]);
   } else if (selectedDelegationId) {
     singleCells = await getHeadCounterCells({
       delegationId: selectedDelegationId,
@@ -207,6 +217,7 @@ async function BqTab({ profile, dateParam, delegationParam }: BqTabProps) {
             dateYmd={dateParam}
             delegations={visibleDelegations}
             cells={consolidatedCells?.data ?? []}
+            overallCells={overallCells?.data ?? []}
           />
         )
       ) : selectedDelegation ? (
