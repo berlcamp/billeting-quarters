@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
-import { ArrowLeft, MapPin, Stethoscope, User } from "lucide-react";
+import { ArrowLeft, MapPin, Printer, Stethoscope, User } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -153,6 +153,13 @@ export default async function IncidentDetailPage({ params }: PageProps) {
         <span className="font-mono text-xs text-muted-foreground">
           {incident.incident_number}
         </span>
+        <Link
+          href={`/dashboard/incidents/${incident.id}/print`}
+          className={buttonVariants({ variant: "outline", size: "sm" })}
+        >
+          <Printer className="size-4" />
+          Print incident
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
