@@ -65,6 +65,10 @@ export function DrawBoard({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoSpinPending, setAutoSpinPending] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  // `settings.totalWinners` is treated as a *batch* size, not a session cap.
+  // When a batch completes, the next Spin starts a new batch — this is the
+  // session-winners count at the moment the current batch began.
+  const [batchStartCount, setBatchStartCount] = useState(0);
   const autoSpinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { state: engine, spin } = useSpinEngine();
@@ -115,18 +119,19 @@ export function DrawBoard({
   );
 
   const excludedCount = winners.length - sessionWinners.length;
-  const goalReached = sessionWinners.length >= settings.totalWinners;
+  const drawnInBatch = Math.max(0, sessionWinners.length - batchStartCount);
+  const batchComplete = drawnInBatch >= settings.totalWinners;
   const poolEmpty = eligibleEntries.length === 0;
-  const canSpin = !engine.spinning && !goalReached && !poolEmpty;
+  // Goal-already-reached no longer disables Spin — the next click just starts
+  // a new batch of `totalWinners`. Only the pool / spinning state can block.
+  const canSpin = !engine.spinning && !poolEmpty;
   const disabledReason = engine.spinning
     ? null
-    : goalReached
-      ? `Goal reached (${sessionWinners.length}/${settings.totalWinners}). Start a new draw to spin again.`
-      : poolEmpty
-        ? settings.departmentId === "ALL"
-          ? "No eligible entries left in the pool."
-          : "No eligible entries for this department."
-        : null;
+    : poolEmpty
+      ? settings.departmentId === "ALL"
+        ? "No eligible entries left in the pool."
+        : "No eligible entries for this department."
+      : null;
 
   const onSpin = useCallback(async () => {
     if (!canSpin) return;
@@ -135,6 +140,15 @@ export function DrawBoard({
     if (autoSpinTimerRef.current !== null) {
       clearTimeout(autoSpinTimerRef.current);
       autoSpinTimerRef.current = null;
+    }
+
+    // If the previous batch already met its goal, this Spin starts a new
+    // batch — count progress from now, not from the start of the session.
+    const effectiveBatchStart = batchComplete
+      ? sessionWinners.length
+      : batchStartCount;
+    if (effectiveBatchStart !== batchStartCount) {
+      setBatchStartCount(effectiveBatchStart);
     }
 
     // Clear the previous winner-on-wheel so the new spin streams names again.
@@ -163,8 +177,8 @@ export function DrawBoard({
     setWinnerNameForWheel(result.winner.entry_name);
     setWinners((prev) => [...prev, result.winner]);
 
-    const nextCount = sessionWinners.length + 1;
-    const moreNeeded = nextCount < settings.totalWinners;
+    const nextDrawnInBatch = sessionWinners.length + 1 - effectiveBatchStart;
+    const moreNeeded = nextDrawnInBatch < settings.totalWinners;
     const poolHasMore = eligibleEntries.length - 1 > 0;
     if (
       settings.autoSpin &&
@@ -188,12 +202,15 @@ export function DrawBoard({
     settings,
     winners,
     sessionWinners.length,
+    batchStartCount,
+    batchComplete,
     eligibleEntries.length,
   ]);
 
   const resetDraw = useCallback(() => {
     clearAutoSpinTimer();
     setWinnerNameForWheel(null);
+    setBatchStartCount(0);
     setSessionId(crypto.randomUUID());
     setResetConfirmOpen(false);
   }, [clearAutoSpinTimer]);
@@ -400,19 +417,17 @@ export function DrawBoard({
               {disabledReason
                 ? disabledReason
                 : autoSpinPending
-                  ? `Next spin in ~${settings.autoSpinIntervalSeconds.toFixed(1)}s · ${sessionWinners.length} of ${settings.totalWinners} drawn.`
-                  : settings.autoSpin && settings.totalWinners > 1
-                    ? `Auto-spin on · ${sessionWinners.length} of ${settings.totalWinners} winners drawn.`
-                    : `${sessionWinners.length} of ${settings.totalWinners} winners drawn.`}
+                  ? `Next spin in ~${settings.autoSpinIntervalSeconds.toFixed(1)}s · ${drawnInBatch} of ${settings.totalWinners} drawn · ${sessionWinners.length} total.`
+                  : batchComplete
+                    ? `Batch of ${settings.totalWinners} complete · ${sessionWinners.length} total. Click Spin to draw another ${settings.totalWinners}.`
+                    : settings.autoSpin && settings.totalWinners > 1
+                      ? `Auto-spin on · ${drawnInBatch} of ${settings.totalWinners} drawn · ${sessionWinners.length} total.`
+                      : `${drawnInBatch} of ${settings.totalWinners} drawn · ${sessionWinners.length} total.`}
             </p>
           </div>
         </section>
 
-        <WinnersPanel
-          winners={sessionWinners}
-          totalGoal={settings.totalWinners}
-          landed={engine.landed}
-        />
+        <WinnersPanel winners={sessionWinners} landed={engine.landed} />
       </main>
 
       <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>

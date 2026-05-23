@@ -5,11 +5,10 @@ import type { DrawWinnerResult } from "@/lib/actions/raffle";
 
 interface Props {
   winners: DrawWinnerResult[];
-  totalGoal: number;
   landed: boolean;
 }
 
-export function WinnersPanel({ winners, totalGoal, landed }: Props) {
+export function WinnersPanel({ winners, landed }: Props) {
   const latest = winners[winners.length - 1];
   const prior = winners.slice(0, -1).reverse();
 
@@ -18,7 +17,7 @@ export function WinnersPanel({ winners, totalGoal, landed }: Props) {
       <div className="flex items-center justify-between font-[var(--font-fraunces)]">
         <h2 className="text-xl font-medium tracking-wide">Winners</h2>
         <span className="rounded-full border border-amber-400/40 px-3 py-0.5 font-[var(--font-geist-mono)] text-[10px] uppercase tracking-[0.18em] text-amber-300">
-          {winners.length} / {totalGoal}
+          {winners.length} drawn
         </span>
       </div>
 
