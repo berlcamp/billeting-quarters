@@ -1,9 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Maximize2, Minimize2, Play, Settings, Square, X } from "lucide-react";
+import {
+  Maximize2,
+  Minimize2,
+  Play,
+  RotateCcw,
+  Settings,
+  Square,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { WaterwheelSpinner } from "./waterwheel-spinner";
 import { WinnersPanel } from "./winners-panel";
 import { SettingsSheet, type DrawSettings } from "./settings-sheet";
@@ -35,19 +51,20 @@ export function DrawBoard({
   entries,
   initialWinners = [],
 }: Props) {
-  // Lazy init — runs once on first render. Stable across re-renders, and
-  // since the id is only used in server-action callbacks (never rendered as
-  // text), a different SSR vs CSR value can't cause a hydration mismatch.
-  const [sessionId] = useState<string>(() => crypto.randomUUID());
+  // Rotated on "New draw" so each visible draw run starts at draw_index=1 and
+  // has a clean local winners list. The id is only used in server-action
+  // callbacks (never rendered as text), so SSR/CSR mismatch isn't a concern.
+  const [sessionId, setSessionId] = useState<string>(() => crypto.randomUUID());
   const [settings, setSettings] = useState<DrawSettings>(DEFAULT_SETTINGS);
-  // Seed with persisted winners so they remain excluded from the pool across
-  // page refreshes. Cleared server-side via "Clear winners".
+  // All persisted winners for this raffle. Drives pool exclusion so prior
+  // winners can never be drawn again until an admin runs "Clear winners".
   const [winners, setWinners] = useState<DrawWinnerResult[]>(initialWinners);
   const [winnerNameForWheel, setWinnerNameForWheel] = useState<string | null>(
     null,
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [autoSpinPending, setAutoSpinPending] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const autoSpinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { state: engine, spin } = useSpinEngine();
@@ -89,9 +106,27 @@ export function DrawBoard({
     [eligibleEntries],
   );
 
-  const goalReached = winners.length >= settings.totalWinners;
+  // Visible "this draw" list — filtered to the current session. Prior-session
+  // winners stay in `winners` to keep them excluded from the pool, but they
+  // shouldn't show on the stage or count against this draw's goal.
+  const sessionWinners = useMemo(
+    () => winners.filter((w) => w.session_id === sessionId),
+    [winners, sessionId],
+  );
+
+  const excludedCount = winners.length - sessionWinners.length;
+  const goalReached = sessionWinners.length >= settings.totalWinners;
   const poolEmpty = eligibleEntries.length === 0;
   const canSpin = !engine.spinning && !goalReached && !poolEmpty;
+  const disabledReason = engine.spinning
+    ? null
+    : goalReached
+      ? `Goal reached (${sessionWinners.length}/${settings.totalWinners}). Start a new draw to spin again.`
+      : poolEmpty
+        ? settings.departmentId === "ALL"
+          ? "No eligible entries left in the pool."
+          : "No eligible entries for this department."
+        : null;
 
   const onSpin = useCallback(async () => {
     if (!canSpin) return;
@@ -128,7 +163,7 @@ export function DrawBoard({
     setWinnerNameForWheel(result.winner.entry_name);
     setWinners((prev) => [...prev, result.winner]);
 
-    const nextCount = winners.length + 1;
+    const nextCount = sessionWinners.length + 1;
     const moreNeeded = nextCount < settings.totalWinners;
     const poolHasMore = eligibleEntries.length - 1 > 0;
     if (
@@ -152,8 +187,24 @@ export function DrawBoard({
     sessionId,
     settings,
     winners,
+    sessionWinners.length,
     eligibleEntries.length,
   ]);
+
+  const resetDraw = useCallback(() => {
+    clearAutoSpinTimer();
+    setWinnerNameForWheel(null);
+    setSessionId(crypto.randomUUID());
+    setResetConfirmOpen(false);
+  }, [clearAutoSpinTimer]);
+
+  function requestReset() {
+    if (sessionWinners.length === 0) {
+      resetDraw();
+    } else {
+      setResetConfirmOpen(true);
+    }
+  }
 
   const onSpinRef = useRef<typeof onSpin | null>(null);
   useEffect(() => {
@@ -257,6 +308,16 @@ export function DrawBoard({
             size="icon"
             variant="outline"
             className="border-white/15 bg-white/[0.04] text-white hover:bg-white/10"
+            onClick={requestReset}
+            aria-label="New draw"
+            title="New draw (clear stage, keep history)"
+          >
+            <RotateCcw className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            className="border-white/15 bg-white/[0.04] text-white hover:bg-white/10"
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
             title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
@@ -287,7 +348,14 @@ export function DrawBoard({
           <div className="flex w-full flex-wrap items-center justify-between gap-2 px-2 pt-2 font-[var(--font-geist-mono)] text-[10px] uppercase tracking-[0.22em] text-white/55">
             <span>
               Pool:{" "}
-              <span className="text-white/90">{eligibleEntries.length}</span> ·{" "}
+              <span className="text-white/90">{eligibleEntries.length}</span>
+              {excludedCount > 0 ? (
+                <span className="text-white/45">
+                  {" "}
+                  · {excludedCount} excluded (already won)
+                </span>
+              ) : null}{" "}
+              ·{" "}
               {settings.departmentId === "ALL"
                 ? "All departments"
                 : departments.find((d) => d.id === settings.departmentId)
@@ -314,7 +382,7 @@ export function DrawBoard({
                 style={{ fontFamily: "var(--font-fraunces), serif" }}
               >
                 <Square className="size-5 fill-current" />
-                Stop auto-spin
+                Pause auto-spin
               </Button>
             ) : (
               <Button
@@ -329,25 +397,49 @@ export function DrawBoard({
             )}
 
             <p className="text-xs text-white/45">
-              {poolEmpty
-                ? "No eligible entries left in the pool."
-                : goalReached
-                  ? `All ${settings.totalWinners} winners drawn. Change settings to draw more.`
-                  : autoSpinPending
-                    ? `Next spin in ~${settings.autoSpinIntervalSeconds.toFixed(1)}s · ${winners.length} of ${settings.totalWinners} drawn.`
-                    : settings.autoSpin && settings.totalWinners > 1
-                      ? `Auto-spin on · ${winners.length} of ${settings.totalWinners} winners drawn.`
-                      : `${winners.length} of ${settings.totalWinners} winners drawn.`}
+              {disabledReason
+                ? disabledReason
+                : autoSpinPending
+                  ? `Next spin in ~${settings.autoSpinIntervalSeconds.toFixed(1)}s · ${sessionWinners.length} of ${settings.totalWinners} drawn.`
+                  : settings.autoSpin && settings.totalWinners > 1
+                    ? `Auto-spin on · ${sessionWinners.length} of ${settings.totalWinners} winners drawn.`
+                    : `${sessionWinners.length} of ${settings.totalWinners} winners drawn.`}
             </p>
           </div>
         </section>
 
         <WinnersPanel
-          winners={winners}
+          winners={sessionWinners}
           totalGoal={settings.totalWinners}
           landed={engine.landed}
         />
       </main>
+
+      <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start a new draw?</DialogTitle>
+            <DialogDescription>
+              This clears the {sessionWinners.length} winner
+              {sessionWinners.length === 1 ? "" : "s"} on screen and starts a
+              fresh draw. The dashboard winners list is unchanged, and anyone
+              who already won stays excluded from the pool.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setResetConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={resetDraw}>
+              <RotateCcw className="size-4" />
+              Start new draw
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
