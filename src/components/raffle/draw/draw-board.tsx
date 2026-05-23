@@ -118,7 +118,6 @@ export function DrawBoard({
     [winners, sessionId],
   );
 
-  const excludedCount = winners.length - sessionWinners.length;
   const drawnInBatch = Math.max(0, sessionWinners.length - batchStartCount);
   const batchComplete = drawnInBatch >= settings.totalWinners;
   const poolEmpty = eligibleEntries.length === 0;
@@ -361,28 +360,6 @@ export function DrawBoard({
       {/* ───────────────────── stage ───────────────────── */}
       <main className="relative z-10 mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 px-8 pb-8 pt-6 lg:grid-cols-[1fr_360px]">
         <section className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-sm">
-          {/* status strip */}
-          <div className="flex w-full flex-wrap items-center justify-between gap-2 px-2 pt-2 font-[var(--font-geist-mono)] text-[10px] uppercase tracking-[0.22em] text-white/55">
-            <span>
-              Pool:{" "}
-              <span className="text-white/90">{eligibleEntries.length}</span>
-              {excludedCount > 0 ? (
-                <span className="text-white/45">
-                  {" "}
-                  · {excludedCount} excluded (already won)
-                </span>
-              ) : null}{" "}
-              ·{" "}
-              {settings.departmentId === "ALL"
-                ? "All departments"
-                : departments.find((d) => d.id === settings.departmentId)
-                    ?.name ?? "—"}
-            </span>
-            <span>
-              Spin · {settings.spinDurationSeconds.toFixed(1)}s
-            </span>
-          </div>
-
           <WaterwheelSpinner
             angle={engine.angle}
             names={eligibleNames}
