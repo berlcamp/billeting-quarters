@@ -15,46 +15,106 @@ interface Props {
 }
 
 interface DayRow {
+  day: string;
   ins: Date[];
   outs: Date[];
   hours: number;
+  remarks: string[];
 }
 
-// Collect every scan for the day into a Time-In list and a Time-Out list (no
-// AM/PM split — each cell stacks all times chronologically).
-// Hours = chronological pairing across the whole day. We walk events in time
-// order and pair the first unmatched time_in with the next time_out; extra
-// time_ins (forgot to tap out, then re-tapped) are ignored so the gap counts.
-function bucketDay(dayLogs: AttendanceLog[]): DayRow {
-  const ins: Date[] = [];
-  const outs: Date[] = [];
-  const events: { ts: Date; type: AttendanceLog["type"] }[] = [];
+function manilaDay(ts: Date): string {
+  return formatInTimeZone(ts, PALARO_TZ, "yyyy-MM-dd");
+}
 
-  for (const log of dayLogs) {
+// Pair INs with OUTs over the whole period (not per-day), so overnight shifts
+// (22:00 IN → 06:00 OUT) no longer vanish from the total. Paired hours are
+// attributed to the day of the IN. Same-day extra INs keep the historical
+// "gap counts" behaviour (forgot to tap out, then re-tapped), but a cross-day
+// extra IN closes the prior shift unpaired — otherwise a forgotten OUT would
+// silently inflate the next morning's shift into a ~20-hour day. Anything
+// that doesn't pair cleanly is surfaced in the Remarks column instead of
+// quietly skewing the total.
+function computePeriod(
+  logs: AttendanceLog[],
+  days: string[],
+): { rows: DayRow[]; totalHours: number } {
+  const byDay = new Map<string, { ins: Date[]; outs: Date[] }>();
+  for (const d of days) byDay.set(d, { ins: [], outs: [] });
+
+  type Event = { ts: Date; type: AttendanceLog["type"]; day: string };
+  const events: Event[] = [];
+
+  for (const log of logs) {
     const ts = new Date(log.scanned_at);
-    events.push({ ts, type: log.type });
-    if (log.type === "time_in") ins.push(ts);
-    else outs.push(ts);
+    const day = manilaDay(ts);
+    let entry = byDay.get(day);
+    if (!entry) {
+      entry = { ins: [], outs: [] };
+      byDay.set(day, entry);
+    }
+    if (log.type === "time_in") entry.ins.push(ts);
+    else entry.outs.push(ts);
+    events.push({ ts, type: log.type, day });
   }
 
-  const byTime = (a: Date, b: Date) => a.getTime() - b.getTime();
-  ins.sort(byTime);
-  outs.sort(byTime);
   events.sort((a, b) => a.ts.getTime() - b.ts.getTime());
 
-  let ms = 0;
-  let openIn: Date | null = null;
+  const hoursByDay = new Map<string, number>();
+  const remarksByDay = new Map<string, string[]>();
+  const addRemark = (day: string, note: string) => {
+    const arr = remarksByDay.get(day) ?? [];
+    if (!arr.includes(note)) arr.push(note);
+    remarksByDay.set(day, arr);
+  };
+
+  let openIn: { ts: Date; day: string } | null = null;
+
   for (const evt of events) {
     if (evt.type === "time_in") {
-      if (!openIn) openIn = evt.ts;
-    } else if (openIn && evt.ts > openIn) {
-      ms += evt.ts.getTime() - openIn.getTime();
+      if (!openIn) {
+        openIn = { ts: evt.ts, day: evt.day };
+      } else if (openIn.day === evt.day) {
+        addRemark(evt.day, "Missing time-out between scans");
+      } else {
+        addRemark(openIn.day, "Missing time-out");
+        openIn = { ts: evt.ts, day: evt.day };
+      }
+    } else if (openIn && evt.ts > openIn.ts) {
+      const hrs = (evt.ts.getTime() - openIn.ts.getTime()) / 3_600_000;
+      hoursByDay.set(openIn.day, (hoursByDay.get(openIn.day) ?? 0) + hrs);
+      if (openIn.day !== evt.day) {
+        addRemark(
+          openIn.day,
+          `Overnight — out ${formatInTimeZone(evt.ts, PALARO_TZ, "MMM d HH:mm")}`,
+        );
+        addRemark(
+          evt.day,
+          `Overnight — in ${formatInTimeZone(openIn.ts, PALARO_TZ, "MMM d HH:mm")}`,
+        );
+      }
       openIn = null;
+    } else {
+      addRemark(evt.day, "Time-out without time-in");
     }
   }
-  const hours = ms / 3_600_000;
+  if (openIn) addRemark(openIn.day, "Missing time-out");
 
-  return { ins, outs, hours };
+  const byTime = (a: Date, b: Date) => a.getTime() - b.getTime();
+  const rows: DayRow[] = days.map((day) => {
+    const entry = byDay.get(day) ?? { ins: [], outs: [] };
+    entry.ins.sort(byTime);
+    entry.outs.sort(byTime);
+    return {
+      day,
+      ins: entry.ins,
+      outs: entry.outs,
+      hours: hoursByDay.get(day) ?? 0,
+      remarks: remarksByDay.get(day) ?? [],
+    };
+  });
+
+  const totalHours = rows.reduce((sum, r) => sum + r.hours, 0);
+  return { rows, totalHours };
 }
 
 function fmtCell(dates: Date[]): string {
@@ -64,25 +124,7 @@ function fmtCell(dates: Date[]): string {
 }
 
 export function DtrSheet({ personnel, days, logs, periodLabel }: Props) {
-  // Index logs by day (Asia/Manila).
-  const byDay = new Map<string, AttendanceLog[]>();
-  for (const log of logs) {
-    const day = formatInTimeZone(
-      new Date(log.scanned_at),
-      PALARO_TZ,
-      "yyyy-MM-dd",
-    );
-    const arr = byDay.get(day) ?? [];
-    arr.push(log);
-    byDay.set(day, arr);
-  }
-
-  const rows = days.map((day) => {
-    const dayLogs = byDay.get(day) ?? [];
-    return { day, ...bucketDay(dayLogs) };
-  });
-
-  const totalHours = rows.reduce((sum, r) => sum + r.hours, 0);
+  const { rows, totalHours } = computePeriod(logs, days);
 
   return (
     <section
@@ -179,7 +221,9 @@ export function DtrSheet({ personnel, days, logs, periodLabel }: Props) {
                 <td className={cellCls}>{fmtCell(row.ins)}</td>
                 <td className={cellCls}>{fmtCell(row.outs)}</td>
                 <td className={cellCls}>{hoursLabel}</td>
-                <td className="border border-black px-1 py-1 align-top" />
+                <td className="border border-black px-1 py-1 align-top text-[10px] leading-tight">
+                  {row.remarks.length ? row.remarks.join("; ") : null}
+                </td>
               </tr>
             );
           })}
