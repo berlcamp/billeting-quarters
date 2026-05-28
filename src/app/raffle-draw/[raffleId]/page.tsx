@@ -63,6 +63,7 @@ export default async function RaffleDrawPage({
       id: w.id,
       entry_id: w.entry_id,
       entry_name: w.entry_name,
+      entry_designation: w.entry_designation,
       department_id: w.department_id,
       department_name: w.department_name,
       draw_index: w.draw_index,

@@ -7,17 +7,21 @@ import { useMemo } from "react";
 const PADDLE_COUNT = 14;
 const RADIUS = 240;
 
+export type SpinnerEntry = { name: string; designation: string | null };
+
 interface Props {
   angle: number;
-  names: string[]; // pool of names; we sample by index = (paddleIdx + offset) % pool
-  winnerName: string | null; // when set, paddle 0 displays this exact name
+  entries: SpinnerEntry[]; // pool; we sample by index = (paddleIdx + offset) % pool
+  // when set, paddle 0 displays this exact entry (used so the landed paddle
+  // matches the server-chosen winner regardless of pool ordering).
+  winner: SpinnerEntry | null;
   spinning: boolean;
 }
 
 export function WaterwheelSpinner({
   angle,
-  names,
-  winnerName,
+  entries,
+  winner,
   spinning,
 }: Props) {
   // While spinning, cycle through the pool: every full rotation shifts the
@@ -27,17 +31,20 @@ export function WaterwheelSpinner({
   const paddles = useMemo(() => {
     return Array.from({ length: PADDLE_COUNT }, (_, i) => {
       const slotAngle = (i * 360) / PADDLE_COUNT;
-      let name: string;
-      if (i === 0 && winnerName) {
-        name = winnerName;
-      } else if (names.length === 0) {
-        name = "—";
+      let entry: SpinnerEntry;
+      if (i === 0 && winner) {
+        entry = winner;
+      } else if (entries.length === 0) {
+        entry = { name: "—", designation: null };
       } else {
-        name = names[(i + offset) % names.length] ?? "—";
+        entry = entries[(i + offset) % entries.length] ?? {
+          name: "—",
+          designation: null,
+        };
       }
-      return { i, slotAngle, name };
+      return { i, slotAngle, entry };
     });
-  }, [names, offset, winnerName]);
+  }, [entries, offset, winner]);
 
   return (
     <div className="relative isolate flex h-[560px] w-full items-center justify-center [perspective:1400px]">
@@ -62,7 +69,7 @@ export function WaterwheelSpinner({
         }}
       >
         {paddles.map((p) => {
-          const isWinner = p.i === 0 && winnerName !== null;
+          const isWinner = p.i === 0 && winner !== null;
           return (
             <div
               key={p.i}
@@ -73,7 +80,7 @@ export function WaterwheelSpinner({
             >
               <div
                 className={[
-                  "flex h-20 w-[520px] items-center justify-center rounded-xl border px-6 text-center text-2xl font-medium tracking-tight transition-colors",
+                  "flex h-20 w-[520px] flex-col items-center justify-center rounded-xl border px-6 text-center transition-colors",
                   isWinner
                     ? "border-amber-300/80 bg-gradient-to-r from-amber-400 to-amber-500 text-[#0a1740] shadow-[0_0_40px_rgba(245,197,38,0.55)]"
                     : "border-white/10 bg-white/[0.06] text-white/90 backdrop-blur-sm",
@@ -82,7 +89,19 @@ export function WaterwheelSpinner({
                   fontFamily: "var(--font-fraunces), serif",
                 }}
               >
-                <span className="line-clamp-1">{p.name}</span>
+                <span className="line-clamp-1 text-2xl font-medium tracking-tight">
+                  {p.entry.name}
+                </span>
+                {p.entry.designation ? (
+                  <span
+                    className={[
+                      "line-clamp-1 text-xs tracking-wide",
+                      isWinner ? "text-[#0a1740]/75" : "text-white/55",
+                    ].join(" ")}
+                  >
+                    {p.entry.designation}
+                  </span>
+                ) : null}
               </div>
             </div>
           );

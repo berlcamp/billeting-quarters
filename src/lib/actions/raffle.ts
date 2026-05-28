@@ -17,6 +17,7 @@ import {
   drawWinnerSchema,
   resetSessionSchema,
   updateDepartmentSchema,
+  updateEntrySchema,
   updateRaffleSchema,
 } from "@/lib/schemas/raffle";
 import { recordAudit } from "./audit";
@@ -358,7 +359,9 @@ export async function getEntriesForDepartment(
 export async function getRaffleEntries(
   raffleId: string,
   departmentId?: string,
-): Promise<ActionResult<Pick<Entry, "id" | "name" | "department_id">[]>> {
+): Promise<
+  ActionResult<Pick<Entry, "id" | "name" | "designation" | "department_id">[]>
+> {
   const auth = await requireViewer();
   if (!auth.ok) return fail(auth.error);
 
@@ -366,7 +369,7 @@ export async function getRaffleEntries(
   let q = admin
     .schema("palaro")
     .from("raffle_entries")
-    .select("id, name, department_id")
+    .select("id, name, designation, department_id")
     .eq("raffle_id", raffleId);
   if (departmentId) q = q.eq("department_id", departmentId);
   const { data, error } = await q;
@@ -396,11 +399,12 @@ export async function addEntriesBulk(
   // Chunk inserts so we don't hit any payload size limit on huge pastes.
   const CHUNK = 500;
   let inserted = 0;
-  for (let i = 0; i < parsed.data.names.length; i += CHUNK) {
-    const slice = parsed.data.names.slice(i, i + CHUNK).map((name) => ({
+  for (let i = 0; i < parsed.data.entries.length; i += CHUNK) {
+    const slice = parsed.data.entries.slice(i, i + CHUNK).map((entry) => ({
       department_id: dept.id,
       raffle_id: dept.raffle_id,
-      name,
+      name: entry.name,
+      designation: entry.designation ?? null,
     }));
     const { error } = await admin
       .schema("palaro")
@@ -419,6 +423,42 @@ export async function addEntriesBulk(
   });
   revalidatePath(adminDetailPath(dept.raffle_id));
   return ok({ inserted });
+}
+
+export async function updateEntry(
+  input: unknown,
+): Promise<ActionResult<void>> {
+  const auth = await requireManager();
+  if (!auth.ok) return fail(auth.error);
+
+  const parsed = updateEntrySchema.safeParse(input);
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input.");
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .schema("palaro")
+    .from("raffle_entries")
+    .update({
+      name: parsed.data.name,
+      designation: parsed.data.designation ?? null,
+    })
+    .eq("id", parsed.data.id)
+    .select("raffle_id")
+    .single();
+  if (error) return fail(error.message);
+
+  await recordAudit({
+    action: "update",
+    entity_type: "raffle_entry",
+    entity_id: parsed.data.id,
+    changes: {
+      name: parsed.data.name,
+      designation: parsed.data.designation ?? null,
+    },
+    user_id: auth.profile.id,
+  });
+  if (data) revalidatePath(adminDetailPath(data.raffle_id));
+  return ok();
 }
 
 export async function deleteEntry(
@@ -513,6 +553,7 @@ export type DrawWinnerResult = {
   id: string;
   entry_id: string;
   entry_name: string;
+  entry_designation: string | null;
   department_id: string;
   department_name: string;
   draw_index: number;
@@ -535,7 +576,7 @@ export async function drawWinner(
   let q = admin
     .schema("palaro")
     .from("raffle_entries")
-    .select("id, name, department_id")
+    .select("id, name, designation, department_id")
     .eq("raffle_id", parsed.data.raffle_id);
   if (parsed.data.department_id) q = q.eq("department_id", parsed.data.department_id);
   const { data: pool, error: poolError } = await q;
@@ -577,6 +618,7 @@ export async function drawWinner(
       department_id: dept.id,
       entry_id: pick.id,
       entry_name: pick.name,
+      entry_designation: pick.designation ?? null,
       department_name: dept.name,
       prize_label: parsed.data.prize_label ?? null,
       session_id: parsed.data.session_id,
@@ -606,6 +648,7 @@ export async function drawWinner(
     id: inserted.id,
     entry_id: pick.id,
     entry_name: pick.name,
+    entry_designation: pick.designation ?? null,
     department_id: dept.id,
     department_name: dept.name,
     draw_index: drawIndex,

@@ -1864,6 +1864,7 @@ export type Database = {
           raffle_id: string;
           department_id: string;
           name: string;
+          designation: string | null;
           created_at: string;
         };
         Insert: {
@@ -1871,6 +1872,7 @@ export type Database = {
           raffle_id: string;
           department_id: string;
           name: string;
+          designation?: string | null;
           created_at?: string;
         };
         Update: {
@@ -1878,6 +1880,7 @@ export type Database = {
           raffle_id?: string;
           department_id?: string;
           name?: string;
+          designation?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -1889,6 +1892,7 @@ export type Database = {
           department_id: string;
           entry_id: string;
           entry_name: string;
+          entry_designation: string | null;
           department_name: string;
           prize_label: string | null;
           session_id: string;
@@ -1902,6 +1906,7 @@ export type Database = {
           department_id: string;
           entry_id: string;
           entry_name: string;
+          entry_designation?: string | null;
           department_name: string;
           prize_label?: string | null;
           session_id: string;
@@ -1915,6 +1920,7 @@ export type Database = {
           department_id?: string;
           entry_id?: string;
           entry_name?: string;
+          entry_designation?: string | null;
           department_name?: string;
           prize_label?: string | null;
           session_id?: string;

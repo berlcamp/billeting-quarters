@@ -25,38 +25,58 @@ interface Props {
   trigger: ReactNode;
 }
 
+type ParsedEntry = { name: string; designation?: string };
+
 function parseNamesText(text: string): {
-  names: string[];
+  entries: ParsedEntry[];
   empties: number;
   duplicates: number;
   headerSkipped: boolean;
+  withDesignation: number;
 } {
-  const lines = text.split(/\r?\n/);
-  // For CSV: take the first comma-separated column. For plain paste: the whole line.
-  const cells = lines.map((line) => (line.split(",")[0] ?? "").trim());
+  // Split each line into [name, designation?] using the first comma.
+  // Everything after the first comma is treated as the designation, so titles
+  // that contain commas (e.g. "Manager, Operations") survive intact.
+  const rows = text.split(/\r?\n/).map((line) => {
+    const idx = line.indexOf(",");
+    if (idx === -1) {
+      return { name: line.trim(), designation: "" };
+    }
+    return {
+      name: line.slice(0, idx).trim(),
+      designation: line.slice(idx + 1).trim(),
+    };
+  });
   let headerSkipped = false;
-  if (cells[0]?.toLowerCase() === "name") {
-    cells.shift();
+  const firstName = rows[0]?.name.toLowerCase();
+  if (firstName === "name") {
+    rows.shift();
     headerSkipped = true;
   }
   const seen = new Set<string>();
-  const names: string[] = [];
+  const entries: ParsedEntry[] = [];
   let empties = 0;
   let duplicates = 0;
-  for (const c of cells) {
-    if (!c) {
+  let withDesignation = 0;
+  for (const row of rows) {
+    if (!row.name) {
       empties += 1;
       continue;
     }
-    const key = c.toLowerCase();
+    const key = row.name.toLowerCase();
     if (seen.has(key)) {
       duplicates += 1;
       continue;
     }
     seen.add(key);
-    names.push(c);
+    const entry: ParsedEntry = { name: row.name };
+    if (row.designation) {
+      entry.designation = row.designation;
+      withDesignation += 1;
+    }
+    entries.push(entry);
   }
-  return { names, empties, duplicates, headerSkipped };
+  return { entries, empties, duplicates, headerSkipped, withDesignation };
 }
 
 export function AddEntriesDialog({
@@ -80,7 +100,7 @@ export function AddEntriesDialog({
   }
 
   async function onSubmit() {
-    if (parsed.names.length === 0) {
+    if (parsed.entries.length === 0) {
       toast.error("Nothing to add", {
         description: "Paste names (one per line) or upload a CSV.",
       });
@@ -89,7 +109,7 @@ export function AddEntriesDialog({
     setSubmitting(true);
     const result = await addEntriesBulk({
       department_id: departmentId,
-      names: parsed.names,
+      entries: parsed.entries,
     });
     setSubmitting(false);
     if (result.error) {
@@ -121,9 +141,10 @@ export function AddEntriesDialog({
             Add entries to {departmentName}
           </DialogTitle>
           <DialogDescription>
-            One name per line. CSV files only use the first column. A header row
-            named &quot;name&quot; is skipped automatically. Duplicates within
-            the batch are removed.
+            One entry per line as <span className="font-mono">Name, Designation</span>.
+            The designation is optional — lines without a comma are treated as
+            name-only. A header row named &quot;name&quot; is skipped
+            automatically. Duplicates within the batch are removed.
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +159,9 @@ export function AddEntriesDialog({
             <Textarea
               id="paste-input"
               rows={10}
-              placeholder={"Juan dela Cruz\nMaria Santos\nPedro Reyes\n…"}
+              placeholder={
+                "Juan dela Cruz, Coach\nMaria Santos, Driver\nPedro Reyes\n…"
+              }
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
@@ -186,8 +209,12 @@ export function AddEntriesDialog({
             <span>
               Ready to add:{" "}
               <span className="font-semibold text-foreground">
-                {parsed.names.length}
+                {parsed.entries.length}
               </span>
+            </span>
+            <span>
+              With designation:{" "}
+              <span className="font-medium">{parsed.withDesignation}</span>
             </span>
             <span>
               Duplicates skipped:{" "}
@@ -214,10 +241,10 @@ export function AddEntriesDialog({
           <Button
             type="button"
             onClick={onSubmit}
-            disabled={submitting || parsed.names.length === 0}
+            disabled={submitting || parsed.entries.length === 0}
           >
             {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
-            Add {parsed.names.length || ""}
+            Add {parsed.entries.length || ""}
           </Button>
         </DialogFooter>
       </DialogContent>

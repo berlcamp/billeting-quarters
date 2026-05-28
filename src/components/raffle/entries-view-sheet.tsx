@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trash2, Eraser } from "lucide-react";
+import { Loader2, Pencil, Trash2, Eraser } from "lucide-react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -23,10 +23,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   clearDepartmentEntries,
   deleteEntry,
   getEntriesForDepartment,
+  updateEntry,
 } from "@/lib/actions/raffle";
 import type { Database } from "@/types/database";
 
@@ -52,6 +54,10 @@ export function EntriesViewSheet({
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
   const [clearOpen, setClearOpen] = useState(false);
+  const [editing, setEditing] = useState<Entry | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDesignation, setEditDesignation] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -83,6 +89,40 @@ export function EntriesViewSheet({
     });
   }
 
+  function openEdit(entry: Entry) {
+    setEditing(entry);
+    setEditName(entry.name);
+    setEditDesignation(entry.designation ?? "");
+  }
+
+  async function onSaveEdit() {
+    if (!editing) return;
+    const name = editName.trim();
+    if (!name) {
+      toast.error("Name is required.");
+      return;
+    }
+    setEditSaving(true);
+    const res = await updateEntry({
+      id: editing.id,
+      name,
+      designation: editDesignation.trim() || undefined,
+    });
+    setEditSaving(false);
+    if (res.error) {
+      toast.error("Update failed", { description: res.error });
+      return;
+    }
+    const designation = editDesignation.trim() || null;
+    setEntries((prev) =>
+      (prev ?? []).map((e) =>
+        e.id === editing.id ? { ...e, name, designation } : e,
+      ),
+    );
+    setEditing(null);
+    router.refresh();
+  }
+
   function onClearAll() {
     startTransition(async () => {
       const res = await clearDepartmentEntries({
@@ -103,9 +143,13 @@ export function EntriesViewSheet({
   const list = entries ?? [];
 
   const filtered = query.trim()
-    ? list.filter((e) =>
-        e.name.toLowerCase().includes(query.trim().toLowerCase()),
-      )
+    ? list.filter((e) => {
+        const q = query.trim().toLowerCase();
+        return (
+          e.name.toLowerCase().includes(q) ||
+          (e.designation?.toLowerCase().includes(q) ?? false)
+        );
+      })
     : list;
 
   return (
@@ -187,24 +231,96 @@ export function EntriesViewSheet({
                   key={e.id}
                   className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
                 >
-                  <span className="line-clamp-1">{e.name}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="line-clamp-1">{e.name}</div>
+                    {e.designation ? (
+                      <div className="line-clamp-1 text-xs text-muted-foreground">
+                        {e.designation}
+                      </div>
+                    ) : null}
+                  </div>
                   {canManage ? (
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      onClick={() => onDeleteEntry(e.id)}
-                      disabled={pending}
-                      className="text-muted-foreground hover:text-destructive"
-                      title="Remove"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => openEdit(e)}
+                        disabled={pending}
+                        className="text-muted-foreground hover:text-foreground"
+                        title="Edit"
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => onDeleteEntry(e.id)}
+                        disabled={pending}
+                        className="text-muted-foreground hover:text-destructive"
+                        title="Remove"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
                   ) : null}
                 </li>
               ))}
             </ul>
           )}
         </div>
+
+        <Dialog
+          open={editing !== null}
+          onOpenChange={(next) => {
+            if (!next) setEditing(null);
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit entry</DialogTitle>
+              <DialogDescription>
+                Update the name or designation for this entry.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  disabled={editSaving}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-designation">
+                  Designation{" "}
+                  <span className="text-xs text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="edit-designation"
+                  value={editDesignation}
+                  onChange={(e) => setEditDesignation(e.target.value)}
+                  placeholder="e.g. Coach, Driver, Manager"
+                  disabled={editSaving}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setEditing(null)}
+                disabled={editSaving}
+              >
+                Cancel
+              </Button>
+              <Button onClick={onSaveEdit} disabled={editSaving}>
+                {editSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SheetContent>
     </Sheet>
   );

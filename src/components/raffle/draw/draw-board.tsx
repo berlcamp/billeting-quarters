@@ -20,13 +20,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WaterwheelSpinner } from "./waterwheel-spinner";
+import { WaterwheelSpinner, type SpinnerEntry } from "./waterwheel-spinner";
 import { WinnersPanel } from "./winners-panel";
 import { SettingsSheet, type DrawSettings } from "./settings-sheet";
 import { useSpinEngine } from "./use-spin-engine";
 import type { DrawWinnerResult } from "@/lib/actions/raffle";
 
-type Entry = { id: string; name: string; department_id: string };
+type Entry = {
+  id: string;
+  name: string;
+  designation: string | null;
+  department_id: string;
+};
 type Department = { id: string; name: string; entry_count: number };
 
 interface Props {
@@ -59,7 +64,7 @@ export function DrawBoard({
   // All persisted winners for this raffle. Drives pool exclusion so prior
   // winners can never be drawn again until an admin runs "Clear winners".
   const [winners, setWinners] = useState<DrawWinnerResult[]>(initialWinners);
-  const [winnerNameForWheel, setWinnerNameForWheel] = useState<string | null>(
+  const [winnerForWheel, setWinnerForWheel] = useState<SpinnerEntry | null>(
     null,
   );
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -105,8 +110,12 @@ export function DrawBoard({
     });
   }, [entries, winners, settings.departmentId]);
 
-  const eligibleNames = useMemo(
-    () => eligibleEntries.map((e) => e.name),
+  const eligibleSpinnerEntries = useMemo<SpinnerEntry[]>(
+    () =>
+      eligibleEntries.map((e) => ({
+        name: e.name,
+        designation: e.designation,
+      })),
     [eligibleEntries],
   );
 
@@ -151,7 +160,7 @@ export function DrawBoard({
     }
 
     // Clear the previous winner-on-wheel so the new spin streams names again.
-    setWinnerNameForWheel(null);
+    setWinnerForWheel(null);
 
     const result = await spin(
       {
@@ -173,7 +182,10 @@ export function DrawBoard({
       return;
     }
 
-    setWinnerNameForWheel(result.winner.entry_name);
+    setWinnerForWheel({
+      name: result.winner.entry_name,
+      designation: result.winner.entry_designation,
+    });
     setWinners((prev) => [...prev, result.winner]);
 
     const nextDrawnInBatch = sessionWinners.length + 1 - effectiveBatchStart;
@@ -208,7 +220,7 @@ export function DrawBoard({
 
   const resetDraw = useCallback(() => {
     clearAutoSpinTimer();
-    setWinnerNameForWheel(null);
+    setWinnerForWheel(null);
     setBatchStartCount(0);
     setSessionId(crypto.randomUUID());
     setResetConfirmOpen(false);
@@ -362,8 +374,8 @@ export function DrawBoard({
         <section className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-sm">
           <WaterwheelSpinner
             angle={engine.angle}
-            names={eligibleNames}
-            winnerName={engine.spinning ? null : winnerNameForWheel}
+            entries={eligibleSpinnerEntries}
+            winner={engine.spinning ? null : winnerForWheel}
             spinning={engine.spinning}
           />
 

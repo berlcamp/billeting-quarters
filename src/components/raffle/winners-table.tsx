@@ -65,10 +65,17 @@ export function WinnersTable({ winners, raffleId, canManage }: Props) {
       id: "name",
       header: "Name",
       cell: (w) => (
-        <span className="flex items-center gap-2 font-medium">
-          <Trophy className="size-3.5 text-amber-500" />
-          {w.entry_name}
-        </span>
+        <div>
+          <span className="flex items-center gap-2 font-medium">
+            <Trophy className="size-3.5 text-amber-500" />
+            {w.entry_name}
+          </span>
+          {w.entry_designation ? (
+            <span className="ml-5 block text-xs text-muted-foreground">
+              {w.entry_designation}
+            </span>
+          ) : null}
+        </div>
       ),
     },
     {
@@ -151,7 +158,8 @@ export function WinnersTable({ winners, raffleId, canManage }: Props) {
           placeholder: "Search winners…",
           predicate: (w, q) =>
             w.entry_name.toLowerCase().includes(q) ||
-            w.department_name.toLowerCase().includes(q),
+            w.department_name.toLowerCase().includes(q) ||
+            (w.entry_designation?.toLowerCase().includes(q) ?? false),
         }}
         empty={{
           title: "No winners yet",

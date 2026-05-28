@@ -40,6 +40,11 @@ export function WinnersPanel({ winners, landed }: Props) {
           >
             {latest.entry_name}
           </p>
+          {latest.entry_designation ? (
+            <p className="mt-1 text-sm font-medium text-amber-200/90">
+              {latest.entry_designation}
+            </p>
+          ) : null}
           <p className="mt-1 text-sm text-white/65">{latest.department_name}</p>
 
           {landed ? (
@@ -79,14 +84,21 @@ export function WinnersPanel({ winners, landed }: Props) {
             {prior.map((w) => (
               <li
                 key={w.id}
-                className="flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm"
+                className="flex items-start gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm"
               >
-                <span className="font-[var(--font-geist-mono)] text-[10px] text-amber-300/70">
+                <span className="mt-0.5 font-[var(--font-geist-mono)] text-[10px] text-amber-300/70">
                   #{w.draw_index}
                 </span>
-                <span className="line-clamp-1 flex-1 text-white/90">
-                  {w.entry_name}
-                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="line-clamp-1 text-white/90">
+                    {w.entry_name}
+                  </div>
+                  {w.entry_designation ? (
+                    <div className="line-clamp-1 text-[11px] text-amber-200/70">
+                      {w.entry_designation}
+                    </div>
+                  ) : null}
+                </div>
                 <span className="line-clamp-1 text-xs text-white/45">
                   {w.department_name}
                 </span>
