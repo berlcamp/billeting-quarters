@@ -334,7 +334,7 @@ export function DrawBoard({
   }
 
   return (
-    <div className="relative isolate min-h-screen overflow-hidden text-white">
+    <div className="relative isolate flex h-screen flex-col overflow-hidden text-white">
       {/* page-wide background atmospherics */}
       <div
         aria-hidden
@@ -444,7 +444,7 @@ export function DrawBoard({
       </header>
 
       {/* ───────────────────── stage ───────────────────── */}
-      <main className="relative z-10 mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-6 px-8 pb-8 pt-6 lg:grid-cols-[1fr_360px]">
+      <main className="relative z-10 mx-auto grid min-h-0 w-full max-w-[1600px] flex-1 grid-cols-1 gap-6 px-8 pb-8 pt-6 lg:grid-cols-[1fr_360px]">
         <section className="flex flex-col items-center justify-between gap-6 rounded-2xl border border-white/10 bg-white/[0.02] p-4 backdrop-blur-sm">
           <WaterwheelSpinner
             angle={engine.angle}
