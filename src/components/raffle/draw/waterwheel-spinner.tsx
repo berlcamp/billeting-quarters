@@ -1,11 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // Number of paddles around the wheel. More paddles = denser, smoother visual
 // but more DOM nodes. 14 is a sweet spot for a visible "wheel" feel.
 const PADDLE_COUNT = 14;
 const RADIUS = 240;
+// How long the designation teases on the landed paddle before the winner's
+// name is revealed. Also re-used by the draw board to defer the sidebar
+// reveal so the wheel name lands first.
+export const DESIGNATION_TEASE_MS = 3000;
 
 export type SpinnerEntry = { name: string; designation: string | null };
 
@@ -16,6 +20,9 @@ interface Props {
   // matches the server-chosen winner regardless of pool ordering).
   winner: SpinnerEntry | null;
   spinning: boolean;
+  // When true (default), hide names during the spin and tease the designation
+  // on the landed paddle for DESIGNATION_TEASE_MS before showing the name.
+  suspense?: boolean;
 }
 
 export function WaterwheelSpinner({
@@ -23,7 +30,27 @@ export function WaterwheelSpinner({
   entries,
   winner,
   spinning,
+  suspense = true,
 }: Props) {
+  // When a winner with a designation lands, hold on the designation alone for
+  // a beat before revealing the name. The phase resets whenever `winner`
+  // changes (new spin clears it back to null).
+  const [revealPhase, setRevealPhase] = useState<"designation" | "name">(
+    "name",
+  );
+  const hasDesignation = !!winner?.designation?.trim();
+  const teaseLandedPaddle = suspense && hasDesignation;
+
+  useEffect(() => {
+    if (!winner || !teaseLandedPaddle) {
+      setRevealPhase("name");
+      return;
+    }
+    setRevealPhase("designation");
+    const t = setTimeout(() => setRevealPhase("name"), DESIGNATION_TEASE_MS);
+    return () => clearTimeout(t);
+  }, [winner, teaseLandedPaddle]);
+
   // While spinning, cycle through the pool: every full rotation shifts the
   // visible names so the user sees a stream rather than the same 14 names.
   const offset = Math.floor(angle / (360 / PADDLE_COUNT));
@@ -70,6 +97,12 @@ export function WaterwheelSpinner({
       >
         {paddles.map((p) => {
           const isWinner = p.i === 0 && winner !== null;
+          const teasingDesignation =
+            isWinner && teaseLandedPaddle && revealPhase === "designation";
+          // During the spin (when `suspense` is on), every paddle hides the
+          // name and shows the designation — keeps the audience guessing.
+          const hidingNameWhileSpinning = suspense && spinning;
+          const designationOnly = teasingDesignation || hidingNameWhileSpinning;
           return (
             <div
               key={p.i}
@@ -84,24 +117,50 @@ export function WaterwheelSpinner({
                   isWinner
                     ? "border-amber-300/80 bg-gradient-to-r from-amber-400 to-amber-500 text-[#0a1740] shadow-[0_0_40px_rgba(245,197,38,0.55)]"
                     : "border-white/10 bg-white/[0.06] text-white/90 backdrop-blur-sm",
+                  teasingDesignation ? "animate-pulse" : "",
                 ].join(" ")}
                 style={{
                   fontFamily: "var(--font-fraunces), serif",
                 }}
               >
-                <span className="line-clamp-1 text-2xl font-medium tracking-tight">
-                  {p.entry.name}
-                </span>
-                {p.entry.designation ? (
+                {designationOnly ? (
                   <span
+                    key={teasingDesignation ? "tease" : "spin"}
                     className={[
-                      "line-clamp-1 text-xs tracking-wide",
-                      isWinner ? "text-[#0a1740]/75" : "text-white/55",
+                      "line-clamp-1 text-2xl font-semibold uppercase tracking-[0.18em]",
+                      isWinner ? "text-[#0a1740]" : "text-white/85",
+                      teasingDesignation
+                        ? "animate-in fade-in zoom-in-90 duration-500"
+                        : "",
                     ].join(" ")}
                   >
-                    {p.entry.designation}
+                    {p.entry.designation?.trim() || "???"}
                   </span>
-                ) : null}
+                ) : (
+                  <>
+                    <span
+                      key={isWinner ? "winner-name" : "name"}
+                      className={[
+                        "line-clamp-1 text-2xl font-medium tracking-tight",
+                        isWinner
+                          ? "animate-in fade-in zoom-in-50 duration-500"
+                          : "",
+                      ].join(" ")}
+                    >
+                      {p.entry.name}
+                    </span>
+                    {p.entry.designation ? (
+                      <span
+                        className={[
+                          "line-clamp-1 text-xs tracking-wide",
+                          isWinner ? "text-[#0a1740]/75" : "text-white/55",
+                        ].join(" ")}
+                      >
+                        {p.entry.designation}
+                      </span>
+                    ) : null}
+                  </>
+                )}
               </div>
             </div>
           );

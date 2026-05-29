@@ -20,7 +20,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WaterwheelSpinner, type SpinnerEntry } from "./waterwheel-spinner";
+import {
+  DESIGNATION_TEASE_MS,
+  WaterwheelSpinner,
+  type SpinnerEntry,
+} from "./waterwheel-spinner";
 import { WinnersPanel } from "./winners-panel";
 import { SettingsSheet, type DrawSettings } from "./settings-sheet";
 import { useSpinEngine } from "./use-spin-engine";
@@ -48,6 +52,7 @@ const DEFAULT_SETTINGS: DrawSettings = {
   prizeLabel: "",
   autoSpin: false,
   autoSpinIntervalSeconds: 3,
+  designationSuspense: true,
 };
 
 export function DrawBoard({
@@ -75,6 +80,18 @@ export function DrawBoard({
   // session-winners count at the moment the current batch began.
   const [batchStartCount, setBatchStartCount] = useState(0);
   const autoSpinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Winners whose name hasn't been revealed on the wheel yet — hidden from the
+  // sidebar until the designation tease finishes so the wheel announces first.
+  const [hiddenWinnerIds, setHiddenWinnerIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  // Drives the sidebar's "just landed" confetti. Decoupled from engine.landed
+  // because deferred reveals need their own flash window.
+  const [sidebarLanded, setSidebarLanded] = useState(false);
+  const revealTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const sidebarLandedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const { state: engine, spin } = useSpinEngine();
 
@@ -91,7 +108,23 @@ export function DrawBoard({
       if (autoSpinTimerRef.current !== null) {
         clearTimeout(autoSpinTimerRef.current);
       }
+      revealTimersRef.current.forEach((t) => clearTimeout(t));
+      revealTimersRef.current = [];
+      if (sidebarLandedTimerRef.current !== null) {
+        clearTimeout(sidebarLandedTimerRef.current);
+      }
     };
+  }, []);
+
+  const flashSidebarLanded = useCallback(() => {
+    if (sidebarLandedTimerRef.current !== null) {
+      clearTimeout(sidebarLandedTimerRef.current);
+    }
+    setSidebarLanded(true);
+    sidebarLandedTimerRef.current = setTimeout(() => {
+      setSidebarLanded(false);
+      sidebarLandedTimerRef.current = null;
+    }, 1800);
   }, []);
 
   useEffect(() => {
@@ -125,6 +158,12 @@ export function DrawBoard({
   const sessionWinners = useMemo(
     () => winners.filter((w) => w.session_id === sessionId),
     [winners, sessionId],
+  );
+  // What the sidebar actually renders — drops winners still mid-tease so the
+  // wheel reveal lands before the same entry shows up beside it.
+  const visibleSessionWinners = useMemo(
+    () => sessionWinners.filter((w) => !hiddenWinnerIds.has(w.id)),
+    [sessionWinners, hiddenWinnerIds],
   );
 
   const drawnInBatch = Math.max(0, sessionWinners.length - batchStartCount);
@@ -188,6 +227,32 @@ export function DrawBoard({
     });
     setWinners((prev) => [...prev, result.winner]);
 
+    const winnerHasDesignation =
+      !!result.winner.entry_designation?.trim();
+    if (settings.designationSuspense && winnerHasDesignation) {
+      const winnerId = result.winner.id;
+      setHiddenWinnerIds((prev) => {
+        const next = new Set(prev);
+        next.add(winnerId);
+        return next;
+      });
+      const t = setTimeout(() => {
+        setHiddenWinnerIds((prev) => {
+          if (!prev.has(winnerId)) return prev;
+          const next = new Set(prev);
+          next.delete(winnerId);
+          return next;
+        });
+        flashSidebarLanded();
+        revealTimersRef.current = revealTimersRef.current.filter(
+          (timer) => timer !== t,
+        );
+      }, DESIGNATION_TEASE_MS);
+      revealTimersRef.current.push(t);
+    } else {
+      flashSidebarLanded();
+    }
+
     const nextDrawnInBatch = sessionWinners.length + 1 - effectiveBatchStart;
     const moreNeeded = nextDrawnInBatch < settings.totalWinners;
     const poolHasMore = eligibleEntries.length - 1 > 0;
@@ -216,10 +281,19 @@ export function DrawBoard({
     batchStartCount,
     batchComplete,
     eligibleEntries.length,
+    flashSidebarLanded,
   ]);
 
   const resetDraw = useCallback(() => {
     clearAutoSpinTimer();
+    revealTimersRef.current.forEach((t) => clearTimeout(t));
+    revealTimersRef.current = [];
+    if (sidebarLandedTimerRef.current !== null) {
+      clearTimeout(sidebarLandedTimerRef.current);
+      sidebarLandedTimerRef.current = null;
+    }
+    setHiddenWinnerIds(new Set());
+    setSidebarLanded(false);
     setWinnerForWheel(null);
     setBatchStartCount(0);
     setSessionId(crypto.randomUUID());
@@ -377,6 +451,7 @@ export function DrawBoard({
             entries={eligibleSpinnerEntries}
             winner={engine.spinning ? null : winnerForWheel}
             spinning={engine.spinning}
+            suspense={settings.designationSuspense}
           />
 
           {/* SPIN button */}
@@ -416,7 +491,7 @@ export function DrawBoard({
           </div>
         </section>
 
-        <WinnersPanel winners={sessionWinners} landed={engine.landed} />
+        <WinnersPanel winners={visibleSessionWinners} landed={sidebarLanded} />
       </main>
 
       <Dialog open={resetConfirmOpen} onOpenChange={setResetConfirmOpen}>

@@ -30,6 +30,10 @@ export type DrawSettings = {
   prizeLabel: string;
   autoSpin: boolean;
   autoSpinIntervalSeconds: number;
+  // When true, paddles hide names during the spin and the landed paddle teases
+  // the designation for a beat before revealing the winner's name. The sidebar
+  // entry is also held back until the name lands.
+  designationSuspense: boolean;
 };
 
 interface Props {
@@ -72,7 +76,7 @@ export function SettingsSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-col gap-5 px-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 pb-4">
           <div className="space-y-1.5">
             <Label htmlFor="total-winners">Total winners to draw</Label>
             <Input
@@ -165,6 +169,35 @@ export function SettingsSheet({
             <p className="text-xs text-muted-foreground">
               Saved with each winner record.
             </p>
+          </div>
+
+          <div className="rounded-md border border-border/60 bg-muted/30 p-3">
+            <div className="flex items-start gap-2.5">
+              <Checkbox
+                id="designation-suspense"
+                checked={draft.designationSuspense}
+                onCheckedChange={(v) =>
+                  setDraft((d) => ({
+                    ...d,
+                    designationSuspense: v === true,
+                  }))
+                }
+                className="mt-0.5"
+              />
+              <div className="flex flex-col">
+                <Label
+                  htmlFor="designation-suspense"
+                  className="cursor-pointer"
+                >
+                  Suspense reveal with designation
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Hide names during the spin and tease the designation for ~3s
+                  before showing the winner. Turn off for a straightforward
+                  spin.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3 rounded-md border border-border/60 bg-muted/30 p-3">
