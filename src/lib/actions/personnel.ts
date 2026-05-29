@@ -442,12 +442,16 @@ export async function getAttendanceLogs(
   if (!auth.ok) return fail(auth.error);
 
   const admin = createAdminClient();
+  // A single Manila day at a national event can exceed 500 scans (hundreds of
+  // personnel × time-in + time-out). A 500-row cap silently truncated the
+  // day's logs, so scans outside the latest-500 window vanished from this view
+  // while still appearing on the DTR sheet (which fetches up to 10000).
   let q = admin
     .schema("palaro")
     .from("attendance_logs")
     .select("*")
     .order("scanned_at", { ascending: false })
-    .limit(500);
+    .limit(10000);
   if (fromIso) q = q.gte("scanned_at", fromIso);
   if (toIso) q = q.lt("scanned_at", toIso);
 
