@@ -1930,6 +1930,81 @@ export type Database = {
         };
         Relationships: [];
       };
+      events: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          location: string | null;
+          event_date: string | null;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          location?: string | null;
+          event_date?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          location?: string | null;
+          event_date?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      event_attendance_logs: {
+        Row: {
+          id: string;
+          event_id: string;
+          personnel_id: string | null;
+          guest_name: string | null;
+          guest_committee: string | null;
+          guest_designation: string | null;
+          time_in: string;
+          recorded_by: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          personnel_id?: string | null;
+          guest_name?: string | null;
+          guest_committee?: string | null;
+          guest_designation?: string | null;
+          time_in?: string;
+          recorded_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          personnel_id?: string | null;
+          guest_name?: string | null;
+          guest_committee?: string | null;
+          guest_designation?: string | null;
+          time_in?: string;
+          recorded_by?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };

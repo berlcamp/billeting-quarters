@@ -85,6 +85,8 @@ export const PERMISSIONS = [
   "vehicle.drive",
   "personnel.manage",
   "attendance.record",
+  "event_attendance.manage",
+  "event_attendance.record",
   "user.invite",
   "user.manage",
   "sites.manage",
@@ -182,6 +184,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   personnel_admin: [
     "personnel.manage",
     "attendance.record",
+    "event_attendance.manage",
+    "event_attendance.record",
     "head_count.view_all",
     "head_count.venue_view_all",
   ],
@@ -253,7 +257,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   // Attendance Checker — kiosk-style role for personnel manning the
   // time-in/time-out station. Can only access the Attendance module
   // (manual + QR scan logging); no personnel CRUD, no other modules.
-  attendance_checker: ["attendance.record"],
+  attendance_checker: ["attendance.record", "event_attendance.record"],
   // Head Counter Viewer — read-only access to both Head Counter tabs (BQ +
   // Venue) across all delegations and venues, including the consolidated
   // print sheets. No encoding, no other modules. The page treats the

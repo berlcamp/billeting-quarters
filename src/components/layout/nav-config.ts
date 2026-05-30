@@ -4,6 +4,7 @@ import {
   BadgeCheck,
   Building2,
   Calendar,
+  CalendarCheck,
   ClipboardCheck,
   ClipboardList,
   Contact,
@@ -189,6 +190,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Attendance",
         href: "/dashboard/personnel/attendance",
         icon: ClipboardCheck,
+        roles: ["personnel_admin", "attendance_checker"],
+      },
+      {
+        label: "Event Attendance",
+        href: "/dashboard/personnel/event-attendance",
+        icon: CalendarCheck,
         roles: ["personnel_admin", "attendance_checker"],
       },
       {
