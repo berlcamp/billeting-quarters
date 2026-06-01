@@ -443,21 +443,29 @@ export async function getAttendanceLogs(
 
   const admin = createAdminClient();
   // A single Manila day at a national event can exceed 500 scans (hundreds of
-  // personnel × time-in + time-out). A 500-row cap silently truncated the
-  // day's logs, so scans outside the latest-500 window vanished from this view
-  // while still appearing on the DTR sheet (which fetches up to 10000).
-  let q = admin
-    .schema("palaro")
-    .from("attendance_logs")
-    .select("*")
-    .order("scanned_at", { ascending: false })
-    .limit(10000);
-  if (fromIso) q = q.gte("scanned_at", fromIso);
-  if (toIso) q = q.lt("scanned_at", toIso);
+  // personnel × time-in + time-out). Any fixed row cap silently truncates the
+  // logs — scans outside the kept window vanish from this view — so page through
+  // the whole range instead. Same fix as getAttendanceLogsForDtr below.
+  const PAGE_SIZE = 1000;
+  const all: AttendanceLog[] = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    let q = admin
+      .schema("palaro")
+      .from("attendance_logs")
+      .select("*")
+      .order("scanned_at", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (fromIso) q = q.gte("scanned_at", fromIso);
+    if (toIso) q = q.lt("scanned_at", toIso);
 
-  const { data, error } = await q;
-  if (error) return fail(error.message);
-  return ok(data ?? []);
+    const { data, error } = await q;
+    if (error) return fail(error.message);
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE_SIZE) break;
+  }
+
+  return ok(all);
 }
 
 export async function updateAttendanceLog(
@@ -647,9 +655,12 @@ export async function scanAttendance(
 // DTR (Daily Time Record)
 // =============================================================================
 
-// Range fetch over attendance_logs for DTR generation. Uses a higher row cap
-// than the live attendance table because a 1-week event with hundreds of
-// personnel can easily exceed 500 logs.
+// Range fetch over attendance_logs for DTR generation. Pages through the whole
+// range instead of using a fixed row cap: at a national event the logs in a
+// 1-month window (hundreds of personnel × time-in + time-out) exceed any single
+// cap, and a cap silently drops the *latest* days (ascending order keeps the
+// oldest), making a month-range DTR disagree with a week-range DTR for the same
+// person. Looping in pages keeps the result complete for any range length.
 export async function getAttendanceLogsForDtr(
   fromIso: string,
   toIso: string,
@@ -658,17 +669,24 @@ export async function getAttendanceLogsForDtr(
   if (!auth.ok) return fail(auth.error);
 
   const admin = createAdminClient();
-  const { data, error } = await admin
-    .schema("palaro")
-    .from("attendance_logs")
-    .select("*")
-    .gte("scanned_at", fromIso)
-    .lt("scanned_at", toIso)
-    .order("scanned_at", { ascending: true })
-    .limit(10000);
-  if (error) return fail(error.message);
+  const PAGE_SIZE = 1000;
+  const all: AttendanceLog[] = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await admin
+      .schema("palaro")
+      .from("attendance_logs")
+      .select("*")
+      .gte("scanned_at", fromIso)
+      .lt("scanned_at", toIso)
+      .order("scanned_at", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) return fail(error.message);
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    if (data.length < PAGE_SIZE) break;
+  }
 
-  return ok(data ?? []);
+  return ok(all);
 }
 
 // =============================================================================
