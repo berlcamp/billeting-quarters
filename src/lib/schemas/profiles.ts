@@ -24,6 +24,7 @@ export const userRoleSchema = z.enum([
   "head_counter_viewer",
   "command_center_viewer",
   "raffle_manager",
+  "dtr",
 ]);
 
 export const profileStatusSchema = z.enum(["active", "suspended"]);

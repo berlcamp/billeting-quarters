@@ -27,6 +27,7 @@ export const USER_ROLES: readonly UserRole[] = [
   "head_counter_viewer",
   "command_center_viewer",
   "raffle_manager",
+  "dtr",
 ] as const;
 
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -53,6 +54,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   head_counter_viewer: "Head Counter Viewer",
   command_center_viewer: "Command Center Viewer",
   raffle_manager: "Raffle Manager",
+  dtr: "DTR",
 };
 
 export const PROFILE_STATUS_LABELS: Record<ProfileStatus, string> = {
@@ -108,6 +110,7 @@ export const PERMISSIONS = [
   "raffle.view",
   "raffle.manage",
   "raffle.draw",
+  "dtr.view",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -275,6 +278,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, readonly Permission[]> = {
   // no other module permissions, so the only nav item that surfaces is
   // Raffle (plus the always-public Command Center root and User Guide).
   raffle_manager: ["raffle.view", "raffle.manage", "raffle.draw"],
+  // DTR — kiosk/back-office role that can only reach the Personnel → DTR
+  // module to generate CSC Form 48–style daily time records. Holds the single
+  // dtr.view permission and nothing else, so the only nav item that surfaces
+  // is DTR (plus the always-public Command Center root and User Guide).
+  dtr: ["dtr.view"],
 };
 
 type ProfileLike =

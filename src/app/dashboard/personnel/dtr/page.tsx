@@ -29,10 +29,14 @@ export default async function DtrPage({ searchParams }: PageProps) {
   const profile = await getCurrentProfile();
   if (
     !profile ||
-    !hasAnyPermission(profile, ["personnel.manage", "attendance.record"])
+    !hasAnyPermission(profile, [
+      "personnel.manage",
+      "attendance.record",
+      "dtr.view",
+    ])
   ) {
     return (
-      <Forbidden message="DTR generator requires the personnel.manage or attendance.record permission." />
+      <Forbidden message="DTR generator requires the personnel.manage, attendance.record, or dtr.view permission." />
     );
   }
 

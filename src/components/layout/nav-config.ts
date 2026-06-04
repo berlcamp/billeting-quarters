@@ -202,7 +202,7 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "DTR",
         href: "/dashboard/personnel/dtr",
         icon: ClipboardList,
-        roles: ["personnel_admin", "attendance_checker"],
+        roles: ["personnel_admin", "attendance_checker", "dtr"],
       },
       {
         label: "ID Generator",

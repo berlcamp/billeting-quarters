@@ -2032,7 +2032,8 @@ export type Database = {
         | "attendance_checker"
         | "head_counter_viewer"
         | "command_center_viewer"
-        | "raffle_manager";
+        | "raffle_manager"
+        | "dtr";
       profile_status: "pending" | "active" | "suspended";
       incident_category:
         | "medical"
