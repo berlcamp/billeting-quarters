@@ -65,7 +65,8 @@ async function requireDtrReader() {
   if (!profile) return { ok: false as const, error: "Not authenticated." };
   if (
     !hasPermission(profile, "personnel.manage") &&
-    !hasPermission(profile, "attendance.record")
+    !hasPermission(profile, "attendance.record") &&
+    !hasPermission(profile, "dtr.view")
   ) {
     return {
       ok: false as const,
